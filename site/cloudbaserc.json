@@ -1,0 +1,12 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "version": "2.0",
+  "envId": "shuatiji-d9gm0j668e9396859",
+  "functions": [
+    {
+      "name": "quiz",
+      "path": "./functions/quiz",
+      "runtime": "Nodejs20.19"
+    }
+  ]
+}

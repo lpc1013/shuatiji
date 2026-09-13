@@ -1,0 +1,35 @@
+# 密钥 / 敏感配置（含 TokenHub API Key，绝不入库）
+cloud/functions/quiz/config.json
+tavern/.env
+
+# 构建/部署暂存
+_deploy/
+dist/
+deploy.zip
+dist.zip
+
+# 依赖
+tavern/node_modules/
+node_modules/
+
+# 本地备份（含账号数据，勿入库）
+*备份*.json
+database_export*.json
+
+# 与站点运行无关，勿再放回本目录。
+# 【部署】不要整目录上传 site/，请跑 `node 题库调研/build_dist.mjs` 生成 ../site_dist/ 后部署它。
+tavern/
+.bak_*/
+_preview/
+deploy_galaxy/
+*.zip
+*.pdf
+serve.js
+build_data.js
+analyze_lql.py
+星系分析.html
+刷题记用户手册.html
+
+# 系统
+.DS_Store
+Thumbs.db

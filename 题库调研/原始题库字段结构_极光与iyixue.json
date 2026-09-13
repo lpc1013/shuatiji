@@ -1,0 +1,859 @@
+{
+ "generatedAt": "2026-09-12T12:02:09.590Z",
+ "note": "原始题库字段结构实测（只读扫描，未改动任何源数据）",
+ "jiguang": {
+  "files": 52,
+  "questions": 43791,
+  "chapters": 755,
+  "fields": {
+   "id": {
+    "count": 43791,
+    "types": {
+     "string": 43791
+    },
+    "samples": [
+     "1fa9df2a-d80a-4008-a6a1-28c653328a6c",
+     "33f2db7b-743e-4e63-a377-d59b24e19aa8",
+     "365ad96e-3617-4ef9-aec1-ebd263620f51"
+    ]
+   },
+   "subject_id": {
+    "count": 43791,
+    "types": {
+     "string": 43791
+    },
+    "samples": [
+     "9669ebfd-245a-489b-bf71-6f3f60dc780c",
+     "b5f5dc43-7e55-4771-bc1b-d85460bbbd93",
+     "cac65a88-d9e3-4193-9f0f-ffe0ffeb3179"
+    ]
+   },
+   "chapter_id": {
+    "count": 43791,
+    "types": {
+     "string": 43791
+    },
+    "samples": [
+     "312020f6-72d4-4a96-92fb-e1bb6f83be12",
+     "1d2cb240-0daa-46d1-af36-eb868d27fbc1",
+     "777d9d7a-c664-42de-a88c-eb9373a281c0"
+    ]
+   },
+   "q_type": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "1",
+     "2",
+     "3"
+    ]
+   },
+   "display_type": {
+    "count": 43791,
+    "types": {
+     "string": 43791
+    },
+    "samples": [
+     "A1",
+     "X",
+     "F"
+    ]
+   },
+   "content": {
+    "count": 43791,
+    "types": {
+     "string": 43791
+    },
+    "samples": [
+     "见图",
+     "以下代码的输出结果是__________。\ntest = {\"age\" : \"18\", \"score\" : \"[89,95]\", \"name\" : \"Hawking\"}\nprint…",
+     "以下代码运行的结果是_________。\ndic1={1:97,2:87,3:68,4:100,5:89}\nprint(100 in dic1)"
+    ]
+   },
+   "options": {
+    "count": 43791,
+    "types": {
+     "object": 43791
+    },
+    "samples": [
+     "[object Object]"
+    ]
+   },
+   "images": {
+    "count": 43791,
+    "types": {
+     "array": 43791
+    },
+    "samples": [
+     "[1]",
+     "[0]",
+     "[2]"
+    ]
+   },
+   "difficulty": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "4",
+     "1",
+     "5"
+    ]
+   },
+   "tags": {
+    "count": 43791,
+    "types": {
+     "array": 43791
+    },
+    "samples": [
+     "[0]"
+    ]
+   },
+   "is_active": {
+    "count": 43791,
+    "types": {
+     "boolean": 43791
+    },
+    "samples": [
+     "true"
+    ]
+   },
+   "is_favorite": {
+    "count": 43791,
+    "types": {
+     "boolean": 43791
+    },
+    "samples": [
+     "false",
+     "true"
+    ]
+   },
+   "is_answered": {
+    "count": 43791,
+    "types": {
+     "boolean": 43791
+    },
+    "samples": [
+     "false",
+     "true"
+    ]
+   },
+   "is_correct": {
+    "count": 43791,
+    "types": {
+     "null": 41175,
+     "boolean": 2616
+    },
+    "samples": [
+     "true",
+     "false"
+    ]
+   },
+   "user_answer": {
+    "count": 43791,
+    "types": {
+     "null": 41213,
+     "string": 2578
+    },
+    "samples": [
+     "D",
+     "E",
+     "A"
+    ]
+   },
+   "is_mastered": {
+    "count": 43791,
+    "types": {
+     "boolean": 43791
+    },
+    "samples": [
+     "false",
+     "true"
+    ]
+   },
+   "correct_answer": {
+    "count": 43791,
+    "types": {
+     "string": 43791
+    },
+    "samples": [
+     "C",
+     "B",
+     "D"
+    ]
+   },
+   "explanation": {
+    "count": 43791,
+    "types": {
+     "string": 43791
+    },
+    "samples": [
+     "",
+     "连续性方程：大管截面积×流速=4×小管截面积×小管流速；R大:R小=2:1，S∝R²，故S大=4S小，v小=v大=1m/s",
+     "按图绿色答案为D"
+    ]
+   },
+   "source": {
+    "count": 43791,
+    "types": {
+     "string": 43791
+    },
+    "samples": [
+     "admin录入",
+     "Excel导入",
+     "Word导入"
+    ]
+   },
+   "answer_count": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "0",
+     "7",
+     "5"
+    ]
+   },
+   "correct_count": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "0",
+     "5",
+     "4"
+    ]
+   },
+   "total_answer_count": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "3",
+     "1",
+     "0"
+    ]
+   },
+   "total_correct_count": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "1",
+     "0",
+     "2"
+    ]
+   },
+   "total_favorite_count": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "0",
+     "11",
+     "8"
+    ]
+   },
+   "comment_count": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "0",
+     "5",
+     "1"
+    ]
+   },
+   "note_count": {
+    "count": 43791,
+    "types": {
+     "number": 43791
+    },
+    "samples": [
+     "0",
+     "1",
+     "2"
+    ]
+   },
+   "local_images": {
+    "count": 72,
+    "types": {
+     "array": 72
+    },
+    "samples": [
+     "[1]"
+    ]
+   },
+   "ai_explanation": {
+    "count": 37947,
+    "types": {
+     "string": 28734,
+     "null": 9213
+    },
+    "samples": [
+     "## 正确答案\nD\n\n## 答案解析\n正确答案是 **D. 环转**。\n\n在解剖学中，关节的运动形式是根据其围绕的运动轴来定义的。一个运动轴通常对应一种基本的运动形式（如屈/伸、内…",
+     "## 正确答案\nE\n\n## 答案解析\n正确答案是 **E. 旋转**。\n在解剖学中，关节的运动形式是根据其围绕的假想“运动轴”来定义的。人体有三个基本的运动轴：**矢状轴、冠状轴和…",
+     "## 正确答案\nA\n\n## 答案解析\n正确答案是 **A. 屈和伸**。\n在解剖学中，关节的运动形式是根据其围绕的假想轴（即运动轴）来定义的。人体有三个基本的运动轴：\n1.  **…"
+    ]
+   },
+   "ai_explanation_generated_at": {
+    "count": 37947,
+    "types": {
+     "string": 28118,
+     "null": 9829
+    },
+    "samples": [
+     "2026-03-28T12:35:16.899264+08:00",
+     "2026-03-28T12:35:52.801800+08:00",
+     "2026-03-28T12:36:38.519284+08:00"
+    ]
+   },
+   "bank_id": {
+    "count": 3488,
+    "types": {
+     "null": 3488
+    },
+    "samples": []
+   }
+  },
+  "q_type": {
+   "1": 41698,
+   "2": 2021,
+   "3": 72
+  },
+  "display_type": {
+   "A1": 40800,
+   "X": 2021,
+   "F": 72,
+   "A2": 895,
+   "A3": 3
+  },
+  "enums": {
+   "source": {
+    "admin录入": 186,
+    "Excel导入": 19905,
+    "Word导入": 23600,
+    "Excel导���": 16,
+    "Excel导��": 17,
+    "Word导���": 7,
+    "Word导��": 8,
+    "Excel��入": 14,
+    "Excel���入": 16,
+    "自创": 1,
+    "Word��入": 8,
+    "Word���入": 13
+   },
+   "q_type_display": {
+    "1": 41698,
+    "2": 2021,
+    "3": 72,
+    "A1": 40800,
+    "X": 2021,
+    "F": 72,
+    "A2": 895,
+    "A3": 3
+   },
+   "difficulty": {
+    "0": 10754,
+    "1": 15699,
+    "2": 9438,
+    "3": 5116,
+    "4": 1451,
+    "5": 1333
+   },
+   "is_active": {
+    "true": 43791
+   },
+   "is_mastered": {
+    "false": 43743,
+    "true": 48
+   }
+  },
+  "empty": {
+   "explanation": 41519,
+   "tags": 43791,
+   "images": 43606,
+   "ai_explanation": 9849
+  },
+  "sampleRecord": {
+   "built": true,
+   "sampleOptionsObj": "{\"A\":\"见图\",\"B\":\"见图\",\"C\":\"见图\",\"D\":\"见图\"}",
+   "sampleImages": "[\"https://practice-problems-bucket.oss-cn-beijing.aliyuncs.com/e3c14719-009e-41f8-a692-79450f33cd7e/banner/20260721/582f57cec422449d881518c646a5b0c7.jpg\"]",
+   "sampleTags": "[]",
+   "sampleQuestionKeys": [
+    "id",
+    "subject_id",
+    "chapter_id",
+    "q_type",
+    "display_type",
+    "content",
+    "options",
+    "images",
+    "difficulty",
+    "tags",
+    "is_active",
+    "is_favorite",
+    "is_answered",
+    "is_correct",
+    "user_answer",
+    "is_mastered",
+    "correct_answer",
+    "explanation",
+    "source",
+    "answer_count",
+    "correct_count",
+    "total_answer_count",
+    "total_correct_count",
+    "total_favorite_count",
+    "comment_count",
+    "note_count",
+    "local_images"
+   ],
+   "imgShape": "https://practice-problems-bucket.oss-cn-beijing.aliyuncs.com/e3c14719-009e-41f8-a692-79450f33cd7e/banner/20260721/582f57cec422449d881518c646a5b0c7.jpg"
+  }
+ },
+ "iyixue": {
+  "files": 333,
+  "banks": {
+   "school": 78708,
+   "kaoyan": 3582
+  },
+  "questions": 82290,
+  "fields": {
+   "id": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "ykb_201012_36101_800101",
+     "ykb_201012_36101_800102",
+     "ykb_201012_36101_800103"
+    ]
+   },
+   "bank": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "school",
+     "kaoyan"
+    ]
+   },
+   "type": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "A1",
+     "multiple",
+     "A3"
+    ]
+   },
+   "subject": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "中医学",
+     "临床诊断学",
+     "临床麻醉学"
+    ]
+   },
+   "system": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "上篇 第一章 导论",
+     "上篇 第二章 中医学的哲学思想",
+     "上篇 第三章 藏象学说"
+    ]
+   },
+   "difficulty": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "medium"
+    ]
+   },
+   "caseInfo": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "",
+     "男，35岁，已婚。因尿道口有脓性分泌物到医院就诊，被诊断为淋病。",
+     "男性，22岁，既往有HBsAg阳性史，10天前无诱因发烧，体温逐渐上升，波动于37.5～39℃，近3天体温持续在38.5～39.5℃不降，伴有食欲不振乏力腹胀及尿黄。查体：T39.…"
+    ]
+   },
+   "question": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "中医理论体系的萌芽和奠基阶段是在哪个时期",
+     "我国中医典籍中现存最早的药学专著是",
+     "不属于金元四大家的医家是"
+    ]
+   },
+   "options": {
+    "count": 82290,
+    "types": {
+     "array": 82290
+    },
+    "samples": [
+     "[5]",
+     "[4]",
+     "[3]"
+    ]
+   },
+   "answer": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "A",
+     "E",
+     "B"
+    ]
+   },
+   "year": {
+    "count": 82290,
+    "types": {
+     "null": 60641,
+     "number": 21649
+    },
+    "samples": [
+     "2024",
+     "2014",
+     "2016"
+    ]
+   },
+   "sourceType": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "yikaobang-network",
+     "contribution",
+     "legacy"
+    ]
+   },
+   "questionSource": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "医考帮",
+     "待整理来源",
+     "jg"
+    ]
+   },
+   "explanationBlocks": {
+    "count": 82290,
+    "types": {
+     "array": 82290
+    },
+    "samples": [
+     "[2]",
+     "[1]",
+     "[3]"
+    ]
+   },
+   "explanation": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "### 考点解析\n\n**原题解析**\n\n中医理论体系的萌芽和奠基阶段在于春秋战国、两汉时期（A对）；两晋隋唐（B错）时期是充实、融合和临床学科发展阶段；宋、金、元时期（C错）是学术…",
+     "### 考点解析\n\n**原题解析**\n\n《神农本草经》（E对）是我国现存最早的一部药物学专著。《本草纲目》（A错）由明代李时珍所著，是一部中药学巨著。《本草拾遗》（B错）是根据《神…",
+     "### 考点解析\n\n**原题解析**\n\n“金元四大家”是指刘完素（A对）、张从正（D对）、李杲（C对）和朱震亨（E对）。王清任（B错，为本题正确答案）是清代医家。\n\n**原题课本出…"
+    ]
+   },
+   "briefExplanation": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "",
+     "教材明确典型心肌缺血发作时ST段水平或下斜型下移≥0.1mV，选项B完全符合，是最常见改变。",
+     "教材明确指出前壁心肌梗死特征性异常Q波或QS波主要出现在V3～V5导联，因此正确答案为B。"
+    ]
+   },
+   "optionExplanations": {
+    "count": 78708,
+    "types": {
+     "array": 78708
+    },
+    "samples": [
+     "[0]"
+    ]
+   },
+   "reasoningSteps": {
+    "count": 78708,
+    "types": {
+     "array": 78708
+    },
+    "samples": [
+     "[0]"
+    ]
+   },
+   "frequencyLevel": {
+    "count": 78708,
+    "types": {
+     "string": 78708
+    },
+    "samples": [
+     ""
+    ]
+   },
+   "questionRevision": {
+    "count": 78708,
+    "types": {
+     "string": 78708
+    },
+    "samples": [
+     "qv1-64113acc",
+     "qv1-00248c91",
+     "qv1-7551e428"
+    ]
+   },
+   "knowledgePoints": {
+    "count": 82290,
+    "types": {
+     "array": 82290
+    },
+    "samples": [
+     "[0]",
+     "[3]"
+    ]
+   },
+   "studyPoints": {
+    "count": 78708,
+    "types": {
+     "array": 78708
+    },
+    "samples": [
+     "[0]"
+    ]
+   },
+   "memoryCards": {
+    "count": 78708,
+    "types": {
+     "array": 78708
+    },
+    "samples": [
+     "[0]"
+    ]
+   },
+   "memoryCardMeta": {
+    "count": 78708,
+    "types": {
+     "object": 78708
+    },
+    "samples": [
+     "[object Object]"
+    ]
+   },
+   "tags": {
+    "count": 82290,
+    "types": {
+     "array": 82290
+    },
+    "samples": [
+     "[0]",
+     "[2]",
+     "[1]"
+    ]
+   },
+   "suggestedTags": {
+    "count": 82290,
+    "types": {
+     "array": 82290
+    },
+    "samples": [
+     "[0]",
+     "[2]",
+     "[3]"
+    ]
+   },
+   "mnemonic": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     ""
+    ]
+   },
+   "explanationMeta": {
+    "count": 82290,
+    "types": {
+     "object": 82290
+    },
+    "samples": [
+     "[object Object]"
+    ]
+   },
+   "extensions": {
+    "count": 82290,
+    "types": {
+     "object": 82290
+    },
+    "samples": [
+     "[object Object]"
+    ]
+   },
+   "knowledgePoint": {
+    "count": 82290,
+    "types": {
+     "string": 82290
+    },
+    "samples": [
+     "",
+     "既往史包括预防接种史、过敏史、手术外伤史等。"
+    ]
+   }
+  },
+  "enums": {
+   "type": {
+    "A1": 64822,
+    "multiple": 10595,
+    "A3": 2923,
+    "A2": 3950
+   },
+   "sourceType": {
+    "yikaobang-network": 67137,
+    "contribution": 14479,
+    "legacy": 674
+   },
+   "questionSource": {
+    "医考帮": 67137,
+    "待整理来源": 8767,
+    "jg": 2804,
+    "2005年考研真题": 150,
+    "2007年考研真题": 179,
+    "2008年考研真题": 180,
+    "2009年考研真题": 180,
+    "2010年考研真题": 180,
+    "2011年考研真题": 180,
+    "2012年考研真题": 180,
+    "2013年考研真题": 180,
+    "2014年考研真题": 180,
+    "2015年考研真题": 180,
+    "2017年考研真题": 165,
+    "2018年考研真题": 165,
+    "2020年考研真题": 165,
+    "2021年考研真题": 165,
+    "2023年考研真题": 165,
+    "2024年考研真题": 165,
+    "2025年考研真题": 165,
+    "2006年考研真题": 150,
+    "2016年考研真题": 180,
+    "2019年考研真题": 163,
+    "2022年考研真题": 165
+   },
+   "difficulty": {
+    "medium": 82290
+   },
+   "bank": {
+    "school": 78708,
+    "kaoyan": 3582
+   },
+   "yearRange": {
+    "min": 1988,
+    "max": 2026,
+    "n": 21649
+   },
+   "yearHist": {
+    "1988": 104,
+    "1989": 111,
+    "1990": 118,
+    "1991": 122,
+    "1992": 117,
+    "1993": 120,
+    "1994": 131,
+    "1995": 124,
+    "1996": 123,
+    "1997": 119,
+    "1998": 125,
+    "1999": 199,
+    "2000": 666,
+    "2001": 600,
+    "2002": 563,
+    "2003": 586,
+    "2004": 574,
+    "2005": 680,
+    "2006": 717,
+    "2007": 778,
+    "2008": 775,
+    "2009": 747,
+    "2010": 755,
+    "2011": 773,
+    "2012": 805,
+    "2013": 832,
+    "2014": 812,
+    "2015": 772,
+    "2016": 752,
+    "2017": 758,
+    "2018": 777,
+    "2019": 636,
+    "2020": 587,
+    "2021": 596,
+    "2022": 1012,
+    "2023": 1156,
+    "2024": 1912,
+    "2025": 467,
+    "2026": 48
+   }
+  },
+  "empty": {
+   "briefExplanation": 72032,
+   "caseInfo": 79697,
+   "mnemonic": 82290,
+   "knowledgePoint": 82289,
+   "frequencyLevel": 78708,
+   "optionExplanations": 78708,
+   "reasoningSteps": 78708,
+   "knowledgePoints": 82289,
+   "studyPoints": 78708,
+   "memoryCards": 78708,
+   "tags": 69424,
+   "suggestedTags": 73944,
+   "explanation": 220,
+   "explanationBlocks": 220
+  },
+  "shapes": {
+   "options": "A. 春秋战国至两汉",
+   "explanationBlocks": "{\"blockId\":\"ykb_discuss_1\",\"section\":\"analysis\",\"type\":\"paragraph\",\"title\":\"原题解析\",\"text\":\"中医理论体系的萌芽和奠基阶段在于春秋战国、两汉时期（A对）；两晋隋唐（B错）时期是充实、融合和临床学科发展阶段；宋、金、元时期（C错）是学术争鸣、理论突破、流派纷陈阶段；明清时期（D错）是综合集成和深化发展阶段；而近现代（E错）是中医药的发展腾飞阶段。\"}",
+   "memoryCardMeta": "{\"schemaVersion\":1,\"generator\":\"analysis-tool\",\"generatedAt\":\"\"}",
+   "explanationMeta": "{\"mode\":\"imported\",\"model\":\"\",\"evidenceGrade\":\"\",\"reasoningType\":\"\",\"thinking\":false,\"modelFallback\":false,\"complexityScore\":0,\"routeReasons\":[],\"requestCount\":0,\"generationTrace\":[],\"score\":0,\"generatedAt\":\"\",\"reviewedAt\":\"\",\"reviewWarnings\":[],\"evidence\":[]}",
+   "extensions": "{\"originalQuestionType\":\"单选题\",\"importWarnings\":[],\"ykbRaw\":{\"name\":\"800101\",\"numb\":\"BK36101XZ001\",\"cls\":\"中医学\",\"unit\":\"上篇 第一章 导论\",\"mode\":\"单选题\",\"test\":\"中医理论体系的萌芽和奠基阶段是在哪个时期\",\"caseInfo\":\"\",\"option\":[\"A. 春秋战国至两汉\",\"B. 两晋隋唐\",\"C. 宋、金、元\",\"D. 明清\",\"E. 近代\"],\"answer\":\"A\",…",
+   "knowledgePoints": "既往史包括预防接种史",
+   "tags": "A1型"
+  }
+ }
+}

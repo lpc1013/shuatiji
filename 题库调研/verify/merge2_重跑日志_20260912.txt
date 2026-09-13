@@ -1,0 +1,48 @@
+[12:22:41] 备份人工裁决文件 3/3 → D:\朝花夕拾 闲暇随笔\李沁玲\大二上\生物化学与分子生物学\题库调研\_merged2_manual_backup
+[12:22:42] 快照 before: 108018 题 idHash=6428cb906b0ed47a pairHash=17c4c6791fd5dac1
+[12:22:42]   字段非空: {"caseInfo":2586,"explanationBlocks":0,"briefExplanation":0,"suggestedTags":0,"ext":0,"tags":0,"nativeYear":0,"sourceType":0}
+[12:22:42] 开始重跑 merge2.mjs ...
+[12:22:44] 极光文件 61 个
+[12:22:45] 读取极光完成, recs=43791
+[12:22:48] 读取 iyixue/school 完成, recs=122499
+[12:22:48] 读取 iyixue/kaoyan 完成, recs=126081
+[12:22:48] 读取自建题语料完成, recs=126101
+[12:22:49] 预处理完成：图片型(选项全同)=107 无选项题=81
+[12:22:49] Pass1 严格键分组: 108023
+[12:22:49] Pass2 模糊合并次数: 112
+[12:22:49] 最终分组: 108018
+[12:22:50] by_subject 20/63
+[12:22:52] by_subject 40/63
+[12:22:52] by_subject 60/63
+[12:22:52] by_subject done: 63 个学科
+[12:22:52] by_origin/极光.json (43008)
+[12:22:52] by_origin/医考帮.json (61502)
+[12:22:52] by_origin/考研真题.json (2786)
+[12:22:52] by_origin/未知来源.json (702)
+[12:22:52] by_origin/自建.json (20)
+[12:22:52] v2 结果: 唯一题 108018（v1 104991）｜冲突 523（v1 1504）｜需人工 58（v1 295）
+{
+ "total": 523,
+ "autoResolved": 465,
+ "byPriority": 439,
+ "byPriorityWithExplanation": 14,
+ "byOptionCheck": 4,
+ "byMajority": 8,
+ "needManual": 58,
+ "manualBreakdown": {
+  "weakStem": 6,
+  "textAnswer": 2,
+  "noMajority": 50
+ },
+ "noConflict": 107495
+}
+[12:22:52] merge2 完成
+[12:22:52] 恢复人工裁决文件 3/3
+[12:22:57] 快照 after: 108018 题 idHash=6428cb906b0ed47a pairHash=17c4c6791fd5dac1
+[12:22:57]   字段非空: {"caseInfo":2586,"explanationBlocks":80476,"briefExplanation":10232,"suggestedTags":8328,"ext":79238,"tags":3159,"nativeYear":20770,"sourceType":80680}
+[12:22:57] ===== DIFF =====
+[12:22:57] 题数: 108018 → 108018  (delta 0)
+[12:22:57] idHash: 6428cb906b0ed47a → 6428cb906b0ed47a  ✅ 一致
+[12:22:57] pairHash: 17c4c6791fd5dac1 → 17c4c6791fd5dac1  ✅ 一致
+[12:22:57] 仅旧有 id: 0 | 仅新增 id: 0 | 答案变化: 0
+[12:22:57] ✅ 结论：纯增量（id 与答案零变化）

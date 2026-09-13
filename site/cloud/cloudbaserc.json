@@ -1,0 +1,30 @@
+{
+  "envId": "shuatiji-d9gm0j668e9396859",
+  "functionRoot": "functions",
+  "functions": [
+    {
+      "name": "echo",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "memorySize": 256,
+      "timeout": 10
+    },
+    {
+      "name": "apitest",
+      "handler": "index.main",
+      "runtime": "Nodejs20.19",
+      "timeout": 3,
+      "memorySize": 256,
+      "envVariables": {
+        "KEY": "value"
+      }
+    },
+    {
+      "name": "quiz",
+      "runtime": "Nodejs20.19",
+      "handler": "index.main",
+      "memorySize": 256,
+      "timeout": 10
+    }
+  ]
+}

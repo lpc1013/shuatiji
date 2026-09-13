@@ -1,0 +1,105 @@
+{
+  "token_ok": true,
+  "checked_at": "2026-08-31T04:57:30.724Z",
+  "rows": [
+    {
+      "name": "影像",
+      "sid": "1632536d-44e2-419e-a6e2-4def52707afb",
+      "local": 473,
+      "online": 493,
+      "delta": 20,
+      "status": 200,
+      "chapters": 0,
+      "ok": false,
+      "err": "SUBJECT_ACCESS_REQUIRED"
+    },
+    {
+      "name": "医学免疫学",
+      "sid": "c799eb33-4ec7-487b-99b3-9cbca206db77",
+      "local": 1209,
+      "online": 1319,
+      "delta": 110,
+      "status": 200,
+      "chapters": 0,
+      "ok": false,
+      "err": "SUBJECT_ACCESS_REQUIRED"
+    },
+    {
+      "name": "病理学",
+      "sid": "c8c58d59-f1f4-477e-a006-0117ee9b215d",
+      "local": 1594,
+      "online": 1595,
+      "delta": 1,
+      "status": 200,
+      "chapters": 0,
+      "ok": false,
+      "err": "SUBJECT_ACCESS_REQUIRED"
+    },
+    {
+      "name": "传染病（test）",
+      "sid": "7e00dfaf-7c33-4285-a547-a5386c22e9ab",
+      "local": 627,
+      "online": 723,
+      "delta": 96,
+      "status": 200,
+      "chapters": 0,
+      "ok": false,
+      "err": "SUBJECT_ACCESS_REQUIRED"
+    },
+    {
+      "name": "儿科学",
+      "sid": "47842446-c979-41d0-ae76-a239f05eb773",
+      "local": 48,
+      "online": 2515,
+      "delta": 2467,
+      "status": 200,
+      "chapters": 0,
+      "ok": false,
+      "err": "SUBJECT_ACCESS_REQUIRED"
+    },
+    {
+      "name": "儿童医院社区实习",
+      "sid": "8808fba0-c481-4ef3-b9f7-e441f4bc55bc",
+      "local": 244,
+      "online": 262,
+      "delta": 18,
+      "status": 200,
+      "chapters": 12,
+      "ok": true,
+      "err": "获取成功"
+    },
+    {
+      "name": "内科学（test）",
+      "sid": "06d0cd87-0c14-4bde-9ee4-5f1892f18578",
+      "local": 367,
+      "online": 1803,
+      "delta": 1436,
+      "status": 200,
+      "chapters": 0,
+      "ok": false,
+      "err": "SUBJECT_ACCESS_REQUIRED"
+    },
+    {
+      "name": "眼科学",
+      "sid": "b7a1da02-2764-4ca3-ab3f-1613704896e2",
+      "local": 953,
+      "online": 1131,
+      "delta": 178,
+      "status": 200,
+      "chapters": 15,
+      "ok": true,
+      "err": "获取成功"
+    },
+    {
+      "name": "耳鼻咽喉头颈外科学",
+      "sid": "d49ee977-5a70-4408-abb3-bd315a0ac129",
+      "local": 1023,
+      "online": 1101,
+      "delta": 78,
+      "status": 200,
+      "chapters": 0,
+      "ok": false,
+      "err": "SUBJECT_ACCESS_REQUIRED"
+    }
+  ]
+}

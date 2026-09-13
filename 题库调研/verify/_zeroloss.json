@@ -1,0 +1,41 @@
+{
+  "snapshot": "database_export-shuatiji-d9gm0j668e9396859-progress.json",
+  "alias": 10343,
+  "newIds": 14884,
+  "users": [
+    {
+      "user": "lql",
+      "subjects": [
+        "bio",
+        "immunology",
+        "physiology"
+      ],
+      "sessions": 15,
+      "qrefTotal": 3104,
+      "qrefCovered": 3104,
+      "qrefUncovered": 0,
+      "coveredByAiGen": 6,
+      "uncoveredByKind": {},
+      "uncovered": [],
+      "chrefTotal": 27,
+      "chrefUncovered": 0,
+      "chUncovered": []
+    },
+    {
+      "user": "lpc",
+      "subjects": [
+        "bio"
+      ],
+      "sessions": 3,
+      "qrefTotal": 419,
+      "qrefCovered": 419,
+      "qrefUncovered": 0,
+      "coveredByAiGen": 0,
+      "uncoveredByKind": {},
+      "uncovered": [],
+      "chrefTotal": 2,
+      "chrefUncovered": 0,
+      "chUncovered": []
+    }
+  ]
+}

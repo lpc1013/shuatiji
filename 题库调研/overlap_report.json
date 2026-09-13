@@ -1,0 +1,2255 @@
+{
+ "generatedAt": "2026-09-11T18:22:32.088Z",
+ "corpus": {
+  "jiguang": {
+   "files": 61,
+   "rawQuestions": 54796,
+   "duplicateById": 11005,
+   "uniqueById": 43791,
+   "uniqueByStem": 42529
+  },
+  "iyixue": {
+   "questions": 82290,
+   "uniqueByStem": 78444
+  },
+  "oursite": {
+   "questions": 4916,
+   "uniqueByStem": 4869
+  }
+ },
+ "overlap": {
+  "jiguang∩iyixue": {
+   "commonStems": 16704,
+   "jiguangQuestionsMatched": 17110,
+   "iyixueQuestionsMatched": 18098,
+   "jiguangOnlyStems": 25825,
+   "iyixueOnlyStems": 61740,
+   "pctOfJiguang": 39.1,
+   "pctOfIyixue": 22
+  },
+  "oursite∩jiguang": {
+   "commonStems": 4849,
+   "ourQuestionsMatched": 4896
+  },
+  "oursite∩iyixue": {
+   "commonStems": 4763,
+   "ourQuestionsMatched": 4810,
+   "pctOfOursite": 97.8
+  }
+ },
+ "answerConflicts": {
+  "comparedStems": 16668,
+  "conflictStems": 588,
+  "samples": [
+   {
+    "stem": "关于椎体间的连结正确的是",
+    "jg": {
+     "id": "244643e2-3a2b-4c82-bc23-839b268d1bfd",
+     "subject": "系统解剖学",
+     "chapter": "第一章 骨和骨的连接",
+     "stem": "关于椎体间的连结正确的是",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45002_1836684",
+     "subject": "系统解剖学",
+     "system": "运动系统 第二章 骨连结",
+     "bank": "school",
+     "stem": "关于椎体间的连结正确的是",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-002.json"
+    }
+   },
+   {
+    "stem": "关于椎骨的描述正确的是",
+    "jg": {
+     "id": "ca08d270-8608-4c7b-a383-70f91cb28c9b",
+     "subject": "系统解剖学",
+     "chapter": "第一章 骨和骨的连接",
+     "stem": "关于椎骨的描述正确的是",
+     "ans": "D",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45001_588745",
+     "subject": "系统解剖学",
+     "system": "运动系统 第一章 骨",
+     "bank": "school",
+     "stem": "关于椎骨的描述正确的是",
+     "ans": "B",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-001.json"
+    }
+   },
+   {
+    "stem": "关于胸骨角不正确的是",
+    "jg": {
+     "id": "313df6b7-ec74-46e4-a7d3-24ac8fff4a2c",
+     "subject": "系统解剖学",
+     "chapter": "第一章 骨和骨的连接",
+     "stem": "关于胸骨角不正确的是",
+     "ans": "B",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45001_1836699",
+     "subject": "系统解剖学",
+     "system": "运动系统 第一章 骨",
+     "bank": "school",
+     "stem": "关于胸骨角不正确的是",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-001.json"
+    }
+   },
+   {
+    "stem": "关于肘关节的描述正确的是",
+    "jg": {
+     "id": "46f5530f-c8be-47e3-9dcd-5c92f162bd40",
+     "subject": "系统解剖学",
+     "chapter": "第一章 骨和骨的连接",
+     "stem": "关于肘关节的描述正确的是",
+     "ans": "D",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45002_588938",
+     "subject": "系统解剖学",
+     "system": "运动系统 第二章 骨连结",
+     "bank": "school",
+     "stem": "关于肘关节的描述正确的是",
+     "ans": "ABDE",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-002.json"
+    }
+   },
+   {
+    "stem": "脑膜中动脉通过",
+    "jg": {
+     "id": "f14cc477-c38a-42b1-80da-d094d43900c6",
+     "subject": "系统解剖学",
+     "chapter": "第一章 骨和骨的连接",
+     "stem": "脑膜中动脉通过",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45020_590846",
+     "subject": "系统解剖学",
+     "system": "脉管系统 第二十章 心血管系统",
+     "bank": "school",
+     "stem": "脑膜中动脉通过",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-011.json"
+    }
+   },
+   {
+    "stem": "属于脑颅骨的是",
+    "jg": {
+     "id": "11cdbb64-878a-4624-8cc7-a2a15e35b593",
+     "subject": "系统解剖学",
+     "chapter": "第一章 骨和骨的连接",
+     "stem": "属于脑颅骨的是",
+     "ans": "B",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45001_588774",
+     "subject": "系统解剖学",
+     "system": "运动系统 第一章 骨",
+     "bank": "school",
+     "stem": "属于脑颅骨的是",
+     "ans": "D",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-001.json"
+    }
+   },
+   {
+    "stem": "关节的基本结构包括",
+    "jg": {
+     "id": "18fdd64e-729e-43f9-bac9-ce90d5fa99c9",
+     "subject": "系统解剖学",
+     "chapter": "第一章 骨和骨的连接",
+     "stem": "关节的基本结构包括",
+     "ans": "CDE",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45002_588914",
+     "subject": "系统解剖学",
+     "system": "运动系统 第二章 骨连结",
+     "bank": "school",
+     "stem": "关节的基本结构包括",
+     "ans": "ACD",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-002.json"
+    }
+   },
+   {
+    "stem": "使脊柱后伸的肌是",
+    "jg": {
+     "id": "ae729ba7-500d-47ce-8789-22c1c775edf9",
+     "subject": "系统解剖学",
+     "chapter": "第二章 肌学",
+     "stem": "使脊柱后伸的肌是",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45003_589108",
+     "subject": "系统解剖学",
+     "system": "运动系统 第三章 骨骼肌",
+     "bank": "school",
+     "stem": "使脊柱后伸的肌是",
+     "ans": "B",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-003.json"
+    }
+   },
+   {
+    "stem": "既能屈髋又能屈膝的肌是",
+    "jg": {
+     "id": "e8cfeeaf-e38b-4831-8653-63feb3740512",
+     "subject": "系统解剖学",
+     "chapter": "第二章 肌学",
+     "stem": "既能屈髋又能屈膝的肌是",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45003_589296",
+     "subject": "系统解剖学",
+     "system": "运动系统 第三章 骨骼肌",
+     "bank": "school",
+     "stem": "既能屈髋又能屈膝的肌是",
+     "ans": "B",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-004.json"
+    }
+   },
+   {
+    "stem": "关于腘窝的描述错误的是",
+    "jg": {
+     "id": "70306e34-c21c-4051-a607-df8e5415c440",
+     "subject": "系统解剖学",
+     "chapter": "第二章 肌学",
+     "stem": "关于腘窝的描述错误的是",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201012_37008_581412",
+     "subject": "局部解剖学",
+     "system": "第八章 下肢",
+     "bank": "school",
+     "stem": "关于腘窝的描述错误的是",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/局部解剖学/subject-8d06e90d655e-002.json"
+    }
+   },
+   {
+    "stem": "通过腕管的结构有",
+    "jg": {
+     "id": "e5ef3a41-0d6b-493b-97c0-a1d714b5feaa",
+     "subject": "系统解剖学",
+     "chapter": "第二章 肌学",
+     "stem": "通过腕管的结构有",
+     "ans": "ADE",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45003_589277",
+     "subject": "系统解剖学",
+     "system": "运动系统 第三章 骨骼肌",
+     "bank": "school",
+     "stem": "通过腕管的结构有",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-003.json"
+    }
+   },
+   {
+    "stem": "没有结肠带的肠管是",
+    "jg": {
+     "id": "83fe1789-e1fc-4643-8a00-ce4a952fa934",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "没有结肠带的肠管是",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_1825309",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "没有结肠带的肠管是",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-005.json"
+    }
+   },
+   {
+    "stem": "空肠的特征是",
+    "jg": {
+     "id": "03a3c5b5-cf8c-4512-8809-72bd1c3634ae",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "空肠的特征是",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228193",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "空肠的特征是",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-005.json"
+    }
+   },
+   {
+    "stem": "胃的溃疡和肿瘤好发于",
+    "jg": {
+     "id": "c677a645-4212-4f93-aeff-e69eaf34ebec",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "胃的溃疡和肿瘤好发于",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_589632",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "胃的溃疡和肿瘤好发于",
+     "ans": "B",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-005.json"
+    }
+   },
+   {
+    "stem": "食管",
+    "jg": {
+     "id": "3cb81bc1-d7ec-4f1c-8ab7-5e469320a438",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "食管",
+     "ans": "D",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_40114_593729",
+     "subject": "组织学与胚胎学",
+     "system": "上篇 第14章 消化管",
+     "bank": "school",
+     "stem": "食管",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/组织学与胚胎学/subject-bf6d1e1a4b31-005.json"
+    }
+   },
+   {
+    "stem": "梨状隐窝位于",
+    "jg": {
+     "id": "397a3849-9c21-4bf6-af57-d4cc0264675e",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "梨状隐窝位于",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_1836772",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "梨状隐窝位于",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-005.json"
+    }
+   },
+   {
+    "stem": "鼻咽癌好发于",
+    "jg": {
+     "id": "e5920770-12d0-4219-bdae-63d5ce2d59ee",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "鼻咽癌好发于",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228191",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "鼻咽癌好发于",
+     "ans": "B",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-004.json"
+    }
+   },
+   {
+    "stem": "对舌的描述错误的是",
+    "jg": {
+     "id": "688abf47-083f-481b-a0c6-a33299ed686f",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "对舌的描述错误的是",
+     "ans": "D",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228188",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "对舌的描述错误的是",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-004.json"
+    }
+   },
+   {
+    "stem": "牙周组织包括",
+    "jg": {
+     "id": "63c172f5-fe87-4845-8790-d3ae419df96a",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "牙周组织包括",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201013_34001_578333",
+     "subject": "口腔科学",
+     "system": "第一章 口腔颌面部的解剖生理",
+     "bank": "school",
+     "stem": "牙周组织包括",
+     "ans": "ACE",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/口腔科学/subject-35dd37fd79ff-001.json"
+    }
+   },
+   {
+    "stem": "关于大唾液腺正确的是",
+    "jg": {
+     "id": "dbaddda9-5982-4014-9182-ebc92136d9f0",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "关于大唾液腺正确的是",
+     "ans": "ABE",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228204",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "关于大唾液腺正确的是",
+     "ans": "CDE",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-004.json"
+    }
+   },
+   {
+    "stem": "咽淋巴环的构成包括",
+    "jg": {
+     "id": "da99b8d1-5c24-4ff2-b325-222b18c18d38",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "咽淋巴环的构成包括",
+     "ans": "ABD",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228225",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "咽淋巴环的构成包括",
+     "ans": "BCD",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-005.json"
+    }
+   },
+   {
+    "stem": "关于咽的说法正确的是",
+    "jg": {
+     "id": "bd77fbe9-5de6-4199-97c1-97a151d7817f",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "关于咽的说法正确的是",
+     "ans": "AC",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228190",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "关于咽的说法正确的是",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-004.json"
+    }
+   },
+   {
+    "stem": "位于鼻咽部侧壁的结构有",
+    "jg": {
+     "id": "4d0722ac-6b7a-4277-8b31-7a3de28bb6ef",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "位于鼻咽部侧壁的结构有",
+     "ans": "BCD",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228208",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "位于鼻咽部侧壁的结构有",
+     "ans": "ABC",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-005.json"
+    }
+   },
+   {
+    "stem": "关于回肠的说法正确的是",
+    "jg": {
+     "id": "ff947914-16fc-4890-bb9b-2a34db63caac",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "关于回肠的说法正确的是",
+     "ans": "ABC",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228214",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "关于回肠的说法正确的是",
+     "ans": "ABD",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-005.json"
+    }
+   },
+   {
+    "stem": "关于直肠的说法正确的是",
+    "jg": {
+     "id": "4e0a8527-6e27-4799-b5f1-e6c5453430fb",
+     "subject": "系统解剖学",
+     "chapter": "第四章 消化系统",
+     "stem": "关于直肠的说法正确的是",
+     "ans": "AC",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45005_3228227",
+     "subject": "系统解剖学",
+     "system": "消化系统 第五章 消化管",
+     "bank": "school",
+     "stem": "关于直肠的说法正确的是",
+     "ans": "BD",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-005.json"
+    }
+   },
+   {
+    "stem": "肋膈隐窝",
+    "jg": {
+     "id": "1c88a49a-7cc0-43b5-a3a6-b448e6176877",
+     "subject": "系统解剖学",
+     "chapter": "第五章 呼吸系统",
+     "stem": "肋膈隐窝",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201012_37003_580660",
+     "subject": "局部解剖学",
+     "system": "第三章 胸部",
+     "bank": "school",
+     "stem": "肋膈隐窝",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/局部解剖学/subject-8d06e90d655e-001.json"
+    }
+   },
+   {
+    "stem": "关于支气管肺段下列描述正确的是",
+    "jg": {
+     "id": "a607b336-8c5c-4425-abdd-c15654343f41",
+     "subject": "系统解剖学",
+     "chapter": "第五章 呼吸系统",
+     "stem": "关于支气管肺段下列描述正确的是",
+     "ans": "ABDE",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45008_3228345",
+     "subject": "系统解剖学",
+     "system": "呼吸系统 第八章 肺",
+     "bank": "school",
+     "stem": "关于支气管肺段下列描述正确的是",
+     "ans": "ACDE",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-006.json"
+    }
+   },
+   {
+    "stem": "输尿管盆部",
+    "jg": {
+     "id": "8b116abe-1b2d-4bbe-add2-c52895e93973",
+     "subject": "系统解剖学",
+     "chapter": "第六章 泌尿系统",
+     "stem": "输尿管盆部",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201012_37005_580989",
+     "subject": "局部解剖学",
+     "system": "第五章 盆部与会阴",
+     "bank": "school",
+     "stem": "输尿管盆部",
+     "ans": "D",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/局部解剖学/subject-8d06e90d655e-002.json"
+    }
+   },
+   {
+    "stem": "膀胱",
+    "jg": {
+     "id": "794bbbfd-5580-41ec-8409-2956ec3524fd",
+     "subject": "系统解剖学",
+     "chapter": "第六章 泌尿系统",
+     "stem": "膀胱",
+     "ans": "B",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201012_37005_581021",
+     "subject": "局部解剖学",
+     "system": "第五章 盆部与会阴",
+     "bank": "school",
+     "stem": "膀胱",
+     "ans": "ABCE",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/局部解剖学/subject-8d06e90d655e-002.json"
+    }
+   },
+   {
+    "stem": "在膀胱底的外侧输精管在输尿管的哪个方位",
+    "jg": {
+     "id": "713039e3-9fc5-4196-83f8-f7bbf8b9cef3",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "在膀胱底的外侧输精管在输尿管的哪个方位",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45015_3228417",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十五章 男性生殖系统",
+     "bank": "school",
+     "stem": "在膀胱底的外侧输精管在输尿管的哪个方位",
+     "ans": "D",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-007.json"
+    }
+   },
+   {
+    "stem": "关于阴道穹的描述正确的是",
+    "jg": {
+     "id": "85d4a781-33b4-4283-93fc-a6a8e4dfa897",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "关于阴道穹的描述正确的是",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228455",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "关于阴道穹的描述正确的是",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "乳房悬韧带是乳腺周围的纤维组织发出的纤维束这些纤维束",
+    "jg": {
+     "id": "fe5fb8d4-1974-4ce8-aa2d-c8e85c038a74",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "乳房悬韧带是乳腺周围的纤维组织发出的纤维束这些纤维束",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228471",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "乳房悬韧带是乳腺周围的纤维组织发出的纤维束这些纤维束",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "下列属于乳腺结构的是",
+    "jg": {
+     "id": "62b1e092-e996-4347-93a0-bcbb595193a3",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "下列属于乳腺结构的是",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228470",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "下列属于乳腺结构的是",
+     "ans": "D",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "子宫与输卵管相接处是",
+    "jg": {
+     "id": "36549b4f-8833-486d-bdd4-e88679fb87b3",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "子宫与输卵管相接处是",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228484",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "子宫与输卵管相接处是",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "属于内生殖器的是",
+    "jg": {
+     "id": "ed4aac60-fd3c-4cca-8f3c-96f20dc34778",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "属于内生殖器的是",
+     "ans": "D",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228475",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "属于内生殖器的是",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "子宫颈在阴道上端以上的部分称为",
+    "jg": {
+     "id": "4b93aaf6-6d30-4274-a50e-d475151bc6fe",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "子宫颈在阴道上端以上的部分称为",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228486",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "子宫颈在阴道上端以上的部分称为",
+     "ans": "B",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "子宫体与子宫颈上部间称为",
+    "jg": {
+     "id": "12703a5b-9b34-4b66-99ca-1918fd7ecdde",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "子宫体与子宫颈上部间称为",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228439",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "子宫体与子宫颈上部间称为",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "输卵管腹腔口开口于",
+    "jg": {
+     "id": "23f0b72d-ad93-45db-81e0-b3368fddbb30",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "输卵管腹腔口开口于",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228462",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "输卵管腹腔口开口于",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "输卵管",
+    "jg": {
+     "id": "41636a27-b9a5-4d23-adbf-1c6c6461cb45",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "输卵管",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201013_18002_579288",
+     "subject": "妇产科学",
+     "system": "第二章 女性生殖系统解剖",
+     "bank": "school",
+     "stem": "输卵管",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/妇产科学/obstetrics-gynecology-001.json"
+    }
+   },
+   {
+    "stem": "坐骨直肠窝",
+    "jg": {
+     "id": "22f6b987-1741-4d4a-96c7-88013866517e",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "坐骨直肠窝",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201012_37005_581010",
+     "subject": "局部解剖学",
+     "system": "第五章 盆部与会阴",
+     "bank": "school",
+     "stem": "坐骨直肠窝",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/局部解剖学/subject-8d06e90d655e-002.json"
+    }
+   },
+   {
+    "stem": "输卵管的分部包括",
+    "jg": {
+     "id": "6bcb2ec2-9f50-47bb-a0c8-6130773563cd",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "输卵管的分部包括",
+     "ans": "ACDE",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228503",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "输卵管的分部包括",
+     "ans": "ABCD",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "关于乳房的描述正确的有",
+    "jg": {
+     "id": "d22b14e8-69df-42f2-b034-a8dae0ecd9b4",
+     "subject": "系统解剖学",
+     "chapter": "第七章 生殖系统",
+     "stem": "关于乳房的描述正确的有",
+     "ans": "ABD",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45016_3228501",
+     "subject": "系统解剖学",
+     "system": "生殖系统 第十六章 女性生殖系统",
+     "bank": "school",
+     "stem": "关于乳房的描述正确的有",
+     "ans": "ABCD",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "属于腹膜内位器官的是",
+    "jg": {
+     "id": "e765fb4d-4d07-41d9-b76f-9c8efa41318e",
+     "subject": "系统解剖学",
+     "chapter": "第八章 腹膜",
+     "stem": "属于腹膜内位器官的是",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45018_2807334",
+     "subject": "系统解剖学",
+     "system": "第十八章 腹膜",
+     "bank": "school",
+     "stem": "属于腹膜内位器官的是",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-008.json"
+    }
+   },
+   {
+    "stem": "胫后动脉在踝部位于",
+    "jg": {
+     "id": "d81ffb45-910c-4e06-8127-3f09f0402a4e",
+     "subject": "系统解剖学",
+     "chapter": "第九章 心血管系统",
+     "stem": "胫后动脉在踝部位于",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45020_3228666",
+     "subject": "系统解剖学",
+     "system": "脉管系统 第二十章 心血管系统",
+     "bank": "school",
+     "stem": "胫后动脉在踝部位于",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-011.json"
+    }
+   },
+   {
+    "stem": "髂外动脉",
+    "jg": {
+     "id": "90229a72-0f56-41dd-b114-13306998971b",
+     "subject": "系统解剖学",
+     "chapter": "第九章 心血管系统",
+     "stem": "髂外动脉",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201012_37005_580979",
+     "subject": "局部解剖学",
+     "system": "第五章 盆部与会阴",
+     "bank": "school",
+     "stem": "髂外动脉",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/局部解剖学/subject-8d06e90d655e-002.json"
+    }
+   },
+   {
+    "stem": "肠系膜下动脉的分布范围包括",
+    "jg": {
+     "id": "13d787e6-73be-481d-b00b-dfed7e7c7742",
+     "subject": "系统解剖学",
+     "chapter": "第九章 心血管系统",
+     "stem": "肠系膜下动脉的分布范围包括",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45020_590984",
+     "subject": "系统解剖学",
+     "system": "脉管系统 第二十章 心血管系统",
+     "bank": "school",
+     "stem": "肠系膜下动脉的分布范围包括",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-011.json"
+    }
+   },
+   {
+    "stem": "支气管纵隔干由",
+    "jg": {
+     "id": "8b157c2d-8a47-41c4-9c7a-19d8b95ac0c6",
+     "subject": "系统解剖学",
+     "chapter": "第十章 淋巴系统",
+     "stem": "支气管纵隔干由",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45021_3228845",
+     "subject": "系统解剖学",
+     "system": "脉管系统 第二十一章 淋巴系统",
+     "bank": "school",
+     "stem": "支气管纵隔干由",
+     "ans": "B",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-013.json"
+    }
+   },
+   {
+    "stem": "沿腋静脉近端排列的淋巴结是",
+    "jg": {
+     "id": "8c067b25-ce40-4fca-98a4-acb0b43afe12",
+     "subject": "系统解剖学",
+     "chapter": "第十章 淋巴系统",
+     "stem": "沿腋静脉近端排列的淋巴结是",
+     "ans": "D",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45021_591470",
+     "subject": "系统解剖学",
+     "system": "脉管系统 第二十一章 淋巴系统",
+     "bank": "school",
+     "stem": "沿腋静脉近端排列的淋巴结是",
+     "ans": "B",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-013.json"
+    }
+   },
+   {
+    "stem": "被称为肺门淋巴结的是",
+    "jg": {
+     "id": "80a6ff33-6309-441b-a2d7-ba8e5c548b7e",
+     "subject": "系统解剖学",
+     "chapter": "第十章 淋巴系统",
+     "stem": "被称为肺门淋巴结的是",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45021_3228842",
+     "subject": "系统解剖学",
+     "system": "脉管系统 第二十一章 淋巴系统",
+     "bank": "school",
+     "stem": "被称为肺门淋巴结的是",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-013.json"
+    }
+   },
+   {
+    "stem": "颈外侧浅淋巴结沿下列哪条静脉排列",
+    "jg": {
+     "id": "4ee78107-9908-4993-a5dc-e78fcf671caf",
+     "subject": "系统解剖学",
+     "chapter": "第十章 淋巴系统",
+     "stem": "颈外侧浅淋巴结沿下列哪条静脉排列",
+     "ans": "B",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45021_591464",
+     "subject": "系统解剖学",
+     "system": "脉管系统 第二十一章 淋巴系统",
+     "bank": "school",
+     "stem": "颈外侧浅淋巴结沿下列哪条静脉排列",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-012.json"
+    }
+   },
+   {
+    "stem": "有关乳糜池的描述正确的是",
+    "jg": {
+     "id": "ed6146f4-b962-4c2a-b2e0-0765e34b4696",
+     "subject": "系统解剖学",
+     "chapter": "第十章 淋巴系统",
+     "stem": "有关乳糜池的描述正确的是",
+     "ans": "BCD",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45021_591455",
+     "subject": "系统解剖学",
+     "system": "脉管系统 第二十一章 淋巴系统",
+     "bank": "school",
+     "stem": "有关乳糜池的描述正确的是",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-012.json"
+    }
+   },
+   {
+    "stem": "听觉感受器位于",
+    "jg": {
+     "id": "399d840b-1bd6-47fd-bc23-fb5aab02a16c",
+     "subject": "系统解剖学",
+     "chapter": "第十三章 前庭蜗器",
+     "stem": "听觉感受器位于",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201011_11009_374148",
+     "subject": "生理学",
+     "system": "第九章 感觉器官的功能",
+     "bank": "school",
+     "stem": "听觉感受器位于",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/生理学/physiology-014.json"
+    }
+   },
+   {
+    "stem": "含有内淋巴的是",
+    "jg": {
+     "id": "3e544c14-5262-44a7-b730-843f490e2ec7",
+     "subject": "系统解剖学",
+     "chapter": "第十三章 前庭蜗器",
+     "stem": "含有内淋巴的是",
+     "ans": "E",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45023_3229070",
+     "subject": "系统解剖学",
+     "system": "感觉器 第二十三章 前庭蜗器",
+     "bank": "school",
+     "stem": "含有内淋巴的是",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-014.json"
+    }
+   },
+   {
+    "stem": "外淋巴位于",
+    "jg": {
+     "id": "ec94af1a-e2f0-4db5-a982-062f827cfa6d",
+     "subject": "系统解剖学",
+     "chapter": "第十三章 前庭蜗器",
+     "stem": "外淋巴位于",
+     "ans": "B",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45023_3229090",
+     "subject": "系统解剖学",
+     "system": "感觉器 第二十三章 前庭蜗器",
+     "bank": "school",
+     "stem": "外淋巴位于",
+     "ans": "D",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-014.json"
+    }
+   },
+   {
+    "stem": "位于延髓的核团是",
+    "jg": {
+     "id": "f2a536fc-8971-4c37-8ba0-48e0335c88f1",
+     "subject": "系统解剖学",
+     "chapter": "第十六章 中枢神经系统",
+     "stem": "位于延髓的核团是",
+     "ans": "D",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201013_22002_587395",
+     "subject": "神经病学",
+     "system": "第二章 神经系统的解剖、生理及病损的定位诊断",
+     "bank": "school",
+     "stem": "位于延髓的核团是",
+     "ans": "CDE",
+     "type": "multiple",
+     "source": "医考帮",
+     "file": "school/神经病学/subject-2b16ba3d894b-001.json"
+    }
+   },
+   {
+    "stem": "书写中枢位于",
+    "jg": {
+     "id": "765b8ab7-6433-4d5d-a708-a7c647710655",
+     "subject": "系统解剖学",
+     "chapter": "第十六章 中枢神经系统",
+     "stem": "书写中枢位于",
+     "ans": "C",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45026_592528",
+     "subject": "系统解剖学",
+     "system": "神经系统 第二十六章 中枢神经系统",
+     "bank": "school",
+     "stem": "书写中枢位于",
+     "ans": "A",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-017.json"
+    }
+   },
+   {
+    "stem": "小脑幕切迹与鞍背之间成一环形孔即小脑幕裂孔该孔之间有",
+    "jg": {
+     "id": "c61dddde-b616-48cf-9c42-f73557e88968",
+     "subject": "系统解剖学",
+     "chapter": "第十六章 中枢神经系统",
+     "stem": "小脑幕切迹与鞍背之间成一环形孔即小脑幕裂孔该孔之间有",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45026_3229213",
+     "subject": "系统解剖学",
+     "system": "神经系统 第二十六章 中枢神经系统",
+     "bank": "school",
+     "stem": "小脑幕切迹与鞍背之间成一环形孔即小脑幕裂孔该孔之间有",
+     "ans": "D",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-017.json"
+    }
+   },
+   {
+    "stem": "胼胝体",
+    "jg": {
+     "id": "8ee8195f-87fa-4812-9e05-eebec855f7ef",
+     "subject": "系统解剖学",
+     "chapter": "第十六章 中枢神经系统",
+     "stem": "胼胝体",
+     "ans": "ABE",
+     "type": "X",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201010_45026_592539",
+     "subject": "系统解剖学",
+     "system": "神经系统 第二十六章 中枢神经系统",
+     "bank": "school",
+     "stem": "胼胝体",
+     "ans": "D",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/系统解剖学/subject-3fae5da25391-017.json"
+    }
+   },
+   {
+    "stem": "关于腓总神经的描述错误的是",
+    "jg": {
+     "id": "8a2677d1-c074-462c-9801-71d4cafe0406",
+     "subject": "系统解剖学",
+     "chapter": "第十七章 周围神经系统",
+     "stem": "关于腓总神经的描述错误的是",
+     "ans": "D",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201012_37008_581407",
+     "subject": "局部解剖学",
+     "system": "第八章 下肢",
+     "bank": "school",
+     "stem": "关于腓总神经的描述错误的是",
+     "ans": "E",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/局部解剖学/subject-8d06e90d655e-002.json"
+    }
+   },
+   {
+    "stem": "关于胫神经的描述错误的是",
+    "jg": {
+     "id": "7fcf414a-6ac5-45b6-a4ad-830bfbb7c03b",
+     "subject": "系统解剖学",
+     "chapter": "第十七章 周围神经系统",
+     "stem": "关于胫神经的描述错误的是",
+     "ans": "A",
+     "type": "A1",
+     "src": "jiguang"
+    },
+    "iy": {
+     "id": "ykb_201012_37008_581409",
+     "subject": "局部解剖学",
+     "system": "第八章 下肢",
+     "bank": "school",
+     "stem": "关于胫神经的描述错误的是",
+     "ans": "C",
+     "type": "A1",
+     "source": "医考帮",
+     "file": "school/局部解剖学/subject-8d06e90d655e-002.json"
+    }
+   }
+  ]
+ },
+ "iyixueSourceBreakdown": [
+  {
+   "source": "医考帮",
+   "total": 67137,
+   "overlapWithJiguang": 7161,
+   "rate": 10.7
+  },
+  {
+   "source": "待整理来源",
+   "total": 8767,
+   "overlapWithJiguang": 8100,
+   "rate": 92.4
+  },
+  {
+   "source": "jg",
+   "total": 2804,
+   "overlapWithJiguang": 2801,
+   "rate": 99.9
+  },
+  {
+   "source": "2008年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 2,
+   "rate": 1.1
+  },
+  {
+   "source": "2009年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 1,
+   "rate": 0.6
+  },
+  {
+   "source": "2010年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 3,
+   "rate": 1.7
+  },
+  {
+   "source": "2011年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 3,
+   "rate": 1.7
+  },
+  {
+   "source": "2012年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 1,
+   "rate": 0.6
+  },
+  {
+   "source": "2013年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 1,
+   "rate": 0.6
+  },
+  {
+   "source": "2014年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 1,
+   "rate": 0.6
+  },
+  {
+   "source": "2015年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 1,
+   "rate": 0.6
+  },
+  {
+   "source": "2016年考研真题",
+   "total": 180,
+   "overlapWithJiguang": 4,
+   "rate": 2.2
+  },
+  {
+   "source": "2007年考研真题",
+   "total": 179,
+   "overlapWithJiguang": 4,
+   "rate": 2.2
+  },
+  {
+   "source": "2017年考研真题",
+   "total": 165,
+   "overlapWithJiguang": 0,
+   "rate": 0
+  },
+  {
+   "source": "2018年考研真题",
+   "total": 165,
+   "overlapWithJiguang": 2,
+   "rate": 1.2
+  },
+  {
+   "source": "2020年考研真题",
+   "total": 165,
+   "overlapWithJiguang": 0,
+   "rate": 0
+  },
+  {
+   "source": "2021年考研真题",
+   "total": 165,
+   "overlapWithJiguang": 1,
+   "rate": 0.6
+  },
+  {
+   "source": "2023年考研真题",
+   "total": 165,
+   "overlapWithJiguang": 0,
+   "rate": 0
+  },
+  {
+   "source": "2024年考研真题",
+   "total": 165,
+   "overlapWithJiguang": 0,
+   "rate": 0
+  },
+  {
+   "source": "2025年考研真题",
+   "total": 165,
+   "overlapWithJiguang": 0,
+   "rate": 0
+  },
+  {
+   "source": "2022年考研真题",
+   "total": 165,
+   "overlapWithJiguang": 0,
+   "rate": 0
+  },
+  {
+   "source": "2019年考研真题",
+   "total": 163,
+   "overlapWithJiguang": 1,
+   "rate": 0.6
+  },
+  {
+   "source": "2005年考研真题",
+   "total": 150,
+   "overlapWithJiguang": 5,
+   "rate": 3.3
+  },
+  {
+   "source": "2006年考研真题",
+   "total": 150,
+   "overlapWithJiguang": 6,
+   "rate": 4
+  }
+ ],
+ "byIyixueSubject": [
+  {
+   "subject": "内科学",
+   "total": 7711,
+   "overlap": 543,
+   "rate": 7,
+   "only": 7168
+  },
+  {
+   "subject": "外科学",
+   "total": 6027,
+   "overlap": 1606,
+   "rate": 26.6,
+   "only": 4421
+  },
+  {
+   "subject": "系统解剖学",
+   "total": 5440,
+   "overlap": 77,
+   "rate": 1.4,
+   "only": 5363
+  },
+  {
+   "subject": "生理学",
+   "total": 5369,
+   "overlap": 1817,
+   "rate": 33.8,
+   "only": 3552
+  },
+  {
+   "subject": "医学免疫学",
+   "total": 4807,
+   "overlap": 1598,
+   "rate": 33.2,
+   "only": 3209
+  },
+  {
+   "subject": "病理学",
+   "total": 4770,
+   "overlap": 1710,
+   "rate": 35.8,
+   "only": 3060
+  },
+  {
+   "subject": "儿科学",
+   "total": 3097,
+   "overlap": 136,
+   "rate": 4.4,
+   "only": 2961
+  },
+  {
+   "subject": "医学微生物学",
+   "total": 3026,
+   "overlap": 475,
+   "rate": 15.7,
+   "only": 2551
+  },
+  {
+   "subject": "妇产科学",
+   "total": 2920,
+   "overlap": 197,
+   "rate": 6.7,
+   "only": 2723
+  },
+  {
+   "subject": "生物化学与分子生物学",
+   "total": 2825,
+   "overlap": 180,
+   "rate": 6.4,
+   "only": 2645
+  },
+  {
+   "subject": "生物化学",
+   "total": 2536,
+   "overlap": 1973,
+   "rate": 77.8,
+   "only": 563
+  },
+  {
+   "subject": "诊断学",
+   "total": 2423,
+   "overlap": 165,
+   "rate": 6.8,
+   "only": 2258
+  },
+  {
+   "subject": "组织学与胚胎学",
+   "total": 2191,
+   "overlap": 131,
+   "rate": 6,
+   "only": 2060
+  },
+  {
+   "subject": "医学细胞生物学",
+   "total": 2049,
+   "overlap": 88,
+   "rate": 4.3,
+   "only": 1961
+  },
+  {
+   "subject": "病理生理学",
+   "total": 1943,
+   "overlap": 1026,
+   "rate": 52.8,
+   "only": 917
+  },
+  {
+   "subject": "药理学",
+   "total": 1756,
+   "overlap": 13,
+   "rate": 0.7,
+   "only": 1743
+  },
+  {
+   "subject": "预防医学",
+   "total": 1614,
+   "overlap": 12,
+   "rate": 0.7,
+   "only": 1602
+  },
+  {
+   "subject": "实验诊断",
+   "total": 1480,
+   "overlap": 1480,
+   "rate": 100,
+   "only": 0
+  },
+  {
+   "subject": "医学遗传学",
+   "total": 1347,
+   "overlap": 123,
+   "rate": 9.1,
+   "only": 1224
+  },
+  {
+   "subject": "外基",
+   "total": 1324,
+   "overlap": 1321,
+   "rate": 99.8,
+   "only": 3
+  },
+  {
+   "subject": "临床麻醉学",
+   "total": 1299,
+   "overlap": 5,
+   "rate": 0.4,
+   "only": 1294
+  },
+  {
+   "subject": "精神病学",
+   "total": 1257,
+   "overlap": 661,
+   "rate": 52.6,
+   "only": 596
+  },
+  {
+   "subject": "传染病学",
+   "total": 1208,
+   "overlap": 16,
+   "rate": 1.3,
+   "only": 1192
+  },
+  {
+   "subject": "医学影像学",
+   "total": 1148,
+   "overlap": 261,
+   "rate": 22.7,
+   "only": 887
+  },
+  {
+   "subject": "神经病学",
+   "total": 1139,
+   "overlap": 599,
+   "rate": 52.6,
+   "only": 540
+  },
+  {
+   "subject": "皮肤性病学",
+   "total": 1023,
+   "overlap": 502,
+   "rate": 49.1,
+   "only": 521
+  },
+  {
+   "subject": "医学心理学",
+   "total": 1015,
+   "overlap": 5,
+   "rate": 0.5,
+   "only": 1010
+  },
+  {
+   "subject": "中医学",
+   "total": 968,
+   "overlap": 1,
+   "rate": 0.1,
+   "only": 967
+  },
+  {
+   "subject": "卫生学",
+   "total": 935,
+   "overlap": 321,
+   "rate": 34.3,
+   "only": 614
+  },
+  {
+   "subject": "耳鼻咽喉头颈外科学",
+   "total": 883,
+   "overlap": 468,
+   "rate": 53,
+   "only": 415
+  },
+  {
+   "subject": "急诊与灾难医学",
+   "total": 845,
+   "overlap": 494,
+   "rate": 58.5,
+   "only": 351
+  },
+  {
+   "subject": "眼科学",
+   "total": 790,
+   "overlap": 2,
+   "rate": 0.3,
+   "only": 788
+  },
+  {
+   "subject": "人体寄生虫学",
+   "total": 773,
+   "overlap": 0,
+   "rate": 0,
+   "only": 773
+  },
+  {
+   "subject": "医学统计学",
+   "total": 746,
+   "overlap": 56,
+   "rate": 7.5,
+   "only": 690
+  },
+  {
+   "subject": "局部解剖学",
+   "total": 593,
+   "overlap": 11,
+   "rate": 1.9,
+   "only": 582
+  },
+  {
+   "subject": "流行病学",
+   "total": 505,
+   "overlap": 0,
+   "rate": 0,
+   "only": 505
+  },
+  {
+   "subject": "全科医学概论",
+   "total": 498,
+   "overlap": 0,
+   "rate": 0,
+   "only": 498
+  },
+  {
+   "subject": "医学伦理学",
+   "total": 442,
+   "overlap": 1,
+   "rate": 0.2,
+   "only": 441
+  },
+  {
+   "subject": "核医学",
+   "total": 413,
+   "overlap": 1,
+   "rate": 0.2,
+   "only": 412
+  },
+  {
+   "subject": "危重病医学",
+   "total": 379,
+   "overlap": 2,
+   "rate": 0.5,
+   "only": 377
+  },
+  {
+   "subject": "外科基础",
+   "total": 294,
+   "overlap": 9,
+   "rate": 3.1,
+   "only": 285
+  },
+  {
+   "subject": "口腔科学",
+   "total": 219,
+   "overlap": 1,
+   "rate": 0.5,
+   "only": 218
+  },
+  {
+   "subject": "介入放射学",
+   "total": 120,
+   "overlap": 0,
+   "rate": 0,
+   "only": 120
+  },
+  {
+   "subject": "法医学",
+   "total": 116,
+   "overlap": 0,
+   "rate": 0,
+   "only": 116
+  },
+  {
+   "subject": "医学人文",
+   "total": 16,
+   "overlap": 0,
+   "rate": 0,
+   "only": 16
+  },
+  {
+   "subject": "临床诊断学",
+   "total": 11,
+   "overlap": 11,
+   "rate": 100,
+   "only": 0
+  }
+ ],
+ "byJiguangSubject": [
+  {
+   "subject": "外科学（test）",
+   "total": 3592,
+   "overlap": 355,
+   "rate": 9.9,
+   "only": 3237
+  },
+  {
+   "subject": "临床诊断",
+   "total": 3150,
+   "overlap": 170,
+   "rate": 5.4,
+   "only": 2980
+  },
+  {
+   "subject": "生物化学",
+   "total": 2044,
+   "overlap": 1963,
+   "rate": 96,
+   "only": 81
+  },
+  {
+   "subject": "微生物",
+   "total": 2026,
+   "overlap": 478,
+   "rate": 23.6,
+   "only": 1548
+  },
+  {
+   "subject": "系统解剖学",
+   "total": 1908,
+   "overlap": 86,
+   "rate": 4.5,
+   "only": 1822
+  },
+  {
+   "subject": "神经病学",
+   "total": 1747,
+   "overlap": 616,
+   "rate": 35.3,
+   "only": 1131
+  },
+  {
+   "subject": "生理学",
+   "total": 1663,
+   "overlap": 1658,
+   "rate": 99.7,
+   "only": 5
+  },
+  {
+   "subject": "皮肤性病学",
+   "total": 1652,
+   "overlap": 507,
+   "rate": 30.7,
+   "only": 1145
+  },
+  {
+   "subject": "精神病学",
+   "total": 1629,
+   "overlap": 673,
+   "rate": 41.3,
+   "only": 956
+  },
+  {
+   "subject": "病理学",
+   "total": 1594,
+   "overlap": 1594,
+   "rate": 100,
+   "only": 0
+  },
+  {
+   "subject": "实验诊断",
+   "total": 1480,
+   "overlap": 1480,
+   "rate": 100,
+   "only": 0
+  },
+  {
+   "subject": "外基",
+   "total": 1342,
+   "overlap": 1338,
+   "rate": 99.7,
+   "only": 4
+  },
+  {
+   "subject": "急诊与灾难医学",
+   "total": 1328,
+   "overlap": 500,
+   "rate": 37.7,
+   "only": 828
+  },
+  {
+   "subject": "内科学",
+   "total": 1310,
+   "overlap": 32,
+   "rate": 2.4,
+   "only": 1278
+  },
+  {
+   "subject": "眼科学",
+   "total": 1304,
+   "overlap": 5,
+   "rate": 0.4,
+   "only": 1299
+  },
+  {
+   "subject": "医学免疫学",
+   "total": 1209,
+   "overlap": 1203,
+   "rate": 99.5,
+   "only": 6
+  },
+  {
+   "subject": "组胚",
+   "total": 1126,
+   "overlap": 138,
+   "rate": 12.3,
+   "only": 988
+  },
+  {
+   "subject": "耳鼻咽喉头颈外科学",
+   "total": 1023,
+   "overlap": 487,
+   "rate": 47.6,
+   "only": 536
+  },
+  {
+   "subject": "细胞生物学",
+   "total": 886,
+   "overlap": 91,
+   "rate": 10.3,
+   "only": 795
+  },
+  {
+   "subject": "病理生理学",
+   "total": 863,
+   "overlap": 863,
+   "rate": 100,
+   "only": 0
+  },
+  {
+   "subject": "外科学",
+   "total": 797,
+   "overlap": 796,
+   "rate": 99.9,
+   "only": 1
+  },
+  {
+   "subject": "马克思主义原理",
+   "total": 742,
+   "overlap": 0,
+   "rate": 0,
+   "only": 742
+  },
+  {
+   "subject": "传染病（test）",
+   "total": 627,
+   "overlap": 6,
+   "rate": 1,
+   "only": 621
+  },
+  {
+   "subject": "消化系统",
+   "total": 584,
+   "overlap": 234,
+   "rate": 40.1,
+   "only": 350
+  },
+  {
+   "subject": "医患沟通",
+   "total": 570,
+   "overlap": 0,
+   "rate": 0,
+   "only": 570
+  },
+  {
+   "subject": "野题",
+   "total": 485,
+   "overlap": 0,
+   "rate": 0,
+   "only": 485
+  },
+  {
+   "subject": "影像",
+   "total": 473,
+   "overlap": 259,
+   "rate": 54.8,
+   "only": 214
+  },
+  {
+   "subject": "近代史",
+   "total": 471,
+   "overlap": 0,
+   "rate": 0,
+   "only": 471
+  },
+  {
+   "subject": "卫生学",
+   "total": 466,
+   "overlap": 328,
+   "rate": 70.4,
+   "only": 138
+  },
+  {
+   "subject": "女性生殖系统",
+   "total": 464,
+   "overlap": 207,
+   "rate": 44.6,
+   "only": 257
+  },
+  {
+   "subject": "遗传",
+   "total": 448,
+   "overlap": 123,
+   "rate": 27.5,
+   "only": 325
+  },
+  {
+   "subject": "小儿外科学",
+   "total": 437,
+   "overlap": 0,
+   "rate": 0,
+   "only": 437
+  },
+  {
+   "subject": "内科学（test）",
+   "total": 367,
+   "overlap": 38,
+   "rate": 10.4,
+   "only": 329
+  },
+  {
+   "subject": "python",
+   "total": 358,
+   "overlap": 0,
+   "rate": 0,
+   "only": 358
+  },
+  {
+   "subject": "儿科疾病",
+   "total": 355,
+   "overlap": 125,
+   "rate": 35.2,
+   "only": 230
+  },
+  {
+   "subject": "心血管系统",
+   "total": 341,
+   "overlap": 145,
+   "rate": 42.5,
+   "only": 196
+  },
+  {
+   "subject": "军事理论",
+   "total": 328,
+   "overlap": 0,
+   "rate": 0,
+   "only": 328
+  },
+  {
+   "subject": "精神、神经系统",
+   "total": 312,
+   "overlap": 145,
+   "rate": 46.5,
+   "only": 167
+  },
+  {
+   "subject": "呼吸系统",
+   "total": 298,
+   "overlap": 105,
+   "rate": 35.2,
+   "only": 193
+  },
+  {
+   "subject": "医学统计学",
+   "total": 285,
+   "overlap": 56,
+   "rate": 19.6,
+   "only": 229
+  },
+  {
+   "subject": "伦理",
+   "total": 256,
+   "overlap": 2,
+   "rate": 0.8,
+   "only": 254
+  },
+  {
+   "subject": "儿童医院社区实习",
+   "total": 244,
+   "overlap": 0,
+   "rate": 0,
+   "only": 244
+  },
+  {
+   "subject": "泌尿系统（含男性生殖系统）",
+   "total": 244,
+   "overlap": 91,
+   "rate": 37.3,
+   "only": 153
+  },
+  {
+   "subject": "代谢、内分泌系统",
+   "total": 214,
+   "overlap": 69,
+   "rate": 32.2,
+   "only": 145
+  },
+  {
+   "subject": "运动系统",
+   "total": 198,
+   "overlap": 94,
+   "rate": 47.5,
+   "only": 104
+  },
+  {
+   "subject": "血液系统",
+   "total": 141,
+   "overlap": 39,
+   "rate": 27.7,
+   "only": 102
+  },
+  {
+   "subject": "思想道德与法治",
+   "total": 120,
+   "overlap": 0,
+   "rate": 0,
+   "only": 120
+  },
+  {
+   "subject": "医用物理学",
+   "total": 94,
+   "overlap": 2,
+   "rate": 2.1,
+   "only": 92
+  },
+  {
+   "subject": "核医学",
+   "total": 84,
+   "overlap": 0,
+   "rate": 0,
+   "only": 84
+  },
+  {
+   "subject": "风湿免疫性疾病",
+   "total": 64,
+   "overlap": 8,
+   "rate": 12.5,
+   "only": 56
+  },
+  {
+   "subject": "儿科学",
+   "total": 48,
+   "overlap": 1,
+   "rate": 2.1,
+   "only": 47
+  }
+ ]
+}

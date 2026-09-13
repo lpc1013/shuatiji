@@ -1,0 +1,106 @@
+{
+ "version": "v4-20260912",
+ "generatedAt": "2026-09-12T21:10:00+08:00",
+ "note": "三源题库（极光 / iyixue 扩展 / 自建）统一字段字典。归一发生在 merged2 层，向下游 packs → 归一化 → site/data 逐层精简。极光侧缺省的字段一律「不写 null」（稀疏），下游一律用 `?? ''` 兜底。",
+ "layers": [
+  { "key": "merged2", "path": "题库调研/merged2/by_subject/", "role": "中间层：合并去重 + 冲突裁决的唯一真相源；字段最全（含结构性解析与溯源），不分发前端" },
+  { "key": "packs", "path": "题库调研/packs/<学期>/{极光,扩展}/<学科>.json", "role": "标准题库包：全语义字段；解析另存 explain/<学科>.json 按需加载" },
+  { "key": "normalized", "path": "题库调研/归一化/", "role": "分类维度字典 + 全库 JSONL/CSV 导出，供检索/分析" },
+  { "key": "site", "path": "site/data/packs/<学期>/<sid>-<jg|ext>.json", "role": "前端分片：短字段名，体积敏感；首屏仅 manifest.json（约 3.6KB）" }
+ ],
+ "idPolicy": {
+  "jiguang": "极光原始 UUID 不变；同题其它 id 进 flags.aliasIds；主 id 优先采用「上一版 packs 正在用的那个」，保证用户进度不失效",
+  "extension": "ext-<sha1(题干归一化+选项指纹)前16位>（packs 层）；归一化层再重排为 ext-<学科代号>-<6位序号>，映射持久化于 归一化/id_map.json",
+  "redLines": [
+   "改题目 id → 该 id 的错题/收藏/复习记录成孤儿",
+   "改章节 id / 章节名（不走 chapterAliases 迁移链）→ 分章正确率与断点会话丢",
+   "合并去重删题 → 被删 id 的进度丢（现有 aliasIds 已兜住极光内部同题多 id）"
+  ]
+ },
+ "discarded": [
+  { "field": "bank_id", "source": "极光", "reason": "全库为 null，无信息量（用户确认丢弃）" },
+  { "field": "bank", "source": "iyixue", "reason": "仅 school|kaoyan 二分，已由 sourceDetail 表达" },
+  { "field": "is_active/is_favorite/is_answered/is_correct/user_answer/is_mastered", "source": "极光", "reason": "爬取时带出的登录用户私有状态，对我方无用" },
+  { "field": "explanation（极光）", "source": "极光", "reason": "95% 为空（41519/43791），站点解析实际来自 ai_explanation" },
+  { "field": "tags（极光）", "source": "极光", "reason": "100% 为空；iyixue 侧同名 tags 有值，语义合并到统一 tags" },
+  { "field": "images/local_images（极光）", "source": "极光", "reason": "99.6% 为空；仅保留 img（原图张数）用于筛选" },
+  { "field": "ext（extensions）", "source": "iyixue", "reason": "溯源用（原文题号 / 教材来源），体积大且前端不消费；只留 merged2 中间层，需要时按 id 回查" }
+ ],
+ "explainFormat": {
+  "note": "解析不再是「一坨文本」。packs/site 的 explain/<学科>.json = {题目id: 富解析}；富解析 {bf?, b?, t?}。旧版纯文本（字符串）前端仍兼容，但当前产物已全部为富解析对象。",
+  "shape": {
+   "bf": "一句话解析（来自 briefExplanation）",
+   "b": "块数组，见 blocks",
+   "t": "纯文本回退（仅当原文本没有 `### 小节` 标题时出现，当前 0 条）"
+  },
+  "blocks": {
+    "shape": "[type, sec, title, …payload]（用数组而非对象：字段名省下来直接进前端分片体积）",
+    "type": { "p": "段落 payload=text", "c": "提示框 payload=text,tone", "l": "列表 payload=[item]", "tb": "表格 payload=[列名],[[单元格]]" },
+    "sec": { "an": "考点解析", "ab": "答案依据", "pf": "易错点", "cn": "临床与操作要点", "tx": "教材出处" },
+    "mergeRule": "以源站 explanationBlocks 为主（已带类型），再用文本 `### 小节` 补全其未覆盖的小节（源站 blocks 不含「教材出处」）；两者按 sec 去重后合并"
+  },
+  "coverage": {
+   "三科条目": 14696,
+   "块总数": 36699,
+   "块类型": { "p": 33945, "tb": 2135, "c": 242, "l": 377 },
+   "小节": { "an": 22262, "ab": 4837, "pf": 4828, "tx": 4725, "cn": 47 },
+   "一句话解析": 4855
+  },
+  "consumer": "site/app.js → explainInner()/expBlockHtml()；表格在 760px 以下转卡片（td::before 读 data-label）"
+ },
+ "fields": [
+  { "semantic": "题目 id", "jg": "id (UUID)", "yx": "id (ykb_/kaoyan_*)", "merged2": "id", "packs": "id", "norm": "id / oldId / aliases", "site": "id", "type": "string", "note": "三条源各自保留原 id，绝不互转" },
+  { "semantic": "题型", "jg": "display_type (A1/A2/A3/X/F)", "yx": "type (A1/A2/A3/multiple)", "merged2": "type", "packs": "type", "norm": "type / kind", "site": "t", "type": "string", "note": "multiple → 多选；X ↔ 多选 等价" },
+  { "semantic": "题干", "jg": "content", "yx": "question", "merged2": "stem", "packs": "stem", "norm": "stem", "site": "q", "type": "string", "note": "字段名三源不同，此为本项目最大坑" },
+  { "semantic": "选项", "jg": "options (对象 {A:..})", "yx": "options (数组 [\"A. ..\"])", "merged2": "options (对象)", "packs": "options", "norm": "options", "site": "o", "type": "object", "note": "iyixue 数组在 merge2 层转对象并剥 `A. ` 前缀" },
+  { "semantic": "答案", "jg": "correct_answer", "yx": "answer", "merged2": "answer + answerResolved + answerRule", "packs": "answer", "norm": "answer", "site": "a", "type": "string", "note": "answerResolved 是裁决后答案，原始 answer 不覆盖" },
+  { "semantic": "解析（正文）", "jg": "ai_explanation（28,734 有值）", "yx": "explanation（99.7% 有值）", "merged2": "explanation", "packs": "explain/<学科>.json", "norm": "explain/<sid>.jsonl", "site": "explain/<学期>/<sid>.json", "type": "string", "note": "不进主包，做题时懒加载" },
+  { "semantic": "结构化解析块", "jg": "（无）", "yx": "explanationBlocks（99.73%，80,476 条）", "merged2": "explanationBlocks", "packs": "explain/<学科>.json → b[]", "norm": "（不入）", "site": "explain/<学期>/<sid>.json → b[]", "type": "array", "note": "v3 之前从未透传前端，属纯损失。现以紧凑数组形式并入富解析，见 explainFormat" },
+  { "semantic": "一句话解析", "jg": "（无）", "yx": "briefExplanation（12.5%，10,232 条）", "merged2": "briefExplanation", "packs": "explain/<学科>.json → bf", "norm": "（不入）", "site": "explain/<学期>/<sid>.json → bf", "type": "string", "note": "解析区置顶展示；三科共 4,855 条" },
+  { "semantic": "病例摘要", "jg": "（无）", "yx": "caseInfo（3.15%）", "merged2": "caseInfo", "packs": "caseInfo", "norm": "caseInfo", "site": "ci", "type": "string", "note": "A2/A3 题干的前置情境；缺失时题干只是「该患者最可能的诊断是」这类不可读小问。主记录无值时从同组其它记录借" },
+  { "semantic": "难度", "jg": "difficulty (1–5，0=未标)", "yx": "difficulty（全 \"medium\"，无区分度→弃）", "merged2": "difficulty", "packs": "d", "norm": "difficulty", "site": "d", "type": "number", "note": "只保留极光侧真实难度" },
+  { "semantic": "年份", "jg": "（无）", "yx": "year（26%）+ questionSource 内嵌年份", "merged2": "nativeYear / examYear", "packs": "y / examYear", "norm": "year", "site": "y / ey", "type": "number", "note": "examYear 此前在 site 层被丢弃，本次补回" },
+  { "semantic": "题目出处", "jg": "（无；source 是录入方式）", "yx": "questionSource（24 种）", "merged2": "origin / sourceLabel / sourceTags", "packs": "qs", "norm": "qsource / qsourceKind", "site": "qs", "type": "string", "note": "极光 source=录入方式(Excel/Word导入)，与 iyixue questionSource 语义不同，两者都留" },
+  { "semantic": "系统归类", "jg": "（无）", "yx": "system（自由文本章节名）", "merged2": "chapter（原始）", "packs": "sys", "norm": "part / system / chapter", "site": "sys", "type": "string", "note": "iyixue 的 system 是自由文本 → 需 canonChapters 归一，否则乱序+同章异名" },
+  { "semantic": "章节归属", "jg": "chapter_id (UUID，稳定)", "yx": "system（自由文本名）", "merged2": "chapter", "packs": "chapter / cid", "norm": "chapter / chapterId", "site": "c / cid", "type": "string", "note": "极光用 UUID 直通（进度兼容）；扩展用 `x<章名>`，旧名→新名映射写 manifest.chapterAliases" },
+  { "semantic": "标签", "jg": "tags（100% 空）", "yx": "tags（15.6%，12,866 条）", "merged2": "tags", "packs": "tags", "norm": "（并入 tags 维度）", "site": "tg", "type": "array", "note": "旧 merge2 误用 knowledgePoints（全库仅 1 条有值）当 tags，等于丢光；已修正为 q.tags" },
+  { "semantic": "建议标签", "jg": "（无）", "yx": "suggestedTags（10.1%，8,346 条）", "merged2": "suggestedTags", "packs": "suggestedTags", "norm": "—", "site": "stg", "type": "array", "note": "本次新增" },
+  { "semantic": "抓取来源类型", "jg": "（无）", "yx": "sourceType (network/contribution/legacy)", "merged2": "sourceType", "packs": "sourceType", "norm": "—", "site": "st", "type": "string", "note": "本次新增；用于识别污染源（contribution=贡献题，历史上有 22 题垃圾选项）" },
+  { "semantic": "站点统计", "jg": "total_answer_count / total_correct_count / total_favorite_count / comment_count / note_count", "yx": "（无）", "merged2": "（仅用于裁决）", "packs": "n / ac / fv", "norm": "stats", "site": "n / ac / fv", "type": "number", "note": "极光站真实热度与正确率，前端筛选唯一来源" },
+  { "semantic": "原图张数", "jg": "images.length", "yx": "（无）", "merged2": "—", "packs": "img", "norm": "img", "site": "img", "type": "number", "note": "仅 164 题有图" },
+  { "semantic": "溯源扩展", "jg": "（无）", "yx": "extensions (examQno/textSource/originalQuestionType)", "merged2": "ext", "packs": "（不入包）", "norm": "（不入包）", "site": "（不入包）", "type": "object", "note": "要溯源原始题号（numb/cls/unit）从 merged2 取" },
+  { "semantic": "版本号", "jg": "（无）", "yx": "questionRevision (qv1-*)", "merged2": "questionRevision", "packs": "questionRevision", "norm": "—", "site": "questionRevision", "type": "string", "note": "95.65% 有值（77,926 条）" }
+ ],
+ "reservedFields": {
+  "note": "iyixue 预留 schema 位。当前 6 个全空、2 个仅 1 条、memoryCardMeta 为壳值，但「后续接口会填」→ 通道必须保留。稀疏策略：有值才写、壳值不写（否则 1.5 万题白涨约 0.7MB）；下游一律 `?? ''` 兜底。通道保留指的是代码路径，不是把壳值物理落盘。questionRevision 只在 merged2/packs，site 层有意不带（前端暂不消费，占 0.3MB）。",
+  "fields": [
+   { "name": "mnemonic", "type": "string", "nonEmpty": 0, "status": "全空", "purpose": "记忆口诀" },
+   { "name": "knowledgePoint", "type": "string", "nonEmpty": 1, "status": "近全空", "purpose": "知识点单值" },
+   { "name": "knowledgePoints", "type": "array", "nonEmpty": 1, "status": "近全空", "purpose": "知识点列表" },
+   { "name": "optionExplanations", "type": "array", "nonEmpty": 0, "status": "全空（78,708 题有此键）", "purpose": "逐选项解析" },
+   { "name": "reasoningSteps", "type": "array", "nonEmpty": 0, "status": "全空", "purpose": "推理步骤" },
+   { "name": "frequencyLevel", "type": "string", "nonEmpty": 0, "status": "全空", "purpose": "考频等级" },
+   { "name": "studyPoints", "type": "array", "nonEmpty": 0, "status": "全空", "purpose": "学习要点" },
+   { "name": "memoryCards", "type": "array", "nonEmpty": 0, "status": "全空", "purpose": "记忆卡片" },
+   { "name": "memoryCardMeta", "type": "object", "nonEmpty": 78708, "status": "壳值（{schemaVersion:1,generator,generatedAt:\"\"}）", "purpose": "记忆卡片元信息" }
+  ]
+ },
+ "changedInV4": [
+  "build_packs.mjs：explain/<学科>.json 由「{id: 文本}」升级为「{id: 富解析}」——源站 explanationBlocks（带类型）为主 + 文本 `### 小节` 补全其未覆盖的小节（教材出处 4,725 条），compactBlock/blocksFromText 两个纯函数实现",
+  "build_packs.mjs：预留字段改「有值才写」，壳值（memoryCardMeta = {schemaVersion,generator,generatedAt:\"\"}）不再进包——省约 0.7MB 且不损任何信息",
+  "build_packs.mjs：兜底补齐路径同步改用 hasRealValue（原判据 `!= null` 会把壳值也带回来）",
+  "build_site_data.mjs：RESERVED_FIELDS 去掉 questionRevision（前端不消费，0.3MB），预留 9 个；manifest 新增 explainHelp 说明富解析格式",
+  "site/app.js：新增 explainInner/expBlockHtml/reservedBlocksHtml/qChipsHtml/TYPE_FULL 与 richToText；ensureExplain 同时注入富解析 q.exp 与派生纯文本 q.explanation（AI 上下文仍可用）",
+  "site/features.js：新增 weakTags/kpCardHtml/kpDrill（tags 聚合 → 最弱知识点 Top3，可一键组卷）；组卷预览改为「题量 + 预计时长」，0 命中时指出最紧的限制条件",
+  "site/styles.css：解析小节卡片 / 表格 / callout / 折叠卡；tabular-nums、正文 78ch + 1.85、760px 表格转卡片、触控 ≥44px、focus-visible、prefers-reduced-motion",
+  "site/sw.js：Service Worker 网络优先 + 版本化缓存名，取代手改 ?v=；index.html 注册",
+  "验证：verify_schema_unified 33 → 39 项（新增富解析断言）、verify_jsdom 32 → 64 项"
+ ],
+ "changedInV3": [
+  "merge2.mjs：iyixue 侧补回 explanationBlocks / briefExplanation / suggestedTags / sourceType / nativeYear / ext + 9 个预留字段；修正 tags 误用 knowledgePoints 的 bug",
+  "merge2.mjs：移除对已删除 site/data/data.js 的依赖，自建题改读持久语料 题库调研/oursite_source.json",
+  "build_packs.mjs：siteIds 基线改读「上一版 packs」（原读 data.js 失效会导致 id 漂移）；caseInfo/tags/suggestedTags/sourceType/预留字段入包；兜底逻辑同步改造",
+  "build_site_data.mjs：slim 透传 ci/ey/tg/stg/st + 预留字段（ey 此前被丢弃）",
+  "验证：merged2 重建为纯增量（id 与答案零变化）；site 三科 14877 → 14880，id 100% 命中 packs"
+ ]
+}

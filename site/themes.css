@@ -1,0 +1,125 @@
+/* 刷题记 · 背景主题层（2026-09-13）
+ * 只改「底色 / 纹理 / 主色 / 阴影」四类 token —— 组件样式一律不动，
+ * 所以任何主题下卡片、列表、按钮的排布都不变，只换气质。
+ *
+ * 用法：真实站点把 data-bg 挂在 <body>；预览页挂在手机壳 <div data-bg="...">。
+ * 因为 token 用自定义属性继承，两种挂法同一条 CSS 都成立。
+ *
+ * 暗色优先：所有主题规则都带 :not(.dark)，开了暗色模式即回到暗色 token，
+ * 不让背景主题和暗色打架（暗色下只保留一份干净配色）。
+ */
+
+/* ============ 0. 主题色板（缩略图 / 选择器用，不依赖当前主题） ============ */
+.thm{width:100%;height:46px;border-radius:10px;border:1px solid #dfe4ee;position:relative;overflow:hidden;display:block;}
+.thm::after{content:'';position:absolute;left:8px;right:8px;bottom:7px;height:16px;border-radius:5px;background:rgba(255,255,255,.72);box-shadow:0 1px 3px rgba(31,39,51,.10);}
+.thm i{position:absolute;left:8px;top:8px;width:34px;height:7px;border-radius:99px;display:block;}
+.thm.t-classic{background:linear-gradient(160deg,#e9efff,#f7f9ff);} .thm.t-classic i{background:#4f6ef7;}
+.thm.t-grid{background:#faf6f0;background-image:repeating-linear-gradient(to bottom,transparent 0 7px,rgba(154,91,50,.18) 7px 8px);} .thm.t-grid i{background:#9a5b32;}
+.thm.t-cn{background:#f6f1e6;background-image:radial-gradient(circle at 78% 22%,rgba(168,64,47,.10),transparent 46%);} .thm.t-cn i{background:#a8402f;}
+.thm.t-ink{background:linear-gradient(160deg,#e6eff0,#f4f8f7);background-image:radial-gradient(90% 60% at 8% 0%,rgba(60,111,120,.16),transparent 62%);} .thm.t-ink i{background:#3c6f78;}
+
+/* ============ 1. 经典蓝白（默认，:root 即此套，无需覆盖） ============ */
+/* 只补一条：默认底色略带一点竖向渐层，避免大面积死白 */
+[data-bg="classic"]:not(.dark) .view,
+[data-bg="classic"]:not(.dark) .player{
+  background-image:linear-gradient(180deg,rgba(79,110,247,.045),transparent 240px);
+}
+
+/* ============ 2. 横线格（练习本 / 信纸） ============
+ * 要点：横线画在 .view 上，卡片必须**半透明**，否则不透明白卡把横线整片盖住，
+ * 只剩卡与卡之间的缝里露出几条线 —— 那就是「贴图盖上去」的观感来源。
+ * 卡片透明后横线穿过卡片，正文行高再锁到与横线同距（30px），字就真的踩在线上。 */
+[data-bg="grid"]:not(.dark){
+  /* 纸质暖白：参考 iyixue paper 主题（#faf6f0/#fffdf9/#4d392b/#e4d5c3/#9a5b32），
+     保留横线练习本机制，只把色温从冷蓝换成暖纸 */
+  --bg:#faf6f0; --surface:rgba(255,253,249,.58); --surface2:rgba(245,237,226,.74);
+  --border:rgba(196,170,138,.40); --text:#4d392b; --muted:#846f5e;
+  --primary:#9a5b32; --primary-d:#75401f; --primary-soft:#f3e3d4;
+  --grid-rule:rgba(154,91,50,.18); --grid-margin:rgba(173,81,70,.28);
+  --shadow:0 2px 10px rgba(91,62,37,.06);
+}
+/* 双红线装订（一粗一细，贴近真实练习本）+ 30px 横线；local 让纹理跟着内容滚 */
+[data-bg="grid"]:not(.dark) .view,
+[data-bg="grid"]:not(.dark) .player{
+  background-attachment:local;
+  background-image:
+    linear-gradient(to right,
+      transparent 0 24px,
+      rgba(229,72,77,.26) 24px 25px,
+      transparent 25px 31px,
+      rgba(229,72,77,.13) 31px 32px,
+      transparent 32px),
+    repeating-linear-gradient(to bottom,transparent 0 29px,var(--grid-rule) 29px 30px);
+}
+/* 卡片退成「本子上的一块淡纸」：无边框、无投影、左侧让开装订线 */
+[data-bg="grid"]:not(.dark) .card{
+  background:var(--surface);
+  border:none;border-radius:3px;box-shadow:none;
+  padding:14px 14px 14px 34px;
+}
+[data-bg="grid"]:not(.dark) .card + .card{margin-top:12px;}
+/* 正文踩线：卡片内常规文本行高 = 横线间距 */
+[data-bg="grid"]:not(.dark) .card p,
+[data-bg="grid"]:not(.dark) .card .muted,
+[data-bg="grid"]:not(.dark) .card li,
+[data-bg="grid"]:not(.dark) .card .eng-ex,
+[data-bg="grid"]:not(.dark) .card .eng-pm{line-height:30px;}
+[data-bg="grid"]:not(.dark) .exp-p{line-height:30px;}  /* B22：解析正文也踩横线，与卡片内文本同距 */
+/* 顶栏 / 底栏回到近实色，别让横线穿过它们 */
+[data-bg="grid"]:not(.dark) .topbar,
+[data-bg="grid"]:not(.dark) .tabbar{
+  background:rgba(250,246,240,.95);
+  -webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);
+}
+/* h3 像写在纸上的批注：下方一条细线 */
+[data-bg="grid"]:not(.dark) .card h3{border-bottom:1px dashed var(--border);padding-bottom:6px;}
+[data-bg="grid"]:not(.dark) .modal-box .card{border:1px solid var(--border);box-shadow:var(--shadow);padding:14px;}  /* B23：弹层内卡片不继承横线主题的装订线位移 */
+
+/* ============ 3. 中国风（宣纸 · 朱砂 · 云纹） ============ */
+[data-bg="cn"]:not(.dark){
+  --bg:#f6f1e6; --surface:#fffcf5; --surface2:#f1e9da;
+  --text:#2c2721; --muted:#8c8271; --border:#e5dbc6;
+  --primary:#a8402f; --primary-d:#8a3225; --primary-soft:#f7e7e0;
+  --ok:#2f7d5a; --ok-soft:#e6f1ea; --bad:#b93a34; --bad-soft:#f8e5e2;
+  --warn:#b3822a; --gold:#b8860b;
+  --shadow:0 3px 14px rgba(90,66,40,.09);
+}
+[data-bg="cn"]:not(.dark) .view,
+[data-bg="cn"]:not(.dark) .player{
+  background-attachment:local;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='72' height='72' viewBox='0 0 72 72'%3E%3Cg fill='none' stroke='%23a8402f' stroke-opacity='.075' stroke-width='1.1' stroke-linecap='round'%3E%3Cpath d='M10 36c0-7 6-13 13-13s13 6 13 13-6 13-13 13'/%3E%3Ccircle cx='52' cy='36' r='8'/%3E%3Cpath d='M36 10h-4M36 62h-4'/%3E%3C/g%3E%3C/svg%3E");
+}
+/* 宣纸质感：卡片不投影、描边用暖色细线；主色按钮改朱砂渐变 */
+[data-bg="cn"]:not(.dark) .card{box-shadow:none;border-color:#e8dfcc;}
+[data-bg="cn"]:not(.dark) .hero{
+  background:linear-gradient(135deg,#a8402f,#7d2c21);
+  box-shadow:0 4px 16px rgba(120,50,35,.22);
+}
+/* 底栏加一条朱砂细线，收口 */
+[data-bg="cn"]:not(.dark) .tabbar{border-top:1px solid #e0d3bb;box-shadow:0 -1px 0 rgba(168,64,47,.10);}
+[data-bg="cn"]:not(.dark) .brand{letter-spacing:2px;}
+
+/* ============ 4. 水墨青岚（黛青 · 晕染 · 护眼） ============ */
+[data-bg="ink"]:not(.dark){
+  --bg:#eaf1f1; --surface:#ffffff; --surface2:#e6eef0;
+  --text:#1f2d2c; --muted:#79898a; --border:#dbe6e7;
+  --primary:#3c6f78; --primary-d:#2e5860; --primary-soft:#e2eef0;
+  --ok:#2c8a6a; --ok-soft:#e2f2ec; --bad:#c4544f; --bad-soft:#f9e8e6;
+  --shadow:0 5px 20px rgba(31,56,58,.09);
+}
+[data-bg="ink"]:not(.dark) .view,
+[data-bg="ink"]:not(.dark) .player{
+  background-image:
+    radial-gradient(120% 62% at 10% -4%,rgba(60,111,120,.13),transparent 62%),
+    radial-gradient(86% 46% at 104% 16%,rgba(120,152,143,.13),transparent 60%),
+    radial-gradient(72% 44% at 18% 104%,rgba(60,111,120,.09),transparent 62%);
+  background-repeat:no-repeat;
+}
+[data-bg="ink"]:not(.dark) .hero{
+  background:linear-gradient(135deg,#3c6f78,#274b52);
+  box-shadow:0 6px 22px rgba(39,75,82,.25);
+}
+[data-bg="ink"]:not(.dark) .card{backdrop-filter:saturate(1.02);}
+
+/* 暗色模式：不管选了哪种背景，都回到暗色 token（纹理一并撤掉，避免暗底上浮脏纹） */
+body.dark .view,body.dark .player{background-image:none;}

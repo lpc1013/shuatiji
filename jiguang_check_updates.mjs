@@ -4,7 +4,13 @@ import fs from 'fs';
 import https from 'https';
 import path from 'path';
 
-const TOKEN = process.env.JIGUANG_TOKEN || '';
+// git-bash 下 `VAR=val node x.mjs` 的 env 前缀进不了 node 进程 -> 支持 argv 传 JWT 或读 jiguang_token.txt
+const TOKEN = (() => {
+  const i = process.argv.findIndex(a => typeof a === 'string' && a.startsWith('eyJ') && a.split('.').length === 3);
+  if (i >= 0) { const t = process.argv[i]; process.argv.splice(i, 1); return t; }
+  if (process.env.JIGUANG_TOKEN) return process.env.JIGUANG_TOKEN;
+  try { return fs.readFileSync(path.join(process.cwd(), 'jiguang_token.txt'), 'utf8').trim(); } catch (e) { return ''; }
+})();
 // 2026-07-20 起 API 已从 http://ji-guang.top 迁移到独立域名 https://api.ji-guang.top
 // 学科列表为公开接口（无需鉴权）；章节/题目接口才需有效的 JWT。
 const BASE = 'https://api.ji-guang.top/api/v1';
@@ -45,7 +51,7 @@ function walk(dir, acc) {
     if (e.isDirectory()) {
       if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
       walk(fp, acc);
-    } else if (/^极光_.*\.json$/.test(e.name)) acc.push(fp);
+    } else if (/^极光_.*\.json$/.test(e.name) && !/\.bak_/.test(e.name)) acc.push(fp);  // 排除修复备份, 否则会爬进 .bak_ 旧文件
   }
   return acc;
 }
@@ -69,7 +75,7 @@ async function discover() {
     const d = (await req(`/user/subjects/?skip=${skip}&limit=${limit}`)).data;
     const items = d.items || d;
     out.push(...items);
-    if (!d.has_more) break;
+    if (!d.has_more || !items.length || out.length > 500) break;   // 防空转死循环
     skip += limit;
     await sleep(200);
   }

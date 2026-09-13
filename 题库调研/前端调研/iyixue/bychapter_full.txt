@@ -1,0 +1,408 @@
+- link "跳到主要内容" [ref=e1]
+- complementary "主导航"
+  - link "乐学医题 临床医学学生专属题库" [ref=e2]
+    - strong
+      - StaticText "乐学医题"
+    - StaticText "临床医学学生专属题库"
+  - group "切换题库"
+    - button "本科校题库" [ref=e9]
+    - button "考研西综" [ref=e10]
+  - navigation "桌面导航" [ref=e3]
+    - link "首页" [ref=e11]
+      - StaticText "首页"
+    - link "题库" [ref=e12]
+      - StaticText "题库"
+    - link "模拟考试" [ref=e13]
+      - StaticText "模拟考试"
+    - link "错题本" [ref=e14]
+      - StaticText "错题本"
+    - link "收藏题" [ref=e15]
+      - StaticText "收藏题"
+    - link "我的" [ref=e16]
+      - StaticText "我的"
+  - sectionfooter
+    - link "科研（在新标签页打开）" [ref=e17]
+      - StaticText "科研"
+- banner
+  - search "搜索两类题库"
+    - searchbox "搜索题目、章节、知识点" [ref=e18]
+  - button "登录" [ref=e4]
+  - link "注册" [ref=e5]
+- main
+  - sectionheader
+    - heading "本科校题库" [level=1, ref=e19]
+    - LabelText
+      - StaticText "当前练习范围"
+      - combobox "当前练习范围" [expanded=false, ref=e77]: 全部来源 · 78708
+        - MenuListPopup
+          - option "全部来源 · 78708" [selected, ref=e128]
+          - option "待整理来源 · 8767" [ref=e129]
+          - option "社区上传贰 · 67137" [ref=e130]
+          - option "社区上传壹 · 2804" [ref=e131]
+    - button "高级组题" [ref=e20]
+  - region "练习入口" [ref=e6]
+    - article
+      - heading "开始今天的练习" [level=2, ref=e24]
+      - paragraph
+        - StaticText "选择一门学科，按章节开始刷题"
+      - StaticText "练习记录会自动保存在当前账号或本机"
+      - button "选择学科" [ref=e25]
+    - button "按章节练习 选择学科章节 逐题练习" [ref=e21]
+      - heading "按章节练习" [level=2, ref=e26]
+      - paragraph
+        - StaticText "选择学科章节"
+        - LineBreak "\n"
+        - StaticText "逐题练习"
+    - link "错题复习 回顾错误题目 巩固易错知识点" [ref=e22]
+      - heading "错题复习" [level=2, ref=e27]
+      - paragraph
+        - StaticText "回顾错误题目"
+        - LineBreak "\n"
+        - StaticText "巩固易错知识点"
+    - button "随机组题 选择范围与题量 生成练习试卷" [ref=e23]
+      - heading "随机组题" [level=2, ref=e28]
+      - paragraph
+        - StaticText "选择范围与题量"
+        - LineBreak "\n"
+        - StaticText "生成练习试卷"
+  - region "按学科与章节" [ref=e7]
+    - generic
+      - StaticText "按年级"
+      - group "按年级筛选"
+        - button "全部" [ref=e78]
+        - button "大一" [ref=e79]
+        - button "大二" [ref=e80]
+        - button "大三" [ref=e81]
+        - button "大四" [ref=e82]
+    - LabelText
+      - StaticText "筛选学科名称"
+      - searchbox "筛选学科名称" [ref=e29]
+    - sectionheader
+      - heading "按学科与章节" [level=2, ref=e30]
+      - paragraph
+        - StaticText "选择学科进入章节列表，开始练习或组题"
+      - status
+        - StaticText "45 个学科入口"
+    - generic
+      - button "01 诊断学 11 题 · 已作答 0 题 共 2 个章节 作答 0%" [ref=e31]
+        - heading "01 诊断学" [level=3, ref=e83]
+          - StaticText "01诊断学"
+        - paragraph
+          - StaticText "11 题 · 已作答 0 题"
+        - StaticText "共 2 个章节"
+        - StaticText "作答 0%"
+      - button "02 病理生理学 1,943 题 · 已作答 0 题 共 27 个章节 作答 0%" [ref=e32]
+        - heading "02 病理生理学" [level=3, ref=e84]
+          - StaticText "02病理生理学"
+        - paragraph
+          - StaticText "1,943 题 · 已作答 0 题"
+        - StaticText "共 27 个章节"
+        - StaticText "作答 0%"
+      - button "03 病理学 4,183 题 · 已作答 0 题 共 20 个章节 作答 0%" [ref=e33]
+        - heading "03 病理学" [level=3, ref=e85]
+          - StaticText "03病理学"
+        - paragraph
+          - StaticText "4,183 题 · 已作答 0 题"
+        - StaticText "共 20 个章节"
+        - StaticText "作答 0%"
+      - button "04 传染病学 1,208 题 · 已作答 0 题 共 10 个章节 作答 0%" [ref=e34]
+        - heading "04 传染病学" [level=3, ref=e86]
+          - StaticText "04传染病学"
+        - paragraph
+          - StaticText "1,208 题 · 已作答 0 题"
+        - StaticText "共 10 个章节"
+        - StaticText "作答 0%"
+      - button "05 儿科学 3,097 题 · 已作答 0 题 共 17 个章节 作答 0%" [ref=e35]
+        - heading "05 儿科学" [level=3, ref=e87]
+          - StaticText "05儿科学"
+        - paragraph
+          - StaticText "3,097 题 · 已作答 0 题"
+        - StaticText "共 17 个章节"
+        - StaticText "作答 0%"
+      - button "06 耳鼻咽喉头颈外科学 883 题 · 已作答 0 题 共 80 个章节 作答 0%" [ref=e36]
+        - heading "06 耳鼻咽喉头颈外科学" [level=3, ref=e88]
+          - StaticText "06耳鼻咽喉头颈外科学"
+        - paragraph
+          - StaticText "883 题 · 已作答 0 题"
+        - StaticText "共 80 个章节"
+        - StaticText "作答 0%"
+      - button "07 法医学 116 题 · 已作答 0 题 共 15 个章节 作答 0%" [ref=e37]
+        - heading "07 法医学" [level=3, ref=e89]
+          - StaticText "07法医学"
+        - paragraph
+          - StaticText "116 题 · 已作答 0 题"
+        - StaticText "共 15 个章节"
+        - StaticText "作答 0%"
+      - button "08 妇产科学 2,920 题 · 已作答 0 题 共 35 个章节 作答 0%" [ref=e38]
+        - heading "08 妇产科学" [level=3, ref=e90]
+          - StaticText "08妇产科学"
+        - paragraph
+          - StaticText "2,920 题 · 已作答 0 题"
+        - StaticText "共 35 个章节"
+        - StaticText "作答 0%"
+      - button "09 核医学 413 题 · 已作答 0 题 共 25 个章节 作答 0%" [ref=e39]
+        - heading "09 核医学" [level=3, ref=e91]
+          - StaticText "09核医学"
+        - paragraph
+          - StaticText "413 题 · 已作答 0 题"
+        - StaticText "共 25 个章节"
+        - StaticText "作答 0%"
+      - button "10 急诊与灾难医学 845 题 · 已作答 0 题 共 23 个章节 作答 0%" [ref=e40]
+        - heading "10 急诊与灾难医学" [level=3, ref=e92]
+          - StaticText "10急诊与灾难医学"
+        - paragraph
+          - StaticText "845 题 · 已作答 0 题"
+        - StaticText "共 23 个章节"
+        - StaticText "作答 0%"
+      - button "11 介入放射学 120 题 · 已作答 0 题 共 11 个章节 作答 0%" [ref=e41]
+        - heading "11 介入放射学" [level=3, ref=e93]
+          - StaticText "11介入放射学"
+        - paragraph
+          - StaticText "120 题 · 已作答 0 题"
+        - StaticText "共 11 个章节"
+        - StaticText "作答 0%"
+      - button "12 精神病学 1,257 题 · 已作答 0 题 共 25 个章节 作答 0%" [ref=e42]
+        - heading "12 精神病学" [level=3, ref=e94]
+          - StaticText "12精神病学"
+        - paragraph
+          - StaticText "1,257 题 · 已作答 0 题"
+        - StaticText "共 25 个章节"
+        - StaticText "作答 0%"
+      - button "13 局部解剖学 593 题 · 已作答 0 题 共 9 个章节 作答 0%" [ref=e43]
+        - heading "13 局部解剖学" [level=3, ref=e95]
+          - StaticText "13局部解剖学"
+        - paragraph
+          - StaticText "593 题 · 已作答 0 题"
+        - StaticText "共 9 个章节"
+        - StaticText "作答 0%"
+      - button "14 口腔科学 219 题 · 已作答 0 题 共 18 个章节 作答 0%" [ref=e44]
+        - heading "14 口腔科学" [level=3, ref=e96]
+          - StaticText "14口腔科学"
+        - paragraph
+          - StaticText "219 题 · 已作答 0 题"
+        - StaticText "共 18 个章节"
+        - StaticText "作答 0%"
+      - button "15 临床麻醉学 1,299 题 · 已作答 0 题 共 39 个章节 作答 0%" [ref=e45]
+        - heading "15 临床麻醉学" [level=3, ref=e97]
+          - StaticText "15临床麻醉学"
+        - paragraph
+          - StaticText "1,299 题 · 已作答 0 题"
+        - StaticText "共 39 个章节"
+        - StaticText "作答 0%"
+      - button "16 流行病学 505 题 · 已作答 0 题 共 15 个章节 作答 0%" [ref=e46]
+        - heading "16 流行病学" [level=3, ref=e98]
+          - StaticText "16流行病学"
+        - paragraph
+          - StaticText "505 题 · 已作答 0 题"
+        - StaticText "共 15 个章节"
+        - StaticText "作答 0%"
+      - button "17 内科学 6,817 题 · 已作答 0 题 共 138 个章节 作答 0%" [ref=e47]
+        - heading "17 内科学" [level=3, ref=e99]
+          - StaticText "17内科学"
+        - paragraph
+          - StaticText "6,817 题 · 已作答 0 题"
+        - StaticText "共 138 个章节"
+        - StaticText "作答 0%"
+      - button "18 皮肤性病学 1,023 题 · 已作答 0 题 共 29 个章节 作答 0%" [ref=e48]
+        - heading "18 皮肤性病学" [level=3, ref=e100]
+          - StaticText "18皮肤性病学"
+        - paragraph
+          - StaticText "1,023 题 · 已作答 0 题"
+        - StaticText "共 29 个章节"
+        - StaticText "作答 0%"
+      - button "19 全科医学概论 498 题 · 已作答 0 题 共 19 个章节 作答 0%" [ref=e49]
+        - heading "19 全科医学概论" [level=3, ref=e101]
+          - StaticText "19全科医学概论"
+        - paragraph
+          - StaticText "498 题 · 已作答 0 题"
+        - StaticText "共 19 个章节"
+        - StaticText "作答 0%"
+      - button "20 人体寄生虫学 773 题 · 已作答 0 题 共 19 个章节 作答 0%" [ref=e50]
+        - heading "20 人体寄生虫学" [level=3, ref=e102]
+          - StaticText "20人体寄生虫学"
+        - paragraph
+          - StaticText "773 题 · 已作答 0 题"
+        - StaticText "共 19 个章节"
+        - StaticText "作答 0%"
+      - button "21 神经病学 1,139 题 · 已作答 0 题 共 23 个章节 作答 0%" [ref=e51]
+        - heading "21 神经病学" [level=3, ref=e103]
+          - StaticText "21神经病学"
+        - paragraph
+          - StaticText "1,139 题 · 已作答 0 题"
+        - StaticText "共 23 个章节"
+        - StaticText "作答 0%"
+      - button "22 生理学 4,526 题 · 已作答 0 题 共 14 个章节 作答 0%" [ref=e52]
+        - heading "22 生理学" [level=3, ref=e104]
+          - StaticText "22生理学"
+        - paragraph
+          - StaticText "4,526 题 · 已作答 0 题"
+        - StaticText "共 14 个章节"
+        - StaticText "作答 0%"
+      - button "23 生物化学 1,961 题 · 已作答 0 题 共 19 个章节 作答 0%" [ref=e53]
+        - heading "23 生物化学" [level=3, ref=e105]
+          - StaticText "23生物化学"
+        - paragraph
+          - StaticText "1,961 题 · 已作答 0 题"
+        - StaticText "共 19 个章节"
+        - StaticText "作答 0%"
+      - button "24 生物化学与分子生物学 2,825 题 · 已作答 0 题 共 27 个章节 作答 0%" [ref=e54]
+        - heading "24 生物化学与分子生物学" [level=3, ref=e106]
+          - StaticText "24生物化学与分子生物学"
+        - paragraph
+          - StaticText "2,825 题 · 已作答 0 题"
+        - StaticText "共 27 个章节"
+        - StaticText "作答 0%"
+      - button "25 实验诊断 1,480 题 · 已作答 0 题 共 9 个章节 作答 0%" [ref=e55]
+        - heading "25 实验诊断" [level=3, ref=e107]
+          - StaticText "25实验诊断"
+        - paragraph
+          - StaticText "1,480 题 · 已作答 0 题"
+        - StaticText "共 9 个章节"
+        - StaticText "作答 0%"
+      - button "26 外基 1,324 题 · 已作答 0 题 共 14 个章节 作答 0%" [ref=e56]
+        - heading "26 外基" [level=3, ref=e108]
+          - StaticText "26外基"
+        - paragraph
+          - StaticText "1,324 题 · 已作答 0 题"
+        - StaticText "共 14 个章节"
+        - StaticText "作答 0%"
+      - button "27 外科基础 294 题 · 已作答 0 题 共 8 个章节 作答 0%" [ref=e57]
+        - heading "27 外科基础" [level=3, ref=e109]
+          - StaticText "27外科基础"
+        - paragraph
+          - StaticText "294 题 · 已作答 0 题"
+        - StaticText "共 8 个章节"
+        - StaticText "作答 0%"
+      - button "28 外科学 5,360 题 · 已作答 0 题 共 96 个章节 作答 0%" [ref=e58]
+        - heading "28 外科学" [level=3, ref=e110]
+          - StaticText "28外科学"
+        - paragraph
+          - StaticText "5,360 题 · 已作答 0 题"
+        - StaticText "共 96 个章节"
+        - StaticText "作答 0%"
+      - button "29 危重病医学 379 题 · 已作答 0 题 共 33 个章节 作答 0%" [ref=e59]
+        - heading "29 危重病医学" [level=3, ref=e111]
+          - StaticText "29危重病医学"
+        - paragraph
+          - StaticText "379 题 · 已作答 0 题"
+        - StaticText "共 33 个章节"
+        - StaticText "作答 0%"
+      - button "30 卫生学 935 题 · 已作答 0 题 共 10 个章节 作答 0%" [ref=e60]
+        - heading "30 卫生学" [level=3, ref=e112]
+          - StaticText "30卫生学"
+        - paragraph
+          - StaticText "935 题 · 已作答 0 题"
+        - StaticText "共 10 个章节"
+        - StaticText "作答 0%"
+      - button "31 系统解剖学 5,440 题 · 已作答 0 题 共 29 个章节 作答 0%" [ref=e61]
+        - heading "31 系统解剖学" [level=3, ref=e113]
+          - StaticText "31系统解剖学"
+        - paragraph
+          - StaticText "5,440 题 · 已作答 0 题"
+        - StaticText "共 29 个章节"
+        - StaticText "作答 0%"
+      - button "32 眼科学 790 题 · 已作答 0 题 共 21 个章节 作答 0%" [ref=e62]
+        - heading "32 眼科学" [level=3, ref=e114]
+          - StaticText "32眼科学"
+        - paragraph
+          - StaticText "790 题 · 已作答 0 题"
+        - StaticText "共 21 个章节"
+        - StaticText "作答 0%"
+      - button "33 药理学 1,756 题 · 已作答 0 题 共 49 个章节 作答 0%" [ref=e63]
+        - heading "33 药理学" [level=3, ref=e115]
+          - StaticText "33药理学"
+        - paragraph
+          - StaticText "1,756 题 · 已作答 0 题"
+        - StaticText "共 49 个章节"
+        - StaticText "作答 0%"
+      - button "34 医学伦理学 442 题 · 已作答 0 题 共 18 个章节 作答 0%" [ref=e64]
+        - heading "34 医学伦理学" [level=3, ref=e116]
+          - StaticText "34医学伦理学"
+        - paragraph
+          - StaticText "442 题 · 已作答 0 题"
+        - StaticText "共 18 个章节"
+        - StaticText "作答 0%"
+      - button "35 医学免疫学 4,807 题 · 已作答 0 题 共 26 个章节 作答 0%" [ref=e65]
+        - heading "35 医学免疫学" [level=3, ref=e117]
+          - StaticText "35医学免疫学"
+        - paragraph
+          - StaticText "4,807 题 · 已作答 0 题"
+        - StaticText "共 26 个章节"
+        - StaticText "作答 0%"
+      - button "36 医学统计学 746 题 · 已作答 0 题 共 15 个章节 作答 0%" [ref=e66]
+        - heading "36 医学统计学" [level=3, ref=e118]
+          - StaticText "36医学统计学"
+        - paragraph
+          - StaticText "746 题 · 已作答 0 题"
+        - StaticText "共 15 个章节"
+        - StaticText "作答 0%"
+      - button "37 医学微生物学 3,026 题 · 已作答 0 题 共 40 个章节 作答 0%" [ref=e67]
+        - heading "37 医学微生物学" [level=3, ref=e119]
+          - StaticText "37医学微生物学"
+        - paragraph
+          - StaticText "3,026 题 · 已作答 0 题"
+        - StaticText "共 40 个章节"
+        - StaticText "作答 0%"
+      - button "38 医学细胞生物学 2,049 题 · 已作答 0 题 共 18 个章节 作答 0%" [ref=e68]
+        - heading "38 医学细胞生物学" [level=3, ref=e120]
+          - StaticText "38医学细胞生物学"
+        - paragraph
+          - StaticText "2,049 题 · 已作答 0 题"
+        - StaticText "共 18 个章节"
+        - StaticText "作答 0%"
+      - button "39 医学心理学 1,015 题 · 已作答 0 题 共 11 个章节 作答 0%" [ref=e69]
+        - heading "39 医学心理学" [level=3, ref=e121]
+          - StaticText "39医学心理学"
+        - paragraph
+          - StaticText "1,015 题 · 已作答 0 题"
+        - StaticText "共 11 个章节"
+        - StaticText "作答 0%"
+      - button "40 医学遗传学 1,347 题 · 已作答 0 题 共 20 个章节 作答 0%" [ref=e70]
+        - heading "40 医学遗传学" [level=3, ref=e122]
+          - StaticText "40医学遗传学"
+        - paragraph
+          - StaticText "1,347 题 · 已作答 0 题"
+        - StaticText "共 20 个章节"
+        - StaticText "作答 0%"
+      - button "41 医学影像学 1,148 题 · 已作答 0 题 共 16 个章节 作答 0%" [ref=e71]
+        - heading "41 医学影像学" [level=3, ref=e123]
+          - StaticText "41医学影像学"
+        - paragraph
+          - StaticText "1,148 题 · 已作答 0 题"
+        - StaticText "共 16 个章节"
+        - StaticText "作答 0%"
+      - button "42 预防医学 1,614 题 · 已作答 0 题 共 23 个章节 作答 0%" [ref=e72]
+        - heading "42 预防医学" [level=3, ref=e124]
+          - StaticText "42预防医学"
+        - paragraph
+          - StaticText "1,614 题 · 已作答 0 题"
+        - StaticText "共 23 个章节"
+        - StaticText "作答 0%"
+      - button "43 诊断学 2,423 题 · 已作答 0 题 共 76 个章节 作答 0%" [ref=e73]
+        - heading "43 诊断学" [level=3, ref=e125]
+          - StaticText "43诊断学"
+        - paragraph
+          - StaticText "2,423 题 · 已作答 0 题"
+        - StaticText "共 76 个章节"
+        - StaticText "作答 0%"
+      - button "44 中医学 968 题 · 已作答 0 题 共 13 个章节 作答 0%" [ref=e74]
+        - heading "44 中医学" [level=3, ref=e126]
+          - StaticText "44中医学"
+        - paragraph
+          - StaticText "968 题 · 已作答 0 题"
+        - StaticText "共 13 个章节"
+        - StaticText "作答 0%"
+      - button "45 组织学与胚胎学 2,191 题 · 已作答 0 题 共 28 个章节 作答 0%" [ref=e75]
+        - heading "45 组织学与胚胎学" [level=3, ref=e127]
+          - StaticText "45组织学与胚胎学"
+        - paragraph
+          - StaticText "2,191 题 · 已作答 0 题"
+        - StaticText "共 28 个章节"
+        - StaticText "作答 0%"
+  - region "最近练习" [ref=e8]
+    - sectionheader
+      - heading "最近练习" [level=2, ref=e76]
+      - StaticText "当前来源 · 按最近作答排序"
+    - paragraph
+      - StaticText "还没有练习记录，完成作答后会在这里显示。"
+- status

@@ -9,8 +9,16 @@ import fs from 'fs';
 import https from 'https';
 import path from 'path';
 
-const TOKEN = process.env.JIGUANG_TOKEN;
-if (!TOKEN) { console.error('错误: 需要有效的 JWT 环境变量 JIGUANG_TOKEN'); process.exit(1); }
+function resolveToken() {
+  const i = process.argv.findIndex(a => typeof a === 'string' && a.startsWith('eyJ') && a.split('.').length === 3);
+  if (i >= 0) { const t = process.argv[i]; process.argv.splice(i, 1); return t; }
+  if (process.env.JIGUANG_TOKEN) return process.env.JIGUANG_TOKEN;
+  const f = path.join(process.cwd(), 'jiguang_token.txt');
+  if (fs.existsSync(f)) { try { return fs.readFileSync(f, 'utf8').trim(); } catch (e) {} }
+  return null;
+}
+const TOKEN = resolveToken();
+if (!TOKEN) { console.error('错误: 需要有效的 JWT (命令行参数 / 环境变量 JIGUANG_TOKEN / jiguang_token.txt 文件)'); process.exit(1); }
 const BASE = 'https://api.ji-guang.top/api/v1';
 const ALL = process.env.ALL === '1';
 const AGG = process.env.AGGRESSIVE === '1';

@@ -1,0 +1,20 @@
+{
+  "name": "极光刷题 · 医学题库",
+  "short_name": "极光刷题",
+  "description": "轻量医学题库：生化 / 生理 / 免疫三科刷题 + 医学英语",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f7ff",
+  "theme_color": "#4f6ef7",
+  "icons": [
+    {
+      "src": "favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

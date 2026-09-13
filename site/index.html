@@ -2,10 +2,15 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#4f6ef7">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="favicon.svg">
+<link rel="manifest" href="manifest.webmanifest">
 <title>刷题记 · 个人学习站</title>
-<link rel="stylesheet" href="styles.css?v=20260710h">
+<link rel="stylesheet" href="styles.css?v=20260913y">
+<!-- 背景主题层：必须在 styles.css 之后（它靠覆盖 token 生效） -->
+<link rel="stylesheet" href="themes.css?v=20260913y">
 </head>
 <body>
 <div id="app" class="font-m">
@@ -21,26 +26,43 @@
   <!-- 主内容区 -->
   <main id="view" class="view"></main>
 
+  <!-- 备份提醒横幅 -->
+  <div id="backupBanner" class="banner hidden"></div>
+
   <!-- 底部导航 -->
-  <nav class="tabbar">
-    <button class="tab" data-tab="home"><span class="ic">🏠</span><span>刷题</span></button>
-    <button class="tab" data-tab="bank"><span class="ic">🔍</span><span>题库</span></button>
-    <button class="tab" data-tab="wrong"><span class="ic">❌</span><span>错题</span></button>
-    <button class="tab" data-tab="honor"><span class="ic">🏅</span><span>成就</span></button>
-    <button class="tab" data-tab="me"><span class="ic">⚙️</span><span>我的</span></button>
+  <nav class="tabbar" aria-label="主导航">
+    <button class="tab" data-tab="home"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4"/><path d="M2.5 7H6M2.5 12H6M2.5 17H6"/><path d="M21.4 5.6a1 1 0 1 0-3-3l-5 5a2 2 0 0 0-.5.86l-.84 2.87a.5.5 0 0 0 .62.62l2.87-.84a2 2 0 0 0 .86-.5z"/></svg></span><span>刷题</span></button>
+    <button class="tab" data-tab="bank"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="18" x="3" y="3" rx="1"/><path d="M7 3v18"/><path d="M20.4 18.9c.2.5-.1 1.1-.6 1.3l-1.9.7c-.5.2-1.1-.1-1.3-.6L11.1 5.1c-.2-.5.1-1.1.6-1.3l1.9-.7c.5-.2 1.1.1 1.3.6Z"/></svg></span><span>题库</span></button>
+    <button class="tab" data-tab="wrong"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H19a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6.5a1 1 0 0 1 0-5H20"/><path d="m14.5 7-5 5"/><path d="m9.5 7 5 5"/></svg><i class="tab-dot" id="dotWrong"></i></span><span>错题</span></button>
+    <button class="tab" data-tab="honor"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg></span><span>成就</span></button>
+    <button class="tab" data-tab="english"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="M8 15.5 10.8 8.5 13.6 15.5"/><path d="M9.2 13.3h3.4"/><circle cx="17.2" cy="13" r="2"/><path d="M19.2 11v4.4"/></svg></span><span>单词</span></button>
+    <button class="tab" data-tab="me"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></span><span>设置</span></button>
   </nav>
 
   <!-- 题目播放器浮层 -->
   <div id="player" class="player hidden"></div>
 
   <!-- 通用弹层 -->
-  <div id="modal" class="modal hidden"><div class="modal-box" id="modalBox"></div></div>
+  <div id="modal" class="modal hidden" role="dialog" aria-modal="true" aria-hidden="true"><div class="modal-box" id="modalBox"></div></div>
 
   <!-- 轻提示 -->
-  <div id="toast" class="toast hidden"></div>
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
 </div>
 
-<script src="data/data.js?v=20260729b"></script>
-<script src="app.js?v=20260710p"></script>
+<!-- 题库改为「manifest + 分片懒加载」，首屏不再下载 11.7MB 全量数据 -->
+<!-- features.js 必须在 app.js 之前：app.js 的渲染会调用 Feat.*（高级筛选/四级掌握/纠错/偏好） -->
+<script src="features.js?v=20260913y"></script>
+<script src="english.js?v=20260913y"></script>
+<script src="app.js?v=20260913y"></script>
+<script src="sync.js?v=20260913y"></script>
+<!-- Service Worker：网络优先 + 离线回落。数据分片与页面在线时永远取最新，断网可用缓存；
+     顺带取代「改 app.js 必须手改 ?v=」那个老坑（缓存名带版本，activate 时清旧的） -->
+<script>
+if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js?v=20260913y').catch(function () {});
+  });
+}
+</script>
 </body>
 </html>

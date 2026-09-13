@@ -13,3 +13,40 @@ site/data/data.js
 
 # 爬虫中间产物/缓存/运行日志（整个目录均为产物，非源码）
 爬虫与构建产物/
+
+# 发布打包产物（由 题库调研/build_dist.mjs 生成，非源码）
+site_dist/
+
+# ===== 推送 GitHub 排除（2026-09-14）：数据产物 / 凭证 =====
+# 超大文件（>100MB GitHub 直接拒绝）
+jiguangv1.2.1+36-app-release.apk
+# 部署 / 构建产物
+爬虫与构建产物/
+site/data/
+site/原文/
+# 题库调研大数据产物（可本地 rebuild，不进仓库）
+题库调研/merged2/
+题库调研/归一化/
+题库调研/merged/
+题库调研/packs/
+题库调研/fixed/
+# 第三方爬虫数据
+iyixue_top/
+haimamed_english/
+# 凭证 / 敏感运行时文件（脚本运行时读取，不入仓）
+jiguang_token*.txt
+jiguang_token*.bak*
+jiguang_tokens*.txt
+jiguang_token_idx.json
+jiguang_proxies.json
+jiguang_window_state*.json
+hdr1.txt
+hdrA.txt
+# 用户个人进度快照
+database_export-*.json
+
+# 爬虫临时 / 备份残留（不进仓库）
+*.tmp
+*.bak
+*.bak_*
+题库调研/_merged2_manual_backup/

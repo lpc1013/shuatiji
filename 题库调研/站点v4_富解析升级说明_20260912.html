@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>站点 v4 · 富解析与排版升级交付说明（2026-09-12）</title>
+<style>
+:root{
+  --bg:#f6f8fc; --surface:#fff; --surface2:#f0f3f9; --border:#e5e9f2;
+  --text:#1c2430; --muted:#6f7c90; --primary:#4f6ef7; --primary-d:#3550d4; --primary-soft:#ecf1ff;
+  --ok:#17a06a; --ok-soft:#e7f7ef; --warn:#c98212; --warn-soft:#fdf3e0; --bad:#d93a44; --bad-soft:#fdecec;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.72 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;}
+.wrap{max-width:940px;margin:0 auto;padding:36px 22px 72px;}
+h1{font-size:clamp(24px,2.6vw,32px);letter-spacing:-.02em;margin:0 0 8px;}
+h2{font-size:19px;margin:34px 0 12px;padding-left:12px;border-left:3px solid var(--primary);letter-spacing:-.01em;}
+h3{font-size:15.5px;margin:20px 0 8px;}
+p{margin:8px 0;}
+.sub{color:var(--muted);margin:0 0 22px;font-size:14px;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin:12px 0;box-shadow:0 1px 2px rgba(28,36,48,.04);}
+code{background:var(--surface2);border-radius:5px;padding:1.5px 5px;font-size:.88em;font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace;}
+table{width:100%;border-collapse:collapse;font-size:14px;margin:10px 0;font-variant-numeric:tabular-nums;}
+th,td{border:1px solid var(--border);padding:7px 10px;text-align:left;vertical-align:top;}
+th{background:var(--surface2);font-weight:700;color:var(--muted);font-size:13px;}
+tbody tr:nth-child(even) td{background:#fafbfe;}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap;}
+.pill{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;}
+.p-ok{background:var(--ok-soft);color:var(--ok);}
+.p-info{background:var(--primary-soft);color:var(--primary-d);}
+.p-warn{background:var(--warn-soft);color:var(--warn);}
+.p-bad{background:var(--bad-soft);color:var(--bad);}
+.p-gray{background:var(--surface2);color:var(--muted);}
+.note{border-left:3px solid var(--primary);background:var(--primary-soft);border-radius:0 10px 10px 0;padding:11px 14px;margin:12px 0;font-size:14px;}
+.note.good{border-color:var(--ok);background:var(--ok-soft);}
+.note.warn{border-color:var(--warn);background:var(--warn-soft);}
+ul{margin:8px 0;padding-left:20px;}
+li{margin:5px 0;}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 14px;font-size:14px;}
+.kv b{color:var(--muted);font-weight:700;}
+hr{border:none;border-top:1px solid var(--border);margin:26px 0;}
+.foot{color:var(--muted);font-size:13px;margin-top:30px;}
+@media(max-width:640px){.kv{grid-template-columns:1fr;}th,td{font-size:13px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>站点 v4 · 富解析与排版升级</h1>
+<p class="sub">把 iyixue.top 调研报告里的 A 档（纯前端立刻可做）、B 档（数据已有但未接入）、C 档（渲染层先建好等数据）落地到自建刷题站。<br>
+数据链：<code>merged2</code> → <code>packs</code> → <code>site/data</code>；前端：<code>app.js / features.js / styles.css / sw.js</code>。</p>
+
+<div class="note good"><b>一句话结论：</b>原本躺在 <code>merged2</code> 里从没透传前端的 <code>explanationBlocks</code>（8 万条结构化解析）已经换成前端能直接渲染的富解析分片；站点主体分片反而瘦了约 20%，净体积略降。用户进度零影响（题目 id / 章节 id 一个都没动）。</div>
+
+<h2>1. 富解析分片（最大的一块）</h2>
+<p>原先解析分片是 <code>{题目id: 一坨文本}</code>，前端只做了「<code>###</code> 变标题、换行变 <code>&lt;br&gt;</code>」的粗糙转换——文本里明明写着 Markdown 表格，渲染出来却是一堆竖线。</p>
+<p>现在改成 <b>富解析</b>：</p>
+<div class="kv">
+  <b>结构</b><span><code>{bf: 一句话解析, b: [块…]}</code>；块为紧凑数组 <code>[type, sec, title, …payload]</code></span>
+  <b>type</b><span><code>p</code> 段落 · <code>c</code> 提示框 · <code>l</code> 列表 · <code>tb</code> 表格（<code>[列名], [行]</code>）</span>
+  <b>sec</b><span><code>an</code> 考点解析 · <code>ab</code> 答案依据 · <code>pf</code> 易错点 · <code>cn</code> 临床与操作要点 · <code>tx</code> 教材出处</span>
+  <b>来源</b><span>源站 <code>explanationBlocks</code>（已带类型）为主 + 文本 <code>### 小节</code> 补全其未覆盖的小节，按 sec 去重后合并</span>
+</div>
+
+<h3>为什么必须「blocks + 文本」两条腿</h3>
+<table>
+<thead><tr><th>小节</th><th>源站 blocks</th><th>文本 <code>###</code></th><th>处置</th></tr></thead>
+<tbody>
+<tr><td>考点解析 / 答案依据 / 易错点</td><td>✅ 有（带 type）</td><td>✅ 有</td><td>用 blocks，保留类型信息</td></tr>
+<tr><td><b>教材出处</b></td><td class="num">❌ 无</td><td class="num">✅ 4,725 条</td><td><span class="pill p-warn">文本补全</span> 只用 blocks 会丢这 4,725 条</td></tr>
+<tr><td>临床与操作要点</td><td>✅ 少量</td><td>✅ 少量</td><td>用 blocks</td></tr>
+</tbody>
+</table>
+
+<h3>实测覆盖（三科 14,696 条）</h3>
+<table>
+<thead><tr><th>指标</th><th>数量</th><th>说明</th></tr></thead>
+<tbody>
+<tr><td>富解析条目</td><td class="num">14,696</td><td>对象 14,696 / 纯文本回退 <b>0</b>（即全部结构化）</td></tr>
+<tr><td>块总数</td><td class="num">36,699</td><td>段落 33,945 · 表格 2,135 · 列表 377 · 提示 242</td></tr>
+<tr><td>一句话解析</td><td class="num">4,855</td><td>来自 <code>briefExplanation</code>，置顶展示（此前完全没用）</td></tr>
+<tr><td>教材出处块</td><td class="num">4,725</td><td><span class="pill p-warn">全部靠文本补全</span></td></tr>
+</tbody>
+</table>
+
+<h2>2. 前端结构化渲染</h2>
+<p><code>app.js</code> 新增一组纯函数：<code>explainInner / expBlockHtml / reservedBlocksHtml / qChipsHtml / richToText</code>。</p>
+<ul>
+  <li><b>小节卡片</b>：每小节一张卡，段头 3px 竖线，颜色按小节分（解析=蓝 / 答案依据=绿 / 易错点=橙 / 教材出处=灰）</li>
+  <li><b>表格真渲染</b>：<code>&lt;table&gt;</code> + 表头 + 斑马纹；<b>760px 以下自动转卡片</b>（<code>td::before</code> 读 <code>data-label</code>，列名不丢）</li>
+  <li><b>一句话解析置顶</b>：淡蓝卡 + 「一句话解析」标签</li>
+  <li><b>旧格式兼容</b>：分片若还是字符串（或 <code>{t}</code>），照旧渲染，不会白屏</li>
+  <li><b>纯文本仍可用</b>：<code>ensureExplain</code> 注入富解析的同时派生 <code>q.explanation</code>，AI 再解析 / 复制 / 旧判断逻辑一处都没坏</li>
+</ul>
+
+<h2>3. A 档 · 排版与无障碍</h2>
+<table>
+<thead><tr><th>项</th><th>做法</th></tr></thead>
+<tbody>
+<tr><td>数字等宽</td><td>统计/计数/正确率/页码加 <code>font-variant-numeric:tabular-nums</code>，数字变化不跳动</td></tr>
+<tr><td>解析限宽</td><td>正文 <code>max-width:78ch</code> + <code>line-height:1.85</code>（常规正文 1.6，长解析更松）</td></tr>
+<tr><td>题型全称</td><td><code>A1 型题 · 单句最佳选择</code> 这类展开写法，取代「A1 / X」代号</td></tr>
+<tr><td>移动端表格</td><td>760px 主断点转卡片，替代横向滚动</td></tr>
+<tr><td>触控基线</td><td><code>.btn:not(.sm)/.chip/.tab</code> 最小高度 44px；<code>:focus-visible</code> 焦点环；<code>prefers-reduced-motion</code> 关动效</td></tr>
+</tbody>
+</table>
+
+<h2>4. C 档 · 9 个预留字段的渲染层（有值才出现）</h2>
+<p>数据还是空的，但<b>渲染分支全部建好并已测过</b>——接口哪天填上，字段一到就显示，不用再改前端。</p>
+<table>
+<thead><tr><th>字段</th><th>渲染成什么</th><th>状态</th></tr></thead>
+<tbody>
+<tr><td><code>mnemonic</code></td><td>记忆口诀卡（渐变大字）</td><td><span class="pill p-ok">已测</span></td></tr>
+<tr><td><code>studyPoints</code></td><td>考点要点折叠卡</td><td><span class="pill p-ok">已测</span></td></tr>
+<tr><td><code>reasoningSteps</code></td><td>推理路径有序列表（<code>证据 → 推断</code>）</td><td><span class="pill p-ok">已测</span></td></tr>
+<tr><td><code>optionExplanations</code></td><td>逐项辨析（圆标选项 + 典型场景）</td><td><span class="pill p-ok">已测</span></td></tr>
+<tr><td><code>memoryCards</code></td><td>知识点背诵卡（含记忆线索 / 对比）</td><td><span class="pill p-ok">已测</span></td></tr>
+<tr><td><code>knowledgePoint(s)</code></td><td>知识点 chip 行</td><td><span class="pill p-ok">已测</span></td></tr>
+<tr><td><code>frequencyLevel</code></td><td>考频徽标（高/中/低）</td><td><span class="pill p-ok">已测</span></td></tr>
+<tr><td><code>explanationMeta</code></td><td>教材依据 + A/B/C 证据分级徽章</td><td><span class="pill p-ok">已测</span></td></tr>
+</tbody>
+</table>
+<div class="note warn"><b>顺带修掉一处体积浪费：</b><code>memoryCardMeta</code> 全库是壳值 <code>{schemaVersion:1,generator,generatedAt:""}</code>。原先判据是「非 null 就写」→ 每题白涨约 60 字节。现在改为「有值才写，壳值不写」，1.5 万题省下约 0.9MB，且不损失任何信息。</div>
+
+<h2>5. 新功能：最弱知识点 Top3</h2>
+<p>借鉴 iyixue.top 的「最弱知识点」，但用的是我们已有的数据：把题目级作答统计（<code>qstat</code>）按知识点标签聚合，取正确率最低的 3 个，<b>点一行直接对该知识点组卷补漏</b>。设了「至少作答 3 次才入榜」的门槛，避免「1 题答错就判定你最弱」的噪声；该学科没有带标签的题时整张卡不出现。</p>
+<p>另外把组卷预览从「命中 N 题」升级为「命中 N 题 · 本轮取 M 题 · <b>预计 X 分钟</b>」；命中为 0 时会指出<b>哪一条限制最紧</b>（逐条临时放开、看题量回升最多的是哪个），比笼统说「没有题」有用。</p>
+
+<h2>6. Service Worker：根治 <code>?v=</code> 那个老坑</h2>
+<p>新增 <code>site/sw.js</code>，策略是<b>网络优先 + 离线回落</b>：在线永远取最新，断网回落缓存（顺带白得离线可用）。缓存名带版本号，<code>activate</code> 时清掉所有旧的 <code>shuati-*</code>，不会两个版本打架；跨域请求（如 CloudBase 的 AI 出题接口）一律直连不进缓存。</p>
+<p>为什么不缓存优先：本站进度全在 localStorage，最怕「index.html 是旧的、分片是新的」这种新旧混排——那正是字段对不上、界面错乱的根源。</p>
+
+<h2>7. 体积账（诚实版）</h2>
+<table>
+<thead><tr><th>部分</th><th>变更前</th><th>变更后</th><th>变化</th></tr></thead>
+<tbody>
+<tr><td>题目主体分片（3 科）</td><td class="num">7.06 MiB</td><td class="num">5.64 MiB</td><td><span class="pill p-ok">−20.1%</span> 壳值过滤 + 预留字段精简</td></tr>
+<tr><td>解析分片（3 科）</td><td class="num">18.02 MiB</td><td class="num">18.65 MiB</td><td><span class="pill p-warn">+3.5%</span> 结构化信息变多</td></tr>
+<tr><td><b>合计</b></td><td class="num"><b>25.08 MiB</b></td><td class="num"><b>24.29 MiB</b></td><td><span class="pill p-ok">−3.1%</span></td></tr>
+<tr><td>首屏 manifest</td><td class="num">3.6 KB</td><td class="num">4.0 KB</td><td>新增 <code>explainHelp</code> 字段说明</td></tr>
+</tbody>
+</table>
+<div class="note"><b>说明：</b>解析分片变大是因为同一份内容从「一整坨文本」变成「带类型、带小节、带表格行列」的结构化数据。净账是降的，且渲染质量是数量级提升——这笔交易划算。</div>
+
+<h2>8. 验证</h2>
+<table>
+<thead><tr><th>校验</th><th>结果</th><th>覆盖了什么</th></tr></thead>
+<tbody>
+<tr><td><code>verify_schema_unified.mjs</code></td><td><span class="pill p-ok">34 / 34</span></td><td>merged2 纯增量 · packs 字段覆盖 · site 与 packs explain 逐条一致 · 教材出处补全 · 壳值未泄漏</td></tr>
+<tr><td><code>verify_jsdom.mjs</code></td><td><span class="pill p-ok">64 / 64</span></td><td>真实 DOM 里跑：小节卡 / 表格 / 列表 / callout / 一句话解析 / 旧格式兼容 / 8 个预留字段 / 最弱知识点 / 组卷预览诊断 / SW 与 CSS 断言</td></tr>
+<tr><td><code>verify_site.mjs</code></td><td><span class="pill p-ok">9 / 9</span></td><td>分片自洽 · 章节 UUID · 题数勾稽</td></tr>
+<tr><td><code>verify_packs.mjs</code></td><td><span class="pill p-ok">未命中 0</span></td><td>site 14,880 题 id 全部命中 packs</td></tr>
+</tbody>
+</table>
+<p><b>用户进度：</b>site 三科 <span class="num">14,877 → 14,880</span>（+3，只增不减）；题目 id 与章节 id 一个都没改 → 错题 / 收藏 / 疑点 / 已掌握 / 分章正确率 / 断点会话全部不受影响。</p>
+
+<h2>9. 怎么看</h2>
+<p>本地服务器已起：<code>node 题库调研/serve_site.mjs 8790</code> → <code>http://127.0.0.1:8790/</code><br>
+（<code>file://</code> 直接打开 index.html 不行——fetch 分片会被 CORS 拦，必须走 HTTP。）</p>
+
+<h2>10. 遗留</h2>
+<ul>
+  <li><b>视觉需你本地确认</b>：本机无可用的浏览器自动化（headless Chrome 系统级崩溃），布局/配色只能靠你打开看。</li>
+  <li><b>站点仍只有 3 科</b>：医学英语数据已就绪（3,783 词 + PubMed 例句），尚未接站。</li>
+  <li><b>标签覆盖率偏低</b>：<code>tags</code> 仅约 1 万题有值（跨源题以极光为主记录时不带扩展侧的标签）。若要补，得改 <code>merge2.mjs</code> 让合并组的标签取并集，再重跑三件套。</li>
+  <li><b><code>questionRevision</code> 不进前端</b>：有意为之（前端暂不消费，占 0.3MB）；将来要做「题干变更 → 复习记录定向失效」时加回即可。</li>
+</ul>
+
+<p class="foot">交付：<code>题库调研/schema_unified.json</code>（v4 字段字典 + 富解析格式）· <code>题库调研/serve_site.mjs</code>（本地自查服务器）· <code>题库调研/verify/verify_schema_unified.mjs</code> · <code>题库调研/verify/verify_jsdom.mjs</code></p>
+
+</div>
+</body>
+</html>

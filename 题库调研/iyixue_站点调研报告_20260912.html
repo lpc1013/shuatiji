@@ -1,0 +1,551 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>iyixue.top 站点调研报告 · 2026-09-12</title>
+<style>
+:root{
+  --bg:#f4f7fb;--card:#fff;--ink:#0f172a;--muted:#64748b;--line:#e3e9f2;
+  --accent:#2563eb;--accent-soft:#eff6ff;--accent-ink:#1e40af;
+  --violet:#7c3aed;--violet-soft:#f5f3ff;
+  --green:#16855b;--green-soft:#e8f8f0;
+  --amber:#b45309;--amber-soft:#fff7ed;
+  --red:#c0392b;--red-soft:#fef2f2;
+  --radius:14px;
+  --shadow:0 4px 18px rgba(15,23,42,.055);
+  --font:system-ui,-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Segoe UI",Roboto,sans-serif;
+  --mono:ui-monospace,"Cascadia Mono","Consolas","Courier New",monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;background:linear-gradient(180deg,#f7f9fd 0%,#eef2f9 55%,#f7f4fb 100%);
+  background-attachment:fixed;color:var(--ink);font-family:var(--font);
+  font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 22px 90px}
+a{color:var(--accent)}
+
+/* ---------- header ---------- */
+.hero{
+  position:relative;overflow:hidden;background:var(--card);border:1px solid var(--line);
+  border-radius:20px;padding:38px 40px 34px;margin:34px 0 26px;box-shadow:var(--shadow);
+}
+.hero::before{
+  content:"";position:absolute;inset:0 0 auto 0;height:4px;
+  background:linear-gradient(90deg,#2563eb,#7c3aed 45%,#db2777 100%);
+}
+.hero::after{
+  content:"";position:absolute;right:-90px;top:-90px;width:290px;height:290px;border-radius:50%;
+  background:radial-gradient(circle at 30% 30%,rgba(124,58,237,.13),rgba(37,99,235,.06) 60%,transparent 72%);
+}
+.eyebrow{display:block;font-size:10.5px;font-weight:700;letter-spacing:.18em;color:var(--accent);margin-bottom:10px}
+.hero h1{margin:0 0 12px;font-size:clamp(25px,3.1vw,37px);line-height:1.14;letter-spacing:-.035em}
+.hero .sub{margin:0;color:var(--muted);max-width:74ch}
+.meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}
+.meta span{
+  font-size:11.5px;color:var(--muted);background:#f6f8fc;border:1px solid var(--line);
+  border-radius:999px;padding:4px 11px;
+}
+.meta span b{color:var(--ink);font-weight:600}
+
+/* ---------- sections ---------- */
+h2{
+  font-size:20px;letter-spacing:-.02em;margin:52px 0 6px;padding-top:22px;
+  border-top:1px solid var(--line);display:flex;align-items:baseline;gap:11px;
+}
+h2 i{
+  font-style:normal;font-family:var(--mono);font-size:12px;color:var(--accent);
+  background:var(--accent-soft);border-radius:6px;padding:2px 7px;font-weight:700;
+}
+h3{font-size:15.5px;margin:28px 0 10px}
+h4{font-size:14px;margin:20px 0 8px;color:#334155}
+p{margin:0 0 12px}
+.lead{color:var(--muted);margin:0 0 20px;max-width:80ch}
+ul,ol{margin:0 0 14px;padding-left:22px}
+li{margin:4px 0}
+code{
+  font-family:var(--mono);font-size:.87em;background:#f1f5f9;border:1px solid #e6ecf4;
+  border-radius:5px;padding:1px 5px;color:#0f172a;
+}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow);margin:16px 0}
+
+/* ---------- tables ---------- */
+.tbl-wrap{overflow-x:auto;margin:16px 0;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:13.5px;line-height:1.6}
+th{
+  text-align:left;background:#f7f9fc;font-weight:600;font-size:11.5px;color:#475569;
+  letter-spacing:.02em;padding:11px 14px;border-bottom:1px solid var(--line);white-space:nowrap;
+  position:sticky;top:0;
+}
+td{padding:11px 14px;border-bottom:1px solid #eef2f8;vertical-align:top}
+tr:last-child td{border-bottom:0}
+tbody tr:hover{background:#fafcff}
+td code,numeric{font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums;white-space:nowrap}
+
+/* ---------- pills ---------- */
+.pill{display:inline-block;font-size:10.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.p-ok{background:var(--green-soft);color:var(--green)}
+.p-warn{background:var(--amber-soft);color:var(--amber)}
+.p-no{background:var(--red-soft);color:var(--red)}
+.p-info{background:var(--accent-soft);color:var(--accent-ink)}
+.p-violet{background:var(--violet-soft);color:#5b21b6}
+.p-gray{background:#f1f5f9;color:#475569}
+
+/* ---------- swatches ---------- */
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:10px;margin:16px 0}
+.sw{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card)}
+.sw .chip{height:44px}
+.sw .lbl{padding:8px 10px;font-size:11px;line-height:1.5}
+.sw .lbl b{display:block;font-family:var(--mono);font-size:10.5px;color:var(--ink)}
+.sw .lbl span{color:var(--muted);font-size:10px}
+
+/* ---------- type scale ---------- */
+.scale{display:grid;gap:2px;margin:16px 0;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;background:var(--card)}
+.scale-row{display:grid;grid-template-columns:190px 1fr;align-items:baseline;gap:16px;padding:10px 16px;border-bottom:1px solid #eef2f8}
+.scale-row:last-child{border-bottom:0}
+.scale-row .k{font-family:var(--mono);font-size:11px;color:var(--muted)}
+.scale-row .k b{color:var(--accent-ink);display:block;font-size:11.5px}
+.scale-row .v{font-weight:600;letter-spacing:-.02em}
+
+/* ---------- field cards ---------- */
+.field{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);padding:0;margin:14px 0;overflow:hidden;box-shadow:var(--shadow)}
+.field>header{
+  display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:13px 18px;
+  background:#f8fafd;border-bottom:1px solid var(--line);
+}
+.field>header .fn{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent-ink)}
+.field>header .uim{font-size:13.5px;font-weight:600}
+.field>header .sp{flex:1}
+.field .body{padding:16px 18px}
+.field .body p:last-child{margin-bottom:0}
+.sig{background:#fbfcfe;border:1px dashed #d8e2f0;border-radius:9px;padding:10px 13px;margin:10px 0;font-family:var(--mono);font-size:12px;color:#334155;overflow-x:auto;white-space:pre}
+.note{border-left:3px solid var(--accent);background:#f8fbff;padding:11px 15px;border-radius:0 8px 8px 0;font-size:13.5px;margin:14px 0}
+.note.warn{border-left-color:#f59e0b;background:#fffdf7}
+.note.good{border-left-color:var(--green);background:#f6fdf9}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:800px){.two{grid-template-columns:1fr}}
+@media(max-width:760px){
+  .hero{padding:26px 20px}
+  .wrap{padding:0 14px 70px}
+  .scale-row{grid-template-columns:1fr;gap:2px}
+  th{white-space:normal}
+}
+.foot{margin-top:52px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:12.5px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="hero">
+  <span class="eyebrow">SITE RESEARCH · 2026-09-12</span>
+  <h1>iyixue.top（乐学医题）站点调研报告</h1>
+  <p class="sub">实测抓取该站全部前端资源（20 个 JS / 10 个 CSS / Service Worker / PWA manifest），逐文件反查其功能设计、排印体系与数据契约。重点回答：<b>那 9 个「闲置空字段」在这套系统里究竟是干什么用的</b>。全部资源已落盘：19 个 JS 文件（18 个业务模块 + Service Worker）、10 个 CSS，共 857KB。</p>
+  <div class="meta">
+    <span>抓取方式：<b>curl 全量下载 + 源码反查</b></span>
+    <span>样本：<b>app.js 397KB / style.css 162KB</b></span>
+    <span>结论口径：<b>仅基于实测代码，无推测</b></span>
+  </div>
+</div>
+
+<h2><i>01</i>站点档案与实测技术栈</h2>
+<p class="lead">一个功能完整度相当高的医学刷题 SPA，且刻意避开框架。</p>
+
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>项</th><th>实测结果</th></tr></thead>
+<tbody>
+<tr><td>站点名</td><td>乐学医题（副标 <code>STUDY RX, JOYFULLY</code>）；另有子域 <code>atlas.iyixue.top</code> 作为科研平台入口</td></tr>
+<tr><td>题库结构</td><td>双库：<code>school</code>（本科本校题库）/ <code>kaoyan</code>（考研西综题库），侧栏一键切换</td></tr>
+<tr><td>前端框架</td><td><span class="pill p-info">无框架</span> 原生 IIFE 模块 + hash 路由，18 个自有 JS 按职责拆分（<code>practice-core</code> / <code>learning-core</code> / <code>explanation-core</code> / <code>memorize</code> / <code>offline-packs</code> …）</td></tr>
+<tr><td>第三方依赖</td><td>仅 2 个 vendor：<code>gsap.min.js@3.12.5</code>（动效）、<code>lucide-icons@0.468.0</code>（图标）</td></tr>
+<tr><td>字体</td><td>自托管 <code>Inter</code> 可变字体（<code>woff2</code>，<code>font-weight:100 900</code>，<code>font-display:swap</code>，限定 latin unicode-range）+ 中文系统字体回退</td></tr>
+<tr><td>离线能力</td><td><span class="pill p-ok">完整 PWA</span> <code>manifest.webmanifest</code> + <code>sw.js</code>（2.1KB）；另有「离线题库包」机制，带 <code>checksum</code> 校验</td></tr>
+<tr><td>数据加载</td><td>manifest 目录 → 分片按需加载 → 游标分页（<code>group.nextCursor</code>）；与我们站点同构</td></tr>
+<tr><td>路由规模</td><td>20+ 路由：home / bank / review / exam / me / settings / notes / offline / mistakes / favorites / stats / leaderboard / contribute / result / search …</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2><i>02</i>设计系统：整套可复制的 token</h2>
+<p class="lead">它的 CSS 变量定义得干净利落，且带用途注释——这是最值得直接借用的部分。</p>
+
+<h3>2.1 颜色（两套主题）</h3>
+<p>默认 <code>clinical</code>（临床蓝，冷色医疗感），可切 <code>paper</code>（暖纸色，长时间阅读）——<b>同一套变量名换值即换肤</b>。</p>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>变量</th><th>clinical（默认）</th><th>paper（暖纸）</th><th>语义</th></tr></thead>
+<tbody>
+<tr><td><code>--bg</code></td><td class="num">#f3f6fb</td><td class="num">#faf6f0</td><td>页面底色</td></tr>
+<tr><td><code>--surface</code></td><td class="num">#fff</td><td class="num">#fffdf9</td><td>卡片面</td></tr>
+<tr><td><code>--surface-2</code></td><td class="num">#f7f9fc</td><td class="num">#f5ede2</td><td>次级面（表头/标签底）</td></tr>
+<tr><td><code>--ink</code></td><td class="num">#142033</td><td class="num">#4d392b</td><td>正文墨色</td></tr>
+<tr><td><code>--muted</code></td><td class="num">#64748b</td><td class="num">#846f5e</td><td>次要文字</td></tr>
+<tr><td><code>--line</code></td><td class="num">#dbe3ee</td><td class="num">#e4d5c3</td><td>分隔线</td></tr>
+<tr><td><code>--accent</code></td><td class="num">#2563eb</td><td class="num">#9a5b32</td><td>主色</td></tr>
+<tr><td><code>--accent-ink</code></td><td class="num">#1748a5</td><td class="num">#75401f</td><td>主色上的深字（保证对比度）</td></tr>
+<tr><td><code>--good / --bad / --warn</code></td><td class="num">#16855b / #d14343 / #a96908</td><td class="num">#557a55 / #ad5146 / #9a681d</td><td>对/错/警示</td></tr>
+</tbody>
+</table>
+</div>
+<div class="note"><b>可抄的细节：</b>每个语义色都配一个 <code>*-soft</code> 浅底（如 <code>--accent-soft:#e8f0ff</code>），所有标签/徽标/选中态统一用「深字 + 浅底 + 同色描边」三件套，视觉一致性极强。另外它给旧变量名留了别名桥（<code>--danger:var(--bad)</code>、<code>--success:var(--good)</code>、<code>--primary:var(--accent)</code>），并注明「缺失会导致边框和状态色失效」——<b>重构期间的兼容技巧</b>。</div>
+
+<h3>2.2 字号层级（原文带用途注释）</h3>
+<p>只有 6 级，但每一级都被明确指派了角色。这是它排印稳的根本原因。</p>
+<div class="scale">
+  <div class="scale-row"><div class="k"><b>--fs-2xl</b>26px</div><div class="v" style="font-size:22px">页面标题 Page Title</div></div>
+  <div class="scale-row"><div class="k"><b>--fs-xl</b>20px</div><div class="v" style="font-size:18px">区块标题 Section</div></div>
+  <div class="scale-row"><div class="k"><b>--fs-lg</b>17px</div><div class="v" style="font-size:16px">题干 Stem</div></div>
+  <div class="scale-row"><div class="k"><b>--fs-md</b>15px</div><div class="v" style="font-size:15px">正文 Body（body 基准）</div></div>
+  <div class="scale-row"><div class="k"><b>--fs-sm</b>13px</div><div class="v" style="font-size:13.5px;font-weight:400">元信息 Meta</div></div>
+  <div class="scale-row"><div class="k"><b>--fs-xs</b>12px</div><div class="v" style="font-size:12.5px;font-weight:400;color:#64748b">标注 Caption</div></div>
+</div>
+
+<h3>2.3 其余 token</h3>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>类别</th><th>取值</th></tr></thead>
+<tbody>
+<tr><td>圆角</td><td><code>--radius:12px</code>、<code>--radius-lg:12px</code>、<code>--radius-small:calc(var(--radius) - 4px)</code>（推导而非硬编码）</td></tr>
+<tr><td>阴影</td><td><code>0 8px 24px rgba(30,55,90,.10)</code>——单层、低透明度，克制</td></tr>
+<tr><td>动效</td><td><code>--dur-fast:110ms</code> / <code>--dur-med:200ms</code> / <code>--ease-out:cubic-bezier(.22,1,.36,1)</code></td></tr>
+<tr><td>布局</td><td><code>--sidebar:248px</code>（外壳层覆盖为 224px）；主列 <code>max-width:1440px</code>，内边距 <code>34px clamp(24px,4vw,64px) 80px</code></td></tr>
+<tr><td>字体栈</td><td><code>system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", Roboto, sans-serif</code></td></tr>
+<tr><td>专用字体</td><td><code>--pixel-font</code> 等宽（Cascadia Mono）；另有 Georgia/Songti 衬线、<code>Segoe Script/楷体</code> 手写体用于点缀</td></tr>
+<tr><td>移动端</td><td><code>--sidebar</code> 归零，切 <code>mobile-header</code> + <code>mobile-nav</code></td></tr>
+</tbody>
+</table>
+</div>
+
+<h2><i>03</i>排印与布局：可直接照搬的 9 条</h2>
+<ol>
+<li><b>正文 15px / 行高 1.65</b>；解析长文额外放宽到 <b>1.85</b>。行高按「阅读密度」分档，而不是全站一个值。</li>
+<li><b>解析正文限宽 <code>max-width:78ch</code></b>——中文长文最舒适的行长，避免大屏上一行 40 个字。</li>
+<li><b>大标题收紧字距</b>：<code>h1{font-size:clamp(29px,3vw,46px); letter-spacing:-.04em; line-height:1.08}</code>。字号随视口流体缩放，字距反向补偿。</li>
+<li><b>所有数字用 <code>font-variant-numeric:tabular-nums</code></b>：题数、页码、正确率、倒计时全部等宽对齐，数字变化时不跳动。这是刷题类界面的基本功。</li>
+<li><b>英文小标签做视觉层次</b>：<code>letter-spacing:.18em</code> + 9–11px + 主色，用作眉标（<code>STUDY RX</code>、<code>TEXTBOOK EVIDENCE</code>、<code>MEMO</code>、<code>POINTS</code>）。中文标题 + 英文眉标是其核心排版语言。</li>
+<li><b>分段标题带 3px 左竖线</b>：<code>.explanation-section-header::before{width:3px;height:12px;background:var(--accent)}</code>——零成本建立层级。</li>
+<li><b>断点主轴 760px</b>（全套 CSS 里出现 23 次，是绝对主断点），次轴 1199 / 900 / 620px。单轴优先，不搞十套断点。</li>
+<li><b>表格在移动端自动降级为卡片</b>：<code>@media(max-width:760px)</code> 下隐藏 <code>thead</code>，每个 <code>td</code> 用 <code>::before{content:attr(data-label)}</code> 显示列名——渲染时就把列名写进 <code>data-label</code>。宽表在手机上不再横向滚动。</li>
+<li><b>横向溢出用 <code>overflow-x:clip</code></b>，并用 <code>@supports not (overflow-x:clip)</code> 回退 <code>hidden</code>——因为 <code>hidden</code> 会创建滚动容器、破坏 sticky 头部，<code>clip</code> 不会。这是很细的一手。</li>
+</ol>
+
+<div class="note good"><b>触控与可访问性（都在细节里）：</b>按钮统一 <code>min-height:44px</code>（iOS 触控推荐下限）；<code>:focus-visible{outline:3px solid …; outline-offset:3px}</code> 键盘可达；<code>.skip-link</code> 跳到主内容；<code>aria-live</code>/<code>aria-expanded</code>/<code>aria-pressed</code>/<code>role="note"</code> 齐备；<code>@media(prefers-reduced-motion:reduce)</code> 关掉全部动效。</div>
+
+<h2><i>04</i>九个「闲置空字段」的真实归宿（核心）</h2>
+<div class="note warn"><b>最重要的结论先讲：</b>这些字段在我们的 <code>iyixue_top/</code> 分片里是空的，<b>但在 iyixue.top 的前端，每一个都有已上线运行的渲染组件、样式类与偏好开关</b>。也就是说——它们不是废弃字段，而是<b>「渲染层已完成、数据层待生成」的接口预留位</b>。参考价值在于：它提前把「这些字段未来会长什么样、会被怎么用」演示了一遍。<br><br>推论：<b>我们的站点即使现在拿不到数据，也可以先把渲染通道建好</b>；等 AI 生成管线接通，字段一到即显示，无需再改前端。</div>
+
+<div class="field">
+  <header><span class="fn">mnemonic</span><span class="pill p-warn">string</span><span class="sp"></span><span class="uim">记忆口诀卡 MEMO</span></header>
+  <div class="body">
+    <p>答题后展示的大字口诀卡，与解析分开陈列，视觉上刻意「重」——17px 加粗、行高 1.8、左侧 146px 的 MEMO 标签栏。</p>
+    <div class="sig">renderMnemonic(q) → &lt;aside class="mnemonic-card"&gt;
+                      &lt;header&gt;&lt;span&gt;MEMO&lt;/span&gt;&lt;h3&gt;记忆口诀&lt;/h3&gt;&lt;/header&gt;
+                      &lt;p&gt;{mnemonic}&lt;/p&gt;&lt;/aside&gt;</div>
+    <p><b>受偏好开关控制：</b>「显示记忆口诀 — 显示口诀与助记卡片」。字号在移动端从 17px 降到 15px。</p>
+  </div>
+</div>
+
+<div class="field">
+  <header><span class="fn">studyPoints</span><span class="pill p-warn">[{title, body}]</span><span class="sp"></span><span class="uim">考点折叠卡 POINTS</span></header>
+  <div class="body">
+    <p>与口诀卡同款外层容器（<code>.mnemonic-card.studypoint-card</code>），内部改成逐条折叠：每条 <code>title</code> 作 summary、<code>body</code> 作正文，用原生 <code>&lt;details&gt;</code> 实现，带 ▸/▾ 箭头指示。</p>
+    <div class="sig">renderStudyPoints(q) → &lt;aside class="mnemonic-card studypoint-card"&gt;
+  &lt;header&gt;&lt;span&gt;POINTS&lt;/span&gt;&lt;h3&gt;考点&lt;/h3&gt;&lt;/header&gt;
+  {points.map(p =&gt; &lt;details class="studypoint-item"&gt;
+      &lt;summary&gt;{p.title}&lt;/summary&gt;&lt;p&gt;{p.body}&lt;/p&gt;&lt;/details&gt;)}&lt;/aside&gt;</div>
+    <p><b>设计意图：</b>口诀是「记住」，考点是「展开理解」——同一位置两种信息密度，默认折叠以免解析过长。</p>
+  </div>
+</div>
+
+<div class="field">
+  <header><span class="fn">reasoningSteps</span><span class="pill p-warn">[{evidence, inference}]</span><span class="sp"></span><span class="uim">推理路径（有序列表）</span></header>
+  <div class="body">
+    <p>这是全套设计里<b>教学价值最高的一个组件</b>：把「怎么想到答案」拆成链式步骤，每步两行——上行灰字是<b>题干/教材给出的证据</b>，下行黑字加粗是<b>由证据得出的推断</b>。</p>
+    <div class="sig">renderReasoningSteps(q) → &lt;section class="reasoning-path"&gt;
+  &lt;h4&gt;推理路径&lt;/h4&gt;&lt;ol&gt;
+   {steps.map(s =&gt; &lt;li&gt;&lt;span&gt;{s.evidence||'题干信息'}&lt;/span&gt;
+                       &lt;strong&gt;{s.inference}&lt;/strong&gt;&lt;/li&gt;)}&lt;/ol&gt;&lt;/section&gt;</div>
+    <p><b>过滤条件：</b><code>evidence</code> 或 <code>inference</code> 至少有一个非空才渲染；全空则整块不出现。</p>
+  </div>
+</div>
+
+<div class="field">
+  <header><span class="fn">optionExplanations</span><span class="pill p-warn">[{option, explanation, typicalScenario?}]</span><span class="sp"></span><span class="uim">选项辨析（逐项）</span></header>
+  <div class="body">
+    <p>把解析从「整段落」拆到「每一个选项」：左侧 30px 圆形字母徽标，右侧说明为何对/错；若有 <code>typicalScenario</code> 则追加一行「典型场景」灰色小字——即<b>把错误选项对应到什么临床情境上，防再错</b>。</p>
+    <div class="sig">renderOptionExplanations(q) → &lt;section class="option-explanations"&gt;
+  &lt;h4&gt;选项辨析&lt;/h4&gt;
+  {items.map(i =&gt; &lt;article&gt;&lt;b&gt;{i.option}&lt;/b&gt;
+     &lt;div&gt;&lt;p&gt;{i.explanation}&lt;/p&gt;
+       {i.typicalScenario &amp;&amp; &lt;small&gt;典型场景：{i.typicalScenario}&lt;/small&gt;}&lt;/div&gt;
+   &lt;/article&gt;)}&lt;/section&gt;</div>
+    <p><b>与推理路径同属一组</b>，由偏好「显示详细解析 — 显示推理路径与逐项解析」统一开关。</p>
+  </div>
+</div>
+
+<div class="field">
+  <header><span class="fn">memoryCards</span><span class="pill p-warn">[{title, content, memoryCue, contrast}]</span><span class="sp"></span><span class="uim">知识点背诵（错题本第二模式）</span></header>
+  <div class="body">
+    <p>这是<b>唯一跨页面复用的字段</b>——不在做题页出现，而是驱动「错题本」的<b>第二视图</b>：错题本有「题目模式 / 知识点背诵」两个 tab（状态存 <code>medq:wrongbook-mode:v1</code>）。</p>
+    <p>背诵模式把同一张知识卡在所有错题里出现的位置聚合成一个分组卡，按「命中题数」倒序排——<b>一道题错得多，它的知识点卡就浮到最上面</b>。</p>
+    <div class="sig">分组键 = title + "\0" + content
+组内字段 = { title, content, memoryCue, contrast, records[] }
+排序 = 按 records.length 降序 → 再按 title 中文排序
+渲染 = &lt;section class="panel wrongbook-knowledge-card"&gt;
+        eyebrow「知识点背诵」+ &lt;h3&gt;{title}&lt;/h3&gt; + 「{n} 题」
+        &lt;p class="studypoint-body"&gt;{content}&lt;/p&gt;
+        {memoryCue &amp;&amp; &lt;div class="wrongbook-mnemonic"&gt;…}    ← 记忆提示</div>
+    <p><b>注意 <code>contrast</code> 字段</b>：命名为「对比」，是给「容易混淆的一对概念」预留的（如「心绞痛 vs 心梗」）。目前前端已取用，是<b>成对记忆</b>的设计位。</p>
+  </div>
+</div>
+
+<div class="field">
+  <header><span class="fn">knowledgePoint / knowledgePoints</span><span class="pill p-warn">string / string[]</span><span class="sp"></span><span class="uim">知识点标签 + 最弱知识点 Top3</span></header>
+  <div class="body">
+    <p>这个字段的用法比想象中深，它同时支撑四件事：</p>
+    <ol>
+      <li><b>标签 chip 展示</b>：题干上方正式知识点标签，偏好「显示题目标签 — 显示正式知识点标签」控制。</li>
+      <li><b>笔记归类</b>：「我的笔记」页声明「按学科与正式知识点自动归类」，即用标签做二级目录。</li>
+      <li><b>知识点级掌握度</b>：把作答记录按标签聚合成「知识点掌握度」，并产出<b>最弱知识点 Top3</b>（正确率升序）。</li>
+      <li><b>元数据标签过滤</b>：内置 <code>isMetadataTag()</code> 剔除「学科名 / A型题 / A 必背 / 高频 / 反馈 / 待整理」等非知识点标签——否则这些词会污染知识点统计。<b>这一条我们做统计时必须照抄。</b></li>
+    </ol>
+    <p><code>knowledgePoint</code>（单数）则是贡献题编辑器里的单值输入位，与复数并存。</p>
+  </div>
+</div>
+
+<div class="field">
+  <header><span class="fn">suggestedTags</span><span class="pill p-warn">string[]</span><span class="sp"></span><span class="uim">标签建议（贡献题编辑器）</span></header>
+  <div class="body">
+    <p>用于「用户投稿题目」场景：AI/用户给出的标签建议，与正式 <code>tags</code> 去重合并后展示在一个输入框里供老师采纳。</p>
+    <div class="sig">value = [...(tags || []), ...(suggestedTags || [])].filter(去重).join('、')
+placeholder = "例如：病史采集、诱导性提问"</div>
+    <p>对我们而言这个字段价值不高（我们不做 UGC 投稿），但<b>它揭示了一个模式：<code>tags</code> 是权威标签，<code>suggestedTags</code> 是待审建议</b>——若未来接入 AI 自动打标，正好沿用这个「建议 / 正式」二分。</p>
+  </div>
+</div>
+
+<div class="field">
+  <header><span class="fn">frequencyLevel</span><span class="pill p-warn">high / medium / low</span><span class="sp"></span><span class="uim">考频筛选 + 复习队列权重</span></header>
+  <div class="body">
+    <p>两处使用，一前一后：</p>
+    <ol>
+      <li><b>抽题前</b>：高级筛选里的「考频」三选（高/中/低频），与章节、年份、难度、题型、作答状态并列，参与 <code>previewSession</code> 预计题量计算。</li>
+      <li><b>复习排序</b>：<code>dueReviews()</code> 的排序末位权重——先按「上次是否做错 → 到期时间 → 错题次数」，最后才轮到「高频题优先」。<b>即考频是排序的最后一道 tiebreaker，不喧宾夺主。</b></li>
+    </ol>
+    <p><b>另一套等价表示法：</b>代码里同时兼容 <code>A 必背 / B 高频 / C 常规</code>（考研中心「高频考点榜」用）。<code>isMetadataTag()</code> 把这两套写法都当作元数据过滤掉，说明<b>它既可以当筛选维度，也可能被误写进 tags——两种都要防</b>。</p>
+  </div>
+</div>
+
+<div class="field">
+  <header><span class="fn">explanationMeta</span><span class="pill p-warn">object</span><span class="sp"></span><span class="uim">教材依据卡 + A/B/C 证据分级</span></header>
+  <div class="body">
+    <p>这是<b>整套设计里最重的机制</b>：为「AI 生成的解析是否可信」设计的分级与溯源体系。</p>
+    <h4>证据分级（自动推导，也可显式指定）</h4>
+    <div class="tbl-wrap" style="margin:8px 0">
+    <table>
+    <thead><tr><th>级别</th><th>判定条件（<code>mode</code>）</th><th>对用户的说辞</th></tr></thead>
+    <tbody>
+    <tr><td><code>A</code></td><td><code>textbook</code></td><td>「教材直接支持 — 结论与所示教材证据直接对应」</td></tr>
+    <tr><td><code>B</code></td><td><code>textbook_reasoning</code></td><td>「教材原则 + 病例推理 — 教材卡片只证明相关原理；病例结论来自题干线索推理，并非教材原文」</td></tr>
+    <tr><td><code>C</code></td><td><code>general_knowledge</code></td><td>「通识生成 — 未找到达到阈值的教材证据，本解析不是教材来源，必须人工复核」<b>（C 级直接隐藏教材依据区）</b></td></tr>
+    </tbody>
+    </table>
+    </div>
+    <h4>教材依据卡的结构</h4>
+    <div class="sig">explanationMeta = {
+  mode: 'textbook' | 'textbook_reasoning' | 'general_knowledge' | 'manual',
+  model, score, evidenceGrade: 'A' | 'B' | 'C',
+  evidence: [{
+    textbook, version,              // 教材名 + 版本
+    sourcePage,                     // 课本实际页码 → 左侧大号数字「页」牌
+    quote,                          // 教材原文（可折叠展开）
+    excerpt,                        // 关键原句（默认显示，40 字内）
+    contextSummary,                 // AI 整理后的上下文摘要（可折叠）
+    highlights[],                   // 需要高亮的术语
+    score                           // 检索相关度
+  }]
+}</div>
+    <p><b>三处细节值得学：</b></p>
+    <ul>
+      <li><b>原文术语自动高亮</b>：把「选项去前缀的文本 + 题干分词 + 显式 highlights」取并集，在教材原文里把命中的术语标红加粗（<code>.evidence-origin-mark</code>）——用户一眼看到「答案的依据在这句话里」。</li>
+      <li><b>双层折叠</b>：「查看整理后的上下文（AI 整理 / 本地整理）」与「查看教材原文（原始记录）」分开，<b>既不掩盖原文，也不强迫阅读</b>。</li>
+      <li><b>教材数量自适应</b>：<code>grid-template-columns:repeat(auto-fit,minmax(min(100%,460px),1fr))</code> —— 一本教材占满、多本自动流式分栏。</li>
+      <li><b>每本教材一个稳定色相</b>：<code>stableHue(教材名|版本)</code>（FNV-1a 哈希取模 360），同一本书永远同一个颜色，卡片不花。</li>
+    </ul>
+  </div>
+</div>
+
+<div class="note"><b>顺带解开的谜：<code>questionRevision</code>（<code>qv1-哈希</code>）是干什么的。</b><br>
+它对「题型 + 题干 + 病例 + 选项 + 答案 + 短解析 + 解析块 + 选项解析 + 推理步骤 + 学习要点」做稳定哈希（键排序后序列化，保证同内容同哈希）。每次加载题目时执行 <code>reconcileQuestionRevisions()</code>：<b>只要哈希变了，就自动删除该题的复习记录</b>。<br>
+理由很硬：题目的答案或解析被修订后，基于旧版本形成的「已掌握」判断是无效的，必须重做。这比我们目前「保守地永不变更 id、靠别名兜底」更主动。<b>我们未来若修订题干/答案，可直接借用这个机制做定向失效。</b></div>
+
+<h2><i>05</i>其余高价值机制（可借鉴度排序）</h2>
+
+<h3>5.1 间隔复习算法（SM-2 变体，纯前端实现）</h3>
+<p>四档状态 + 五档间隔，判定同时看<b>连续正确次数</b>和<b>持续时间跨度</b>——不是简单地「连对几题就算会」。</p>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>条件</th><th>状态</th><th>下次复习</th></tr></thead>
+<tbody>
+<tr><td>答错</td><td><code>learning</code></td><td class="num">+1 天</td></tr>
+<tr><td>连对 1 次</td><td><code>learning</code></td><td class="num">+3 天</td></tr>
+<tr><td>连对 ≥2 次</td><td><code>consolidating</code></td><td class="num">+7 天</td></tr>
+<tr><td>连对 ≥3 次 <b>且</b> 跨度 ≥7 天</td><td><code>consolidating</code></td><td class="num">+14 天</td></tr>
+<tr><td>连对 ≥4 次 <b>且</b> 跨度 ≥21 天</td><td><code>mastered</code></td><td class="num">+30 天</td></tr>
+</tbody>
+</table>
+</div>
+<p><b>复习桶分 6 类</b>（决定进哪个列表）：<code>excluded</code>（手动移出）/ <code>mastered</code> / <code>repeated</code>（错过 ≥2 次）/ <code>due</code>（到期）/ <code>new-wrong</code> / <code>learning</code>。</p>
+
+<h3>5.2 知识点级掌握度会反向拉长题目复习间隔</h3>
+<p>这是它最聪明的一处：知识点掌握度不只看单题。</p>
+<div class="sig">知识点 mastered 需同时满足：作答过 ≥3 题 · 首末作答跨度 ≥7 天 · 正确率 ≥80% · 最近连续 3 题全对
+
+然后 effectiveReviewState()：
+  若该题的所有标签均已 mastered
+    → 该题的复习间隔取「这些标签间隔的最小值」（依据标记为 knowledge-tag）
+      → 并且在题目记录被手动置为 mastered 时，会把它降级回 consolidating/learning 重新走流程</div>
+<p><b>含义：</b>单题答对不等于掌握，但它所属的<b>知识点整体掌握后，题目本身也可以延长复习周期</b>——省下时间给真正的薄弱点。</p>
+
+<h3>5.3 抽题前的「预计题量 + 预计时长 + 冲突提示」</h3>
+<p>调整任一筛选条件即实时计算并回显，且能解释「为什么没题」。</p>
+<div class="sig">previewSession() 返回：
+  available        符合条件题数
+  count            实际抽取数
+  estimatedMinutes Math.ceil(count × 0.9)      ← 每 0.9 分钟一题
+  recentDuplicates 最近 7 天做过的重复题数
+  distribution     各学科题数分布
+  blockedReasons   冲突诊断，例如：
+     「“已掌握”与“排除已掌握”互相冲突」
+     「排除最近 7 天已做题后没有剩余题目」
+     「所选学科或章节与其他条件组合后没有题目」</div>
+<p>这个「给失败原因、不给空列表」的做法，能显著降低用户困惑。</p>
+
+<h3>5.4 选项排除只存会话内存，绝不入库</h3>
+<div class="sig">eliminatedOptions = new Map()   // key = `${sessionId}:${questionId}`，值 Set&lt;字母&gt;
+// 注释原文：「仅会话内存，不入库、不同步」</div>
+<p>排除法只是临场辅助，不应影响历史正确率与掌握度统计。这是个很容易做错的边界。</p>
+
+<h3>5.5 答题后的反思层（错因 / 掌握自评 / 复习感受）</h3>
+<ul>
+<li><b>复习感受 2 档</b>：「还不熟」→ 强制 1 天后再复习、状态回落 learning；「暂时清楚」→ 不改记录。</li>
+<li><b>掌握开关</b>：一键移出复习列表，再按一次取消。</li>
+<li><b>错因 5 类</b>：<code>knowledge</code> 知识性 / <code>confusion</code> 概念混淆 / <code>missed-clue</code> 漏看线索 / <code>calculation</code> 计算失误 / <code>guess</code> 蒙的。</li>
+<li><b>掌握自评 3 档</b>：<code>again</code> / <code>uncertain</code> / <code>mastered</code>。</li>
+</ul>
+<p>全部标注「可直接跳过」——不强迫填写，但提供了归因数据。</p>
+
+<h3>5.6 背题模式（memorize）：独立于作答流程</h3>
+<p>「直接看答案，不计入作答和正确率」，带病例背景框（<code>caseInfo</code>）、短解析（<code>briefExplanation</code>）置顶、口诀与考点，左右方向键翻题，退出后可续接位置。它的实现刻意做成独立模块（<code>memorize.js</code> 仅 3.3KB），<b>与练习流程完全解耦</b>。</p>
+
+<h3>5.7 PWA 与离线题库包</h3>
+<ul>
+<li><b>Service Worker 用「网络优先 + 离线回落」</b>，理由是「避免新旧版本混排」；缓存名带版本号 <code>medq-shell-v63</code>，<code>activate</code> 时自动清掉所有旧的 <code>medq-shell-*</code>。<b>这直接解决了我们「改 app.js 必须手改 index.html 的 ?v=」的痛点。</b></li>
+<li><b>离线题库包</b>：整包下载后按 <code>checksum</code> 校验 + 复用，会话里标记「离线题库包」，并跳过在线修订对账。</li>
+<li>导航请求失败回落到缓存的 <code>/index.html</code>；<code>/api/</code> 与跨域请求不拦截。</li>
+</ul>
+
+<h3>5.8 讨论区与纠错</h3>
+<p>每题下方有「可选反馈」（表态 chip，可切换选中态）+ 讨论帖（作者头像字母、时间、回复、最多 500 字）；另有独立纠错入口，问题类型 4 种（答案错误 / 解析有误 / 题干选项问题 / 其他）+ 200 字补充，并提示「同一道题只需反馈一次」。</p>
+
+<h3>5.9 偏好设置的实现方式</h3>
+<p>11 个开关，状态用<b>反向键</b>存储以避免默认值歧义：</p>
+<div class="sig">showMnemonic   → 存 hideMnemonic  (invert)
+showSource     → 存 hideSource    (invert)
+showDifficulty → 存 hideErrorProne(invert)
+其余：showQuestionTags / showDetailedAnalysis / showPitfalls / showReactions / showDiscussion / showMotion / examSimpleMode / clickToSubmit</div>
+<p>「点击选项自动提交」「做对自动下一题」「考试简洁模式」等也都在这层，<b>做题节奏交给用户自己定</b>。</p>
+
+<h2><i>06</i>对我们站点的借鉴清单</h2>
+<p class="lead">按「投入产出比」分档。A 档零数据依赖、可立刻做；D 档属架构级，看后续规划。</p>
+
+<h3>A 档 · 立即可做（纯前端，不碰数据）</h3>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>项</th><th>具体做法</th><th>收益</th></tr></thead>
+<tbody>
+<tr><td>数字等宽</td><td>统计/计数/页码加 <code>font-variant-numeric:tabular-nums</code></td><td><span class="pill p-ok">高</span> 数字不跳动</td></tr>
+<tr><td>解析限宽</td><td>解析正文 <code>max-width:78ch</code> + <code>line-height:1.85</code></td><td><span class="pill p-ok">高</span> 长解析可读性直接提升</td></tr>
+<tr><td>解析分段渲染</td><td>我们已有 <code>ai_explanation</code> 的 <code>## 正确答案</code>/<code>## 答案解析</code> Markdown 结构，按标题切成卡片段，段头带 3px 竖线</td><td><span class="pill p-ok">高</span> 28,734 条解析立即变好看</td></tr>
+<tr><td>题型细分标签</td><td>把 A1/A2/A3/X/F 显示为「A1 型题 · 单句最佳选择」等全称</td><td><span class="pill p-info">中</span> 减少考生疑惑</td></tr>
+<tr><td>SW 版本化缓存</td><td>引入 <code>sw.js</code>（网络优先 + 版本号缓存名），取代手动改 <code>?v=</code></td><td><span class="pill p-ok">高</span> 根治缓存踩坑，且获得离线可用</td></tr>
+<tr><td>移动端表格降级</td><td>宽表在 760px 以下转卡片（<code>data-label</code>）</td><td><span class="pill p-info">中</span> 手机可用性</td></tr>
+<tr><td>会话预览</td><td>组卷前回显预计题量 + 预计时长（题数×0.9 分钟）+ 冲突原因</td><td><span class="pill p-info">中</span> 组卷体验</td></tr>
+<tr><td>触控与动效基线</td><td>按钮 <code>min-height:44px</code>、<code>:focus-visible</code>、<code>prefers-reduced-motion</code></td><td><span class="pill p-info">中</span> 无障碍与手感</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>B 档 · 数据已有但未接入（性价比最高的一档）</h3>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>字段</th><th>我们的库存（实测非空）</th><th>可做的 UI</th></tr></thead>
+<tbody>
+<tr><td><code>explanationBlocks</code></td><td class="num">80,476 条（99.73%）</td><td><span class="pill p-ok">最高优先</span> 结构化块渲染：<code>table</code> / <code>list</code> / <code>callout</code> 三种类型，已在我们 merged2 里，只是没往前端透传</td></tr>
+<tr><td><code>briefExplanation</code></td><td class="num">10,232 条</td><td>一句话解析置顶（背题模式里也用）</td></tr>
+<tr><td><code>caseInfo</code></td><td class="num">2,586 条</td><td>病例背景框（本次已接）</td></tr>
+<tr><td><code>tags</code></td><td class="num">12,866 条</td><td>知识点 chip；并可做「最弱知识点 Top3」</td></tr>
+<tr><td><code>examYear</code> / <code>extensions.examQno</code></td><td>考研真题</td><td>真题徽标：年份 + 题号 + 题型</td></tr>
+<tr><td><code>questionSource</code></td><td>24 种来源</td><td>来源标签（该站有独立的 <code>source-labels.js</code>）</td></tr>
+</tbody>
+</table>
+</div>
+<div class="note good"><b>结论：</b>B 档里 <code>explanationBlocks</code> 是本次调研最大的「捡钱点」——8 万条结构化解析已经躺在我们的 <code>merged2</code> 里，只差一次字段透传 + 一个渲染函数。</div>
+
+<h3>C 档 · 渲染层可先建好，等数据（那 9 个字段）</h3>
+<p>建议做法：<b>不改数据、不写 null，只在前端加「有值才显示」的渲染分支 + 在 schema 里标注预期结构</b>。这样等 AI 生成管线接通，字段一到即显示，无需二次改前端。</p>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>字段</th><th>预期结构</th><th>建议优先级</th></tr></thead>
+<tbody>
+<tr><td><code>optionExplanations</code></td><td><code>[{option, explanation, typicalScenario?}]</code></td><td><span class="pill p-ok">先做</span> 对多选题/易混题收益最大</td></tr>
+<tr><td><code>mnemonic</code></td><td><code>string</code></td><td><span class="pill p-ok">先做</span> 组件最轻（一张卡）</td></tr>
+<tr><td><code>reasoningSteps</code></td><td><code>[{evidence, inference}]</code></td><td><span class="pill p-info">次之</span> 教学价值最高但生成成本高</td></tr>
+<tr><td><code>studyPoints</code></td><td><code>[{title, body}]</code></td><td><span class="pill p-info">次之</span></td></tr>
+<tr><td><code>memoryCards</code></td><td><code>[{title, content, memoryCue, contrast}]</code></td><td><span class="pill p-gray">后置</span> 需要错题本双视图配合</td></tr>
+<tr><td><code>explanationMeta</code></td><td>教材依据 + A/B/C 分级</td><td><span class="pill p-gray">后置</span> 依赖教材库，属独立项目</td></tr>
+<tr><td><code>frequencyLevel</code></td><td><code>high/medium/low</code></td><td><span class="pill p-no">暂缓</span> 需先有稳定的考频统计口径</td></tr>
+<tr><td><code>suggestedTags</code></td><td><code>string[]</code></td><td><span class="pill p-no">暂缓</span> 仅 UGC 投稿场景需要</td></tr>
+</tbody>
+</table>
+</div>
+
+<h3>D 档 · 架构级（视规划取舍）</h3>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>机制</th><th>与我们的现状对比</th></tr></thead>
+<tbody>
+<tr><td>间隔复习算法（4 状态 / 5 间隔）</td><td>我们目前是「四级掌握度」（手动为主）。对方是<b>连续正确次数 + 时间跨度双条件自动判定</b>，可考虑替换或并行</td></tr>
+<tr><td>知识点级掌握度（≥3 题 / ≥7 天 / ≥80% / 最近 3 连对）</td><td>我们没有知识点维度统计。依赖 <code>tags</code> 可用，见 B 档</td></tr>
+<tr><td>知识点掌握后反向延长题目复习间隔</td><td>很聪明，但需先有知识点维度</td></tr>
+<tr><td><code>questionRevision</code> 修订对账</td><td>我们的策略是「id 永不变 + ALIAS 兜底」。若将来要修订题干/答案，可直接借这套做<b>定向失效</b></td></tr>
+<tr><td>PWA 离线题库包（checksum 校验）</td><td>我们站点只有 3 科 14,880 题，体积尚小；等到全量 10.8 万题上线后价值会凸显</td></tr>
+<tr><td>选项辨析 / 讨论区 / 纠错入口</td><td>我们已有「纠错汇总」，方向一致</td></tr>
+</tbody>
+</table>
+</div>
+
+<h2><i>07</i>抓取资产清单</h2>
+<p class="lead">全部原始文件已落盘，可随时复查（不做二次转述）。</p>
+<div class="tbl-wrap">
+<table>
+<thead><tr><th>路径</th><th>内容</th></tr></thead>
+<tbody>
+<tr><td><code>题库调研/iyixue_web/home.html</code></td><td>首页 HTML（22KB，含 splash 加载流程与全部资源引用清单）</td></tr>
+<tr><td><code>题库调研/iyixue_web/js/</code></td><td>19 个文件：<code>app.js</code>(397KB) / <code>learning-core.js</code> / <code>explanation-core.js</code> / <code>memorize.js</code> / <code>practice-core.js</code> / <code>sw.js</code> 等（另 2 个 vendor 库未下载：GSAP、lucide-icons）</td></tr>
+<tr><td><code>题库调研/iyixue_web/css/</code></td><td>10 个文件：<code>style.css</code>(162KB) / <code>app-shell.css</code> / <code>memorize.css</code> / <code>layout-fixes.css</code> 等</td></tr>
+<tr><td><code>题库调研/iyixue_web/manifest.webmanifest</code></td><td>PWA 清单（standalone / theme #2563eb / 192+512 图标）</td></tr>
+</tbody>
+</table>
+</div>
+
+<div class="foot">
+  报告生成于 2026-09-12 · 依据 iyixue.top 线上资源实测抓取（<code>curl</code> 直取，HTTP 200）<br>
+  所有结论均可回溯至上述源文件；未使用推测性描述。<br>
+  说明：本报告仅用于学习参考该站的交互与信息设计，其代码与文案版权归原站点所有，未做任何复制挪用。
+</div>
+
+</div>
+</body>
+</html>
