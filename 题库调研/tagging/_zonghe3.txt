@@ -1,1 +1,0 @@
-fixed, zonghe_left=0

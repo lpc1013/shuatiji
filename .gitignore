@@ -58,3 +58,7 @@ database_export-*.json
 
 # 爬虫窗口 / 监控日志
 *.jsonl
+
+# tagging 过程记录（已归档；核心仅 _ai_tags.json / jiguang_tags.json / tag_jiguang.mjs / FINAL_REPORT.txt 入库）
+题库调研/tagging/_*.txt
+题库调研/tagging/_ai_todo.json

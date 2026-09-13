@@ -1,3 +1,0 @@
-affected=10 emptied=2
-jiguang:75b109a6-74f6-4d08-b798-918ce58232ad
-jiguang:4cce5432-b02b-4240-b79b-cf8d83ab441b
