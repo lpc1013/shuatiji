@@ -50,3 +50,11 @@ database_export-*.json
 *.bak
 *.bak_*
 题库调研/_merged2_manual_backup/
+
+# 构建 / 验证运行日志与中间产物（运行即生成，非源码；tagging/_ai_tags.json 为结果源，不受影响）
+题库调研/_*.txt
+题库调研/verify/_*.txt
+题库调研/verify/_*.json
+
+# 爬虫窗口 / 监控日志
+*.jsonl
