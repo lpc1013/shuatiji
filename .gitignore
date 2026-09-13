@@ -12,27 +12,27 @@ site/data/data.js
 *.zip
 
 # 爬虫中间产物/缓存/运行日志（整个目录均为产物，非源码）
-爬虫与构建产物/
+工程/爬虫与构建产物/
 
-# 发布打包产物（由 题库调研/build_dist.mjs 生成，非源码）
+# 发布打包产物（由 工程/题库调研/build_dist.mjs 生成，非源码）
 site_dist/
 
-# ===== 推送 GitHub 排除（2026-09-14）：数据产物 / 凭证 =====
+# ===== 目录重构后（2026-09-14）：数据产物 / 凭证 =====
+# 注：site/ 与 site_dist/ 为生产环境，保留在项目根，不参与重构搬迁
 # 超大文件（>100MB GitHub 直接拒绝）
-jiguangv1.2.1+36-app-release.apk
+归档/应用包/
 # 部署 / 构建产物
-爬虫与构建产物/
 site/data/
 site/原文/
 # 题库调研大数据产物（可本地 rebuild，不进仓库）
-题库调研/merged2/
-题库调研/归一化/
-题库调研/merged/
-题库调研/packs/
-题库调研/fixed/
+工程/题库调研/merged2/
+工程/题库调研/归一化/
+工程/题库调研/merged/
+工程/题库调研/packs/
+工程/题库调研/fixed/
 # 第三方爬虫数据
-iyixue_top/
-haimamed_english/
+工程/iyixue_top/
+工程/haimamed_english/
 # 凭证 / 敏感运行时文件（脚本运行时读取，不入仓）
 jiguang_token*.txt
 jiguang_token*.bak*
@@ -49,16 +49,19 @@ database_export-*.json
 *.tmp
 *.bak
 *.bak_*
-题库调研/_merged2_manual_backup/
+工程/题库调研/_merged2_manual_backup/
 
 # 构建 / 验证运行日志与中间产物（运行即生成，非源码；tagging/_ai_tags.json 为结果源，不受影响）
-题库调研/_*.txt
-题库调研/verify/_*.txt
-题库调研/verify/_*.json
+工程/题库调研/_*.txt
+工程/题库调研/verify/_*.txt
+工程/题库调研/verify/_*.json
 
 # 爬虫窗口 / 监控日志
 *.jsonl
 
 # tagging 过程记录（已归档；核心仅 _ai_tags.json / jiguang_tags.json / tag_jiguang.mjs / FINAL_REPORT.txt 入库）
-题库调研/tagging/_*.txt
-题库调研/tagging/_ai_todo.json
+工程/题库调研/tagging/_*.txt
+工程/题库调研/tagging/_ai_todo.json
+
+# 归档区（旧备份 / 一次性脚本 / 杂项探针产物，留档不入库）
+归档/
