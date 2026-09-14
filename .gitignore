@@ -5,8 +5,8 @@
 *.log
 crawl_log_*.txt
 
-# 生成产物：由 极光_*.json 经 build_data.js 重生成
-site/data/data.js
+# 生成产物：题库数据管线（merged2 → build_packs.mjs → build_site_data.mjs）生成 manifest + 分片
+# 具体忽略规则见下方 site/data/（已统一忽略整目录）
 
 # 部署打包产物
 *.zip

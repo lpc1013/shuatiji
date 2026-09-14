@@ -33,33 +33,22 @@ window.Eng = (function () {
   let quizList = null, quizIdx = 0, quizAns = null, quizRight = -1, quizPicked = -1, quizWrong = 0;
   let quizDistractPool = null;   // 小科室测验干扰项回退池（全库，缓存复用）
   let allCache = null;            // 全库词条缓存（懒加载一次，搜索/复习共用）
-  /* ② 列表分段渲染：长列表（「全部科室」≈3.7k 行 / 1.08MB HTML / ≈22k DOM 节点）一次性出全
-     会让切模式掉帧；首屏只渲染 LIST_BATCH 行，滚到底或点「加载更多」再增量追加。
-     单科室 ≤200 行 → batch ≥ total，走一次性渲染，与旧版行为完全一致。 */
-  const LIST_BATCH = 300;
-  let listShown = LIST_BATCH;     // 当前已渲染行数（换科室/筛选/搜索/进列表时重置）
-  let listPool = null;            // 当前列表完整词表（增量追加的唯一来源）
-  let listScrollBound = false;    // 滚动监听只挂一次（#view 跨 refresh 不重建）
+  /* ② 列表分段渲染：长列表（「全部分类」≈3.7k 行）一次性出全会让切模式掉帧；
+     首屏只渲染前 LIST_INIT 行，下方「展示全部」按钮一次放出剩余全部（用户主动触发）。
+     ≤ LIST_INIT 行的小科室直接出全。 */
+  const LIST_INIT = 30;
+  let listShown = LIST_INIT;      // 当前已渲染行数（换科室/筛选/搜索/进列表时重置）
+  let listPool = null;            // 当前列表完整词表（「展示全部」追加的唯一来源）
+  /* A07：高级筛选折叠状态 + 卡片背诵位置记忆 */
+  let advOpen = false;            // 高级筛选 <details> 是否展开（跨刷新保持）
+  function loadCardPos(id) { try { const m = JSON.parse(localStorage.getItem('engCardPos') || '{}'); return (m && m[id]) || 0; } catch (e) { return 0; } }
+  function saveCardPos(id, idx) { try { const m = JSON.parse(localStorage.getItem('engCardPos') || '{}'); m[id] = idx; localStorage.setItem('engCardPos', JSON.stringify(m)); } catch (e) {} }
 
 
   /* ---------- 进度 ---------- */
   function prog() {
     if (!S.global.english) S.global.english = {};
     return S.global.english;
-  }
-  function exportProg() {
-    const data = S.global.english || {};
-    const keys = Object.keys(data);
-    if (!keys.length) { if (typeof toast === 'function') toast('还没有英语进度可导出'); return; }
-    try {
-      const blob = new Blob([JSON.stringify({ app: 'english_progress', version: 1, exportedAt: Date.now(), count: keys.length, data }, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url; a.download = '医学英语进度_' + new Date().toISOString().slice(0, 10) + '.json';
-      document.body.appendChild(a); a.click(); a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-      if (typeof toast === 'function') toast('已导出 ' + keys.length + ' 条英语进度 ✓');
-    } catch (e) { if (typeof toast === 'function') toast('导出失败'); }
   }
   function pkey(w) { return String(w.e || '').toLowerCase().trim(); }
   function pget(w) { return prog()[pkey(w)] || null; }
@@ -167,7 +156,7 @@ window.Eng = (function () {
     return MAN;
   }
   async function loadDept(id) {
-    if (id === 'all') return ensureAllWords();   // 「全部科室」：全库 31 分片懒加载（缓存复用）
+    if (id === 'all') return ensureAllWords();   // 「全部分类」：全库 31 分片懒加载（缓存复用）
     if (cache[id]) return cache[id];
     const d = (MAN && MAN.depts || []).find(x => x.id === id);
     if (!d) return [];
@@ -188,7 +177,7 @@ window.Eng = (function () {
     if (!MAN) return [];
     const parts = await Promise.all((MAN.depts || []).map(async d => {
       const ws = await loadDept(d.id);
-      for (const w of ws) w._d = d.n;
+      for (const w of ws) w._d = trimDept(d.n);
       return ws;
     }));
     allCache = [].concat.apply([], parts);
@@ -200,6 +189,37 @@ window.Eng = (function () {
     const all = await ensureAllWords();
     const now = Date.now(), p = prog();
     return all.filter(w => { const o = p[pkey(w)]; return o && o.due && o.due <= now; });
+  }
+
+  /* ===== A11：英语复习对外 API（供主站「间隔回顾 / 错题」借道，复用既有 per-word SRS） ===== */
+  function allFamiliar(arr) {
+    const p = prog(), all = allCache || [];
+    return all.filter(w => { const o = p[pkey(w)]; return o && arr.indexOf(o.s) >= 0; });
+  }
+  function dueCountSync() {
+    const p = prog(), now = Date.now(), all = allCache || [];
+    let n = 0;
+    for (const w of all) { const o = p[pkey(w)]; if (o && o.due && o.due <= now) n++; }
+    return n;
+  }
+  async function dueCount() { await ensureAllWords().catch(() => {}); return dueCountSync(); }
+  async function wordsByFamiliar(s) { await ensureAllWords().catch(() => {}); return allFamiliar([s]); }
+  async function launchReview() {
+    const dw = await dueWords();          // 全库到期词快照（进那一刻定格）
+    reviewList = dw; mode = 'card'; cardIdx = 0; cardRevealed = false;
+    await refresh();
+  }
+  async function showFamiliar(s) {
+    await ensureAllWords().catch(() => {});
+    only = String(s); mode = 'card'; reviewList = null; cardIdx = 0; cardRevealed = false;
+    await refresh();
+  }
+  async function launchImmersive(wordId) {
+    await ensureAllWords().catch(() => {});
+    let ws = allFamiliar([0, 1]);          // 优先在「模糊/忘记」词表里定位
+    let list = ws, idx = ws.findIndex(w => w.id === wordId);
+    if (idx < 0) { list = allCache || []; idx = Math.max(0, list.findIndex(w => w.id === wordId)); }
+    openReader(Math.max(0, idx), list);
   }
 
   /* ---------- 列表计算 ---------- */
@@ -270,9 +290,12 @@ window.Eng = (function () {
    * 覆盖层铺满整个视口（不设 max-width），内层三块各自限宽 600px，
    * 这样桌面端侧边栏/内容区不会被露出来，也不需要 display:none 掉 .view
    * （保住列表滚动位置）。 */
+  /* 显示用科室名：去掉构建期打的「(扩增)」后缀（仅展示裁剪，不动数据层）；
+     兼容「(扩增)/(扩展)」两种写法（数据层现为「(扩增)」，勿只留一种） */
+  function trimDept(n) { return n ? n.replace(/[（(](?:扩增|扩展)[）)]/g, '') : (n || ''); }
   function deptName() {
     const d = (MAN && MAN.depts || []).find(x => x.id === dept);
-    return d ? d.n : '';
+    return d ? trimDept(d.n) : '';
   }
   function readerHtml() {
     const words = rWords || [];
@@ -381,44 +404,28 @@ window.Eng = (function () {
         </div>
       </div>`;
   }
-  /* ② 分段渲染：> LIST_BATCH 行只先出首屏一批 + 「加载更多」按钮；
-     ≤ LIST_BATCH（单科室最大 178 行）一次性出全，与旧版完全一致。 */
+  /* ② 分段渲染：> LIST_INIT 行只先出首屏 30 行 + 下方「展示全部」按钮；
+     ≤ LIST_INIT 行的小科室一次性出全。 */
   function listHtml(words) {
     if (!words.length) { listPool = null; return emptyHtml(); }
     listPool = words;
     const total = words.length;
-    const batch = total > LIST_BATCH ? Math.min(listShown, total) : total;
+    const batch = total > LIST_INIT ? Math.min(listShown, total) : total;
     listShown = batch;
     const rows = words.slice(0, batch).map(listRowHtml).join('');
     if (batch >= total) return `<div id="engList">${rows}</div>`;
     return `<div id="engList">${rows}</div>
-      <div id="engMore" class="eng-more"><button class="btn ghost sm" data-act="eng-more">加载更多（还剩 ${total - batch} 词）</button></div>`;
+      <div id="engMore" class="eng-more"><button class="btn ghost sm" data-act="eng-more">展示全部（共 ${total} 词）</button></div>`;
   }
-  /* 增量追加下一批：只 insert 新行，不重建已渲染的（避免 3k 行反复重解析 + 滚动位置跳） */
-  function loadMoreList() {
+  /* 「展示全部」：一次 insert 剩余全部行（不重建已渲染的，保滚动位置） */
+  function showAllList() {
     if (mode !== 'list' || !listPool) return;
     const list = document.getElementById('engList');
     if (!list || listShown >= listPool.length) return;
-    const from = listShown, to = Math.min(from + LIST_BATCH, listPool.length);
-    list.insertAdjacentHTML('beforeend', listPool.slice(from, to).map(listRowHtml).join(''));
-    listShown = to;
+    list.insertAdjacentHTML('beforeend', listPool.slice(listShown).map(listRowHtml).join(''));
+    listShown = listPool.length;
     const more = document.getElementById('engMore');
-    const rest = listPool.length - to;
-    if (more) {
-      if (rest > 0) more.innerHTML = `<button class="btn ghost sm" data-act="eng-more">加载更多（还剩 ${rest} 词）</button>`;
-      else more.remove();
-    }
-  }
-  /* 滚动到底自动续接（距底 400px）。监听挂 #view（滚动容器，跨 refresh 不重建，只挂一次） */
-  function bindListScroll() {
-    const v = document.getElementById('view');
-    if (!v || listScrollBound) return;
-    listScrollBound = true;
-    v.addEventListener('scroll', () => {
-      if (mode !== 'list' || !listPool || listShown >= listPool.length) return;
-      if (!document.getElementById('engList')) return;
-      if (v.scrollTop + v.clientHeight >= v.scrollHeight - 400) loadMoreList();
-    }, { passive: true });
+    if (more) more.remove();
   }
 
 
@@ -429,7 +436,7 @@ window.Eng = (function () {
     if (reviewList) words = reviewList;
     if (!words.length) return emptyHtml();
     if (reviewList && cardIdx >= words.length) {
-      return `<div class="eng-done"><div class="eng-done-t">🎉 今日复习完成</div>
+      return `<div class="eng-done"><div class="eng-done-t">${ICON('party')}今日复习完成</div>
         <div class="muted small">共 ${words.length} 词 · 标记过的词已按间隔表排好下次复习时间</div>
         <button class="btn" data-act="eng-review-exit" style="margin-top:12px">返回列表</button></div>`;
     }
@@ -491,13 +498,13 @@ window.Eng = (function () {
   function quizHtml(words) {
     if (!quizList) return '<div class="empty">测验未初始化</div>';
     if (quizIdx >= quizList.length) {
-      return `<div class="eng-done"><div class="eng-done-t">📋 本轮测验完成</div>
+      return `<div class="eng-done"><div class="eng-done-t">${ICON('doc')}本轮测验完成</div>
         <div class="muted small">共 ${quizList.length} 题 · 答错 ${quizWrong} 题（已自动降回「忘记」并安排重考）</div>
         <button class="btn" data-act="eng-quiz-exit" style="margin-top:12px">返回列表</button></div>`;
     }
     const w = quizList[quizIdx];
     const head = quizType === 'audio'
-      ? `<div class="eng-q-audio"><button class="eng-q-replay" data-act="eng-quiz-replay" aria-label="重听">🔊 再听一遍</button></div>`
+      ? `<div class="eng-q-audio"><button class="eng-q-replay" data-act="eng-quiz-replay" aria-label="重听">${ICON('speaker')}再听一遍</button></div>`
       : quizType === 'en2cn'
         ? `<div class="eng-q-en">${esc(w.e)}</div>`
         : `<div class="eng-q-cn">${esc(w.c || '（该词中文释义缺失）')}</div>`;
@@ -516,37 +523,39 @@ window.Eng = (function () {
   /* 模式卡（tab + 各模式 chips + 标记筛选 + 计数）。
      ① 局部刷新（softRefresh）时只重建它 + #engBody，不再整视图 innerHTML ——
      头部（搜索框/科室下拉/进度卡）与 #view 滚动位置都能保住。 */
-  function modeCardInner(words, shown) {
+  function deptOptionsHtml() {
+    const man = MAN || {};
+    return `<option value="all" ${dept === 'all' ? 'selected' : ''}>全部分类 · ${man.total || ''} 词</option>` +
+      (man.depts || []).map(x => `<option value="${x.id}" ${x.id === dept ? 'selected' : ''}>${esc(trimDept(x.n))} · ${x.c}</option>`).join('');
+  }
+  function modeCardInner(words, shown, sched) {
     const st = statOf(words);
+    const hint = filterHint(st);
+    /* 科室选择 = 基础筛选（常驻主视图，与「⚙ 高级筛选」同行）；
+       遮罩 / 题型 / 熟悉度仍收进独立弹窗。 */
     return `<div class="eng-modes" role="tablist" aria-label="学习模式">
         <button class="${mode === 'list' ? 'on' : ''}" data-act="eng-mode" data-v="list" role="tab" aria-selected="${mode === 'list'}">
           <b>列表浏览</b><span>中英对照 · 查词</span></button>
         <button class="${mode === 'card' ? 'on' : ''}" data-act="eng-mode" data-v="card" role="tab" aria-selected="${mode === 'card'}">
           <b>卡片背诵</b><span>先想后选 · 快速过卡</span></button>
         <button class="${mode === 'quiz' ? 'on' : ''}" data-act="eng-mode" data-v="quiz" role="tab" aria-selected="${mode === 'quiz'}">
-          <b>测验</b><span>4 选 1 自测 · 答错喂调度</span></button>
+          <b>测验</b><span>4 选 1 自测</span></button>
       </div>
-      ${mode === 'list' ? `<div class="wrap eng-chips" style="margin-top:8px">
-        <button class="chip sm ${hideCn ? 'on' : ''}" data-act="eng-toggle" data-f="hideCn">遮中文</button>
-        <button class="chip sm ${hideEn ? 'on' : ''}" data-act="eng-toggle" data-f="hideEn" title="遮住词形：看中文回想英文，再点 chip 对照">遮英文</button>
-      </div>` : ''}
-      ${mode === 'card' ? `<div class="wrap eng-chips" style="margin-top:8px">
-        <button class="chip sm" data-act="eng-immersive">📖 沉浸式背单词</button>
-        <span class="muted small" style="align-self:center">全屏 · 标记后弹出词源 / 例句 / 文献</span>
-      </div>` : ''}
-      ${mode === 'quiz' ? `<div class="wrap eng-chips" style="margin-top:6px">
-        <button class="chip sm ${quizType === 'cn2en' ? 'on' : ''}" data-act="eng-quiz-type" data-v="cn2en">中 → 英</button>
-        <button class="chip sm ${quizType === 'en2cn' ? 'on' : ''}" data-act="eng-quiz-type" data-v="en2cn">英 → 中</button>
-        <button class="chip sm ${quizType === 'audio' ? 'on' : ''}" data-act="eng-quiz-type" data-v="audio">听音辨词</button>
-      </div>` : ''}
-      <div class="wrap eng-chips" style="margin-top:6px">
-        <button class="chip sm ${only === '' ? 'on' : ''}" data-act="eng-only" data-v="">全部 ${words.length}</button>
-        <button class="chip sm ${only === 'new' ? 'on' : ''}" data-act="eng-only" data-v="new">未标记 ${st.un}</button>
-        <button class="chip sm ${only === '0' ? 'on' : ''}" data-act="eng-only" data-v="0">忘记 ${st.n0}</button>
-        <button class="chip sm ${only === '1' ? 'on' : ''}" data-act="eng-only" data-v="1">模糊 ${st.n1}</button>
-        <button class="chip sm ${only === '2' ? 'on' : ''}" data-act="eng-only" data-v="2">认识 ${st.n2}</button>
+      ${sched && sched.due > 0 ? `<button class="chip eng-review-hl" data-act="eng-review">${ICON('bell')}到期复习 ${sched.due} 个词</button>` : ''}
+      <div class="eng-filter-row">
+        <select id="engDept" class="subject-select eng-dept-basic" aria-label="选择分类">${deptOptionsHtml()}</select>
+        <button class="chip eng-adv-btn" data-act="eng-adv-open">${ICON('gear')}高级筛选${hint}</button>
       </div>
       <p class="muted small" id="engCount" style="margin:8px 0 0">${countText(words, shown)}</p>`;
+  }
+  /* 高级筛选摘要右侧小计数：折叠时也能看到当前过滤状态 */
+  function filterHint(st) {
+    const parts = [];
+    if (only !== '') parts.push(LEVELS[+only].n + ' ' + (only === 'new' ? st.un : only === '0' ? st.n0 : only === '1' ? st.n1 : st.n2));
+    if (q.trim()) parts.push('搜索');
+    if (hideCn) parts.push('遮中文');
+    if (hideEn) parts.push('遮英文');
+    return parts.length ? `<span class="cnt">${parts.join(' · ')}</span>` : '';
   }
 
   /* ---------- 主视图 ---------- */
@@ -566,10 +575,11 @@ window.Eng = (function () {
 
     const sched = schedStats();
 
-    return `<div class="section-title">医学英语</div>
+    return `    <div class="search"><input id="engQ" placeholder="搜索英文 / 中文（全库）" autocomplete="off" value="${esc(q)}"><button class="btn ghost sm" data-act="eng-clear-q">清空</button></div>
+
     <div class="card">
-      <div class="row between"><h3 style="margin:0">🔤 医学英语词库</h3>
-        <span class="muted small">${man.total} 词 · ${(man.depts || []).length} 科室</span></div>
+      <div class="row between"><h3 style="margin:0">${ICON('abc')}医学英语词库</h3>
+        <span class="muted small">${man.total} 词 · ${(man.depts || []).length} 分类</span></div>
       <div class="eng-bar">${[st.done - st.n1 - st.n2, st.n1, st.n2].map((n, i) =>
       `<i class="${LEVELS[[0, 1, 2][i]].cls}" style="width:${st.total ? n / st.total * 100 : 0}%" title="${LEVELS[[0, 1, 2][i]].n} ${n}"></i>`).join('')}</div>
       <div class="eng-legend">
@@ -577,22 +587,11 @@ window.Eng = (function () {
         <span class="muted small">未标记 ${st.un}</span>
       </div>
       <div class="row between" style="margin-top:10px;gap:8px;flex-wrap:wrap">
-        <span class="muted small">今日已学 <b>${sched.today}</b> 词 · 到期待复习 <b>${sched.due}</b> 词</span>
-        <span class="wrap" style="gap:6px">
-          <button class="chip sm" data-act="eng-export" title="导出医学英语熟悉度进度">⬇ 导出进度</button>
-          ${sched.due > 0 ? `<button class="chip sm eng-review-btn" data-act="eng-review">开始复习</button>` : ''}
-        </span>
+        <span class="muted small">今日已学 <b>${sched.today}</b> · 待复习 <b>${sched.due}</b></span>
       </div>
     </div>
 
-    <div class="search"><input id="engQ" placeholder="搜索英文 / 中文（全库）" autocomplete="off" value="${esc(q)}"><button class="btn ghost sm" data-act="eng-clear-q">清空</button></div>
-    <div class="row" style="gap:8px;margin-bottom:10px">
-      <select id="engDept" class="subject-select" style="flex:1;margin:0" aria-label="选择科室">
-        <option value="all" ${dept === 'all' ? 'selected' : ''}>全部科室 · ${man.total} 词</option>
-        ${(man.depts || []).map(x =>
-      `<option value="${x.id}" ${x.id === dept ? 'selected' : ''}>${esc(x.n)} · ${x.c}</option>`).join('')}</select>
-    </div>
-    <div class="card" id="engModeCard">${modeCardInner(words, shown)}</div>
+    <div class="card" id="engModeCard">${modeCardInner(words, shown, sched)}</div>
 
 
       <div id="engBody" style="margin-top:12px">${bodyHtml(words, shown)}</div>`;
@@ -600,11 +599,17 @@ window.Eng = (function () {
 
   /* 局部刷新：只重建词条列表区，保住 #view 滚动位置与展开态（C05） */
   function bodyHtml(words, shown) {
-    return mode === 'quiz' ? quizHtml(words) : mode === 'card' ? cardHtml(shown) : listHtml(shown);
+    const inner = mode === 'quiz' ? quizHtml(words) : mode === 'card' ? cardHtml(shown) : listHtml(shown);
+    /* 卡片背诵：整块包进「居中舞台」，配合 #view.eng-card-mode 的 flex 列布局，
+       让卡片在可用视口内垂直居中，无需下滑（A06） */
+    return mode === 'card' ? `<div class="eng-card-stage">${inner}</div>` : inner;
   }
   function countText(words, shown) {
-    const d = dept === 'all' ? { n: '全部科室' } : ((MAN && MAN.depts || []).find(x => x.id === dept) || (MAN && MAN.depts || [])[0]);
-    return `当前：<b>${esc(q.trim() ? '全库搜索' : (d ? d.n : ''))}</b>${shown.length !== words.length ? ` · 筛出 ${shown.length} 词` : ''}。${mode === 'card' ? '卡片：先想意思 → 选 认识/模糊/忘记 → 弹出释义 → 下一个。' : ''}`;
+    const d = dept === 'all' ? { n: '全部分类' } : ((MAN && MAN.depts || []).find(x => x.id === dept) || (MAN && MAN.depts || [])[0]);
+    const dn = d ? trimDept(d.n) : '';
+    let s = `${esc(dn)} · 共 ${words.length} 词`;
+    if (shown.length !== words.length) s += ` · 筛出 ${shown.length}`;
+    return s;
   }
   async function updateList() {
     const words = listOf(await curPool());
@@ -616,39 +621,111 @@ window.Eng = (function () {
   }
   /* ① 局部刷新：只重建「模式卡 + 词条区」，不整视图 innerHTML ——
      切模式/筛选/卡片翻页走这里，头部搜索框焦点与 #view 滚动位置都保住。
-     ⚠️ 会改头部统计（标记、复习进出）的动作仍用 refresh()，否则进度条/图例显示旧值。 */
+     ${ICON('warn')}会改头部统计（标记、复习进出）的动作仍用 refresh()，否则进度条/图例显示旧值。 */
   async function softRefresh() {
     const words = listOf(await curPool());
+    const sched = schedStats();
     const mc = document.getElementById('engModeCard');
-    if (mc) mc.innerHTML = modeCardInner(words, words);
+    if (mc) mc.innerHTML = modeCardInner(words, words, sched);
     const body = document.getElementById('engBody');
     if (body) body.innerHTML = bodyHtml(words, words);
+    const v = document.getElementById('view');
+    if (v) v.classList.toggle('eng-card-mode', mode === 'card');   // A06：卡片模式 → 居中布局
+    bindBasicDept();   // 重新绑定基础科室下拉（softRefresh 重建了 engModeCard 内的 select）
+    await renderAdvModal();
   }
+  /* A08：高级筛选弹出式抽屉。modal 挂在 #app 下（position:fixed 不被 #view 布局影响），
+     科室选择 + 遮罩/题型/熟悉度 全收进弹窗；主视图只留一个触发按钮。
+     advOpen 跨 refresh/softRefresh 保持；弹窗体在每次刷新时重建，状态取自模块变量。 */
+  function mountAdvModal() {
+    let el = document.getElementById('engAdvModal');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'engAdvModal';
+      el.className = 'eng-adv-modal hidden';
+      el.innerHTML = `<div class="eng-adv-backdrop" data-act="eng-adv-close"></div>
+        <div class="eng-adv-panel">
+          <div class="eng-adv-head"><b>高级筛选</b><button class="eng-adv-x" data-act="eng-adv-close" aria-label="关闭">✕</button></div>
+          <div class="eng-adv-body"></div>
+          <div class="eng-adv-foot">
+            <button class="btn ghost sm" data-act="eng-clear-filter">清除筛选</button>
+            <button class="btn sm" data-act="eng-adv-close">完成</button>
+          </div>
+        </div>`;
+      (document.getElementById('app') || document.body).appendChild(el);
+    }
+    renderAdvModal();
+  }
+  function advModalBody(words, sched) {
+    const st = statOf(words);
+    const advBody = [
+      mode === 'list' ? `<div class="wrap eng-chips" style="margin-bottom:6px">
+        <button class="chip sm ${hideCn ? 'on' : ''}" data-act="eng-toggle" data-f="hideCn">遮中文</button>
+        <button class="chip sm ${hideEn ? 'on' : ''}" data-act="eng-toggle" data-f="hideEn" title="遮住词形：看中文回想英文，再点 chip 对照">遮英文</button>
+      </div>` : '',
+      (mode === 'card' || mode === 'quiz') ? `<div class="wrap eng-chips" style="margin-bottom:6px">
+        <button class="chip sm" data-act="eng-immersive">${ICON('book2')}沉浸式${mode === 'quiz' ? '测验' : '背单词'}</button>
+        <span class="muted small" style="align-self:center">全屏 · 标记后弹出词源 / 例句 / 文献</span>
+      </div>` : '',
+      mode === 'quiz' ? `<div class="wrap eng-chips" style="margin-bottom:6px">
+        <button class="chip sm ${quizType === 'cn2en' ? 'on' : ''}" data-act="eng-quiz-type" data-v="cn2en">中 → 英</button>
+        <button class="chip sm ${quizType === 'en2cn' ? 'on' : ''}" data-act="eng-quiz-type" data-v="en2cn">英 → 中</button>
+        <button class="chip sm ${quizType === 'audio' ? 'on' : ''}" data-act="eng-quiz-type" data-v="audio">听音辨词</button>
+      </div>` : '',
+      `<div class="wrap eng-chips">
+        <button class="chip sm ${only === '' ? 'on' : ''}" data-act="eng-only" data-v="">全部 ${words.length}</button>
+        <button class="chip sm ${only === 'new' ? 'on' : ''}" data-act="eng-only" data-v="new">未标记 ${st.un}</button>
+        <button class="chip sm ${only === '0' ? 'on' : ''}" data-act="eng-only" data-v="0">忘记 ${st.n0}</button>
+        <button class="chip sm ${only === '1' ? 'on' : ''}" data-act="eng-only" data-v="1">模糊 ${st.n1}</button>
+        <button class="chip sm ${only === '2' ? 'on' : ''}" data-act="eng-only" data-v="2">认识 ${st.n2}</button>
+      </div>`
+    ].filter(Boolean).join('');
+    return `<div class="eng-adv-sec"><div class="eng-adv-label">筛选</div>${advBody}</div>`;
+  }
+  async function renderAdvModal() {
+    const el = document.getElementById('engAdvModal');
+    if (!el) return;
+    const words = listOf(await curPool());
+    el.classList.toggle('hidden', !advOpen);
+    const body = el.querySelector('.eng-adv-body');
+    if (body) body.innerHTML = advModalBody(words, schedStats());
+  }
+  async function openAdv() { advOpen = true; await renderAdvModal(); }
+  async function closeAdv() { advOpen = false; await renderAdvModal(); }
 
 
   /* ---------- 交互 ---------- */
   async function refresh() {
     const v = document.getElementById('view');
     v.innerHTML = await view();
+    v.classList.toggle('eng-card-mode', mode === 'card');   // A06：卡片模式 → 居中布局
     bind();
+    mountAdvModal();
   }
   function bind() {
-    const sel = document.getElementById('engDept');
-    if (sel) sel.addEventListener('change', async () => {
-      dept = sel.value; cardIdx = 0; cardRevealed = false; listShown = LIST_BATCH;
-
-      only = ''; q = '';   // 换科室=换上下文：残留筛选/搜索词会让新科室显示成「空的」（曾被评为「肾内科没单词」）
-      await refresh();
-    });
+    const v = document.getElementById('view');
+    if (v) v.classList.toggle('eng-card-mode', mode === 'card');   // A06：卡片模式 → 居中布局
     const qi = document.getElementById('engQ');
     if (qi) {
       let t = null;
       qi.addEventListener('input', () => {
         clearTimeout(t);
-        t = setTimeout(async () => { q = qi.value; cardIdx = 0; cardRevealed = false; listShown = LIST_BATCH; await updateList(); const n = document.getElementById('engQ'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 260);
+        t = setTimeout(async () => { q = qi.value; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT; await updateList(); const n = document.getElementById('engQ'); if (n) { n.focus(); n.setSelectionRange(n.value.length, n.value.length); } }, 260);
       });
     }
-    bindListScroll();
+    mountAdvModal();   // A10：首屏走 view()+bind()（不经 refresh），必须在此挂载弹窗节点，否则点「高级筛选」无反应
+    bindBasicDept();
+  }
+  /* 基础筛选：主视图科室下拉（与「⚙ 高级筛选」同行），换科室即刷新 */
+  function bindBasicDept() {
+    const sel = document.getElementById('engDept');
+    if (!sel) return;
+    sel.value = dept;
+    sel.onchange = async () => {
+      dept = sel.value; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT;
+      only = ''; q = '';   // 换科室=换上下文：清除残留筛选/搜索词
+      await refresh();
+    };
   }
 
 
@@ -668,12 +745,16 @@ window.Eng = (function () {
     const man = MAN || await loadMan();
     const words = listOf(await curPool());   // 与 view() 同源：搜索时全库，否则当前科室
 
-    if (a === 'eng-export') { exportProg(); return true; }
-    if (a === 'eng-clear-q') { q = ''; cardIdx = 0; cardRevealed = false; listShown = LIST_BATCH; await refresh(); return true; }
+    if (a === 'eng-adv-open') { await openAdv(); return true; }
+    if (a === 'eng-adv-close') { await closeAdv(); return true; }
+
+    if (a === 'eng-clear-q') { q = ''; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT; await refresh(); return true; }
 
     if (a === 'eng-mode') {
       mode = t.dataset.v; cardIdx = 0; cardRevealed = false; reviewList = null;
-      if (mode === 'list') listShown = LIST_BATCH;   // ② 进列表从首屏一批起（长列表分段渲染）
+      if (mode === 'list') listShown = LIST_INIT;   // ② 进列表从首屏一批起（长列表分段渲染）
+      /* A07：卡片背诵记忆上次位置（仅纯科室浏览：无筛选/搜索，否则索引错位从头） */
+      if (mode === 'card' && only === '' && !q.trim()) cardIdx = loadCardPos(dept);
 
       if (mode === 'quiz') {
         initQuiz(words);
@@ -710,7 +791,7 @@ window.Eng = (function () {
       if (quizList && quizList[quizIdx]) speak(quizList[quizIdx].e);
       return true;
     }
-    if (a === 'eng-quiz-exit') { quizList = null; mode = 'list'; listShown = LIST_BATCH; await softRefresh(); return true; }
+    if (a === 'eng-quiz-exit') { quizList = null; mode = 'list'; listShown = LIST_INIT; await softRefresh(); return true; }
 
 
     /* 到期复习：对全库到期词做快照 → 卡片模式逐张过；标记即刷新 due */
@@ -731,10 +812,10 @@ window.Eng = (function () {
       await softRefresh(); return true;
 
     }
-    if (a === 'eng-only') { only = t.dataset.v; cardIdx = 0; cardRevealed = false; listShown = LIST_BATCH; await softRefresh(); return true; }
+    if (a === 'eng-only') { only = t.dataset.v; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT; await softRefresh(); return true; }
 
     if (a === 'eng-clear-filter') {
-      only = ''; q = ''; cardIdx = 0; cardRevealed = false; listShown = LIST_BATCH;
+      only = ''; q = ''; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT;
       await refresh(); return true;
 
     }
@@ -753,10 +834,15 @@ window.Eng = (function () {
     }
 
     if (a === 'eng-immersive') {
-      /* 沉浸式背单词：从卡片模式进入全屏页，词表 = 当前队列快照（复习中则同队列） */
-      const cw = reviewList || words;
+      /* 沉浸式：卡片 / 测验均可进入全屏阅读页；词表 = 当前队列快照 */
+      let cw, idx;
+      if (mode === 'quiz' && quizList) {
+        cw = quizList; idx = Math.min(quizIdx, Math.max(0, quizList.length - 1));
+      } else {
+        cw = reviewList || words; idx = Math.min(cardIdx, Math.max(0, cw.length - 1));
+      }
       if (!cw.length) return true;
-      openReader(Math.min(cardIdx, cw.length - 1), cw);
+      openReader(idx, cw);
       return true;
     }
     if (a === 'eng-read-close') { await closeReader(); return true; }
@@ -764,7 +850,9 @@ window.Eng = (function () {
     if (a === 'eng-read-next') { goReader(1); return true; }
     if (a === 'eng-prev') {
       const cw = reviewList || words;
-      cardIdx = (cardIdx - 1 + cw.length) % Math.max(1, cw.length); cardRevealed = false; await softRefresh(); return true;
+      cardIdx = (cardIdx - 1 + cw.length) % Math.max(1, cw.length); cardRevealed = false;
+      if (mode === 'card' && !reviewList && only === '' && !q.trim()) saveCardPos(dept, cardIdx);   // A07
+      await softRefresh(); return true;
 
     }
     if (a === 'eng-next') {
@@ -773,12 +861,14 @@ window.Eng = (function () {
         /* 复习队列过完 → 完成面板（普通卡片模式保持环形绕回） */
         cardIdx = cw.length; cardRevealed = false; await softRefresh(); return true;
       }
-      cardIdx = (cardIdx + 1) % Math.max(1, cw.length); cardRevealed = false; await softRefresh(); return true;
+      cardIdx = (cardIdx + 1) % Math.max(1, cw.length); cardRevealed = false;
+      if (mode === 'card' && !reviewList && only === '' && !q.trim()) saveCardPos(dept, cardIdx);   // A07
+      await softRefresh(); return true;
 
     }
 
-    /* 「加载更多」：增量追加下一批（与滚动到底同一入口 loadMoreList） */
-    if (a === 'eng-more') { loadMoreList(); return true; }
+    /* 「展示全部」：一次放出剩余全部行 */
+    if (a === 'eng-more') { showAllList(); return true; }
 
     if (a === 'eng-mk') {
       const v = parseInt(t.dataset.v, 10);
@@ -789,15 +879,19 @@ window.Eng = (function () {
          同时下方才出现 上一个/下一个。不自动跳词——推进节奏归用户。 */
       if (rOpen) { rRevealed = true; renderReader(); return true; }
       cardRevealed = true;
+      if (mode === 'card' && !reviewList && only === '' && !q.trim()) saveCardPos(dept, cardIdx);   // A07
       await refresh();
       return true;
     }
+    /* 错题页「英语生词（模糊/忘记）」点击 → 进入全屏沉浸式背诵并定位到该词 */
+    if (a === 'eng-wrong-word') { await launchImmersive(t.dataset.id); return true; }
     return false;
   }
 
   /* 键盘：阅读页 ←→/空格/Esc；测验模式 1-4 选项 + Enter 下一题。
      两把键盘互斥（rOpen / mode==='quiz'），避免与刷题区按键冲突。 */
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && advOpen) { closeAdv(); return; }   // A08：Esc 关高级筛选抽屉
     if (rOpen) {
       if (e.key === 'Escape') { closeReader(); }
       else if (e.key === 'ArrowLeft') { goReader(-1); }
@@ -821,5 +915,36 @@ window.Eng = (function () {
     }
   });
 
-  return { view, bind, act, loadMan, openReader, closeReader, goReader, speak, phRow };
+  function engMasteredSync() {           // A12：同步读取英语「认识(熟悉度=2)」词数，供成就徽章判定
+    let n = 0; const p = prog();
+    for (const k in p) if (p[k] && p[k].s === 2) n++;
+    return n;
+  }
+  /* 首页「单词背诵」入口：进入「卡片背诵」模式（非默认列表浏览），并保留上次卡片位置 */
+  async function enterCardMode() {
+    mode = 'card'; cardRevealed = false; reviewList = null; cardIdx = 0;
+    if (only === '' && !q.trim()) cardIdx = loadCardPos(dept);   // A07：纯科室浏览恢复上次位置
+    await softRefresh();
+  }
+  /* 对外：词库分类列表（供 题库页「词库」子 tab 的下拉） */
+  async function depts() {
+    if (!MAN) await loadMan();
+    return (MAN && MAN.depts || []).map(d => ({ id: d.id, n: trimDept(d.n), c: d.c }));
+  }
+  /* 对外：词库检索（kw 为空返回该分类全部；deptId 省略 / 'all' = 全库） */
+  async function searchWords(kw, deptId) {
+    if (!MAN) await loadMan();
+    const k = String(kw || '').trim().toLowerCase();
+    let pool;
+    if (deptId && deptId !== 'all') {
+      const dd = (MAN && MAN.depts || []).find(x => x.id === deptId);
+      pool = await loadDept(deptId);
+      if (dd) for (const w of pool) if (!w._d) w._d = trimDept(dd.n);
+    } else {
+      pool = await ensureAllWords();
+    }
+    return k ? pool.filter(w => ((w.e || '') + ' ' + (w.c || '')).toLowerCase().includes(k)) : pool;
+  }
+  return { view, bind, act, loadMan, openReader, closeReader, goReader, speak, phRow,
+    dueCount, dueCountSync, wordsByFamiliar, launchReview, showFamiliar, launchImmersive, ensureAll: ensureAllWords, engMasteredSync, enterCardMode, depts, searchWords };
 })();

@@ -18,7 +18,7 @@ const cmds = [
   [`"${NODE}" "${base}工程/题库调研/verify/verify_jsdom.mjs"`, base + '工程/题库调研'],
   [`"${NODE}" "${base}工程/题库调研/verify/verify_actions_smoke.mjs"`, base + '工程/题库调研'],
   // 发布目录一致性：site/ ↔ site_dist/ 逐文件 md5（0913 审查 P2-1：六套 verify 只校验 site/，零校验 site_dist/）
-  // 白名单直接在脚本内从 build_dist.mjs 解析，新增站点资源不用改两处。
+  // 白名单单一真源在 _whitelist.mjs（被 build_dist/_sync_dist/deploy/dist_parity 共享），dist_parity 直接解析它。
   // 两种强度：默认层 = 警示（dist 落后只 ⚠ 不阻断，保住日常改 site/ 的开发节奏）；
   //          --full 追加 --gate = 硬闸门（发布前任何漂移一律 FAIL）。
   [`"${NODE}" "${base}工程/题库调研/verify/dist_parity.mjs"${FULL ? ' --gate' : ''}`, base + '工程/题库调研'],
@@ -31,10 +31,14 @@ if (FULL) cmds.push(
   [`"${NODE}" "${base}工程/题库调研/verify/verify_id_zeroloss.mjs"`, base + '工程/题库调研'],
 );
 let out = '===== run_all.mjs | ' + (FULL ? '前端层 + 数据层' : '仅前端层（加 --full 跑数据层）') + '\n';
+let failed = 0;
 for (const [c, cwd] of cmds) {
   out += '\n===== ' + c + '\n';
   try { out += execSync(c, { encoding: 'utf8', cwd, maxBuffer: 1 << 28 }); out += '\n[rc=0]\n'; }
-  catch (e) { out += (e.stdout || '') + '\n[FAIL] ' + (e.stderr || e.message) + '\n'; }
+  catch (e) { failed++; out += (e.stdout || '') + '\n[FAIL] ' + (e.stderr || e.message) + '\n'; }
 }
 fs.writeFileSync(base + '工程/题库调研/verify/_run.log', out, 'utf8');
 console.log('done -> 工程/题库调研/verify/_run.log');
+/* 步骤失败必须让编排器自身也非零退出——否则「测试挂了但 run_all 报成功」，闸门形同虚设 */
+if (failed) { console.error(`[run_all] ✗ ${failed}/${cmds.length} 步失败，详见 verify/_run.log`); process.exitCode = 1; }
+else console.log(`[run_all] ✓ ${cmds.length} 步全绿`);

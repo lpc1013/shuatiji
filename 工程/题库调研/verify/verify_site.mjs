@@ -78,13 +78,16 @@ for (const sem of M.semesters) {
         if (grp === 'jg') (UUID.test(c.id) ? jgUuidCh++ : jgNonUuidCh++);
       }
     }
-    if (s.explain) {
-      const f = path.join(DATA, s.explain.file);
-      if (!fs.existsSync(f)) { fail++; console.log('  ✗ 解析分片缺失 ' + s.explain.file); }
-      else {
+    if (s.explain && s.explain.chapters) {
+      let total = 0;
+      for (const c of s.explain.chapters) {
+        const f = path.join(DATA, c.file);
+        if (!fs.existsSync(f)) { fail++; console.log('  ✗ 解析分片缺失 ' + c.file); continue; }
         const o = JSON.parse(fs.readFileSync(f, 'utf8'));
-        if (Object.keys(o).length !== s.explain.count) { fail++; console.log('  ✗ 解析条数不符 ' + s.explain.file); }
+        if (Object.keys(o).length !== c.count) { fail++; console.log('  ✗ 解析条数不符 ' + c.file + ' (实际 ' + Object.keys(o).length + ' / 声明 ' + c.count + ')'); }
+        total += Object.keys(o).length;
       }
+      if (total !== s.explain.count) { fail++; console.log('  ✗ 解析总条数不符 ' + s.explain.count + ' / 实际 ' + total); }
     }
     if (sum !== s.count) { fail++; console.log(`  ✗ ${sem.name}/${s.name} 合计数不符 ${sum} vs ${s.count}`); }
   }

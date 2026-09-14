@@ -112,8 +112,9 @@ const chapNumSrc = `function chapNum(n){var m=String(n).match(/^第(.+?)章/);re
 
 /* ---------- C. 新功能点检 ---------- */
 section('C. 新功能');
-try { window.__T.x(`show('bank')`); await sleep(80); } catch {}
-ok('题库页筛选入口', /filter-setup/.test(document.getElementById('view').innerHTML || ''));
+try { window.__T.x(`show('wrong')`); await sleep(80); } catch {}
+/* B6 合并后题库页 = wrong tab（bank 独立页已并入）；C-5 起页内检索框为 #bkSearch，组卷按钮已移除 */
+ok('题库页检索框入口', /bkSearch/.test(document.getElementById('view').innerHTML || ''));
 ok('四级掌握状态定义', X('Feat.MASTERY.length') === 4);
 ok('masteryOf 可用', X('typeof Feat.masteryOf==="function"') === true);
 ok('纠错入口', X('typeof Feat.openFeedback==="function"') === true);
@@ -637,7 +638,7 @@ section('J. 医学英语词库');
         ok('标记后才出现 上一个/下一个', !!document.querySelector('#engBody [data-act="eng-next"]') && !!document.querySelector('#engBody [data-act="eng-prev"]'));
       }
       /* —— 沉浸式背单词：卡片模式入口 → 全屏 → 标记驱动全揭示 —— */
-      const imm = document.querySelector('#view [data-act="eng-immersive"]');
+      const imm = document.querySelector('[data-act="eng-immersive"]');   // A08：入口已收进「高级筛选」抽屉（#engAdvModal）
       ok('卡片模式有「沉浸式背单词」入口', !!imm);
       if (imm) {
         imm.click(); await sleep(500);
@@ -712,7 +713,10 @@ section('J. 医学英语词库');
           sel.dispatchEvent(new window.Event('change', { bubbles: true }));
           await sleep(550);
           const n = document.querySelectorAll('#engBody .eng-item').length;
-          ok('换科室重置筛选（切 d06 后应显示全部 99 词，而非被残留筛选清空）', n === 99, 'items=' + n);
+          /* B21 起列表默认只渲染前 30 行（下方「展示全部」再放全）→ 不能按行数断言 99；
+             改校验「计数文本恢复为 99 词」（证明残留筛选已重置）+ 首屏确有渲染行 */
+          const cntTxt = (document.getElementById('engCount') || {}).textContent || '';
+          ok('换科室重置筛选（切 d06 后应恢复全部 99 词，而非被残留筛选清空）', /99/.test(cntTxt) && n > 0, 'items=' + n + ' count=' + cntTxt.trim());
           const back = [...document.querySelectorAll('[data-act="eng-only"]')].find(c => c.dataset.v === '');
           ok('换科室后「全部」chip 处于选中态', !!(back && back.classList.contains('on')));
           /* 恢复 d00，避免污染后续用例 */
@@ -743,7 +747,7 @@ section('J. 医学英语词库');
         if (nx) { nx.click(); await sleep(450); ok('下一题推进到 2/N', /2\s*\/\s*\d+/.test(document.getElementById('view').innerHTML)); }
       }
       /* —— 英→中 题型：题面是英文词形，选项是互不重复的中文释义 —— */
-      const e2c = document.querySelector('#view [data-act="eng-quiz-type"][data-v="en2cn"]');
+      const e2c = document.querySelector('[data-act="eng-quiz-type"][data-v="en2cn"]');   // 题型切换在「高级筛选」抽屉内
       ok('有「英 → 中」题型入口', !!e2c);
       if (e2c) {
         e2c.click(); await sleep(450);
@@ -771,7 +775,7 @@ section('J. 医学英语词库');
       tabBtn.click(); await sleep(500);
       const rBtn = document.querySelector('#view [data-act="eng-review"]');
       ok('塞入过期词后出现「开始复习」', !!rBtn);
-      ok('头部显示今日到期计数 ≥1', /到期待复习\s*<b>[1-9]/.test(document.getElementById('view').innerHTML));
+      ok('头部显示今日到期计数 ≥1', /待复习\s*<b>[1-9]/.test(document.getElementById('view').innerHTML));
       if (rBtn) {
         rBtn.click(); await sleep(900);   // ensureAllWords 拉全库 31 分片
         ok('复习模式渲染卡片（复习 1 / 1）', /复习\s*1\s*\/\s*1/.test(document.getElementById('view').innerHTML) && !!document.querySelector('#engBody .eng-card-w'),
@@ -798,6 +802,9 @@ try {
    * 注意它顶层会自动 init()，往 body 挂 #authGate，并包装 Storage.prototype.setItem。
    * 因此放在最后跑，避免影响前面的用例。 */
   const syncSrc = fs.readFileSync(path.join(R, 'sync.js'), 'utf8');
+  /* app.js 是 'use strict'，顶层 function 声明经 window.eval 不落全局（只有浏览器 classic script 才挂 window），
+     sync.js 独立 eval 取不到 ICON（createGate 用它拼品牌图标）→ 补一个显示用桩，避免假红。 */
+  if (typeof window.ICON !== 'function') window.ICON = n => '[' + n + ']';
   window.eval(syncSrc);
   await sleep(150);
   const gate = document.getElementById('authGate');

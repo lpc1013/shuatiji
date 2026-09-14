@@ -115,7 +115,8 @@ async function ensureSubject(id) {
   // 富解析分片改为惰性加载：进学科只拉 jg/ext 两片，富解析（单科 6MB）首次打开某题才拉（见 loadExplain）。
   // 否则刷新即整块下载 6MB+，首屏/进科明显变慢。
   sub.explain = {};
-  sub.explainFile = (m.explain && m.explain.file) || null;
+  sub.explainChapters = (m.explain && m.explain.chapters) || null;   // 按章节拆分的解析分片清单
+  if (sub.explainChapters) loadExplain(sub);   // 进科即并发预加载该科所有章节解析（小文件并发 + 缓存友好）
   sub.explainLoaded = false;
   buildGroups(sub, Array.isArray(jg) ? jg : [], Array.isArray(ext) ? ext : []);
   normalizeSubjectIds(id);   // ALIAS 刚建好 → 立刻把本机存的旧题 id 归一到主 id（见函数注释）
@@ -236,14 +237,15 @@ function groupCount(sub, key) {
 let _expLoad = {};          // 每学科只拉一次富解析分片（去重）
 let curDetailQid = null;    // 当前打开的详情题 id，供富解析到达后定向回填
 function loadExplain(sub) {
-  const id = sub.id;
-  if (sub.explainLoaded || _expLoad[id]) return _expLoad[id] || Promise.resolve();
-  if (!sub.explainFile) { sub.explainLoaded = true; return Promise.resolve(); }
+  if (!sub.explainChapters || !sub.explainChapters.length) { sub.explainLoaded = true; return Promise.resolve(); }
   const v = MANIFEST.version || '0';
-  _expLoad[id] = fetch(QF + sub.explainFile + '?v=' + v)
-    .then(r => r.ok ? r.json() : null).catch(() => null)
-    .then(ex => { sub.explain = ex || {}; sub.explainLoaded = true; refreshExpDom(); });
-  return _expLoad[id];
+  sub.explainLoaded = true;
+  // 按章节并发拉取小分片，逐片合并进 sub.explain（单章失败不影响其他章）；比旧「单文件 6MB」更稳、可缓存
+  const ps = sub.explainChapters.map(c =>
+    fetch(QF + c.file + '?v=' + v).then(r => r.ok ? r.json() : null).catch(() => null)
+      .then(ex => { if (ex) Object.assign(sub.explain, ex); })
+  );
+  return Promise.all(ps).then(() => refreshExpDom());
 }
 function ensureExplain(sub, q) {
   if (!q || q.exp) return;
@@ -251,8 +253,8 @@ function ensureExplain(sub, q) {
     const e = sub.explain[q.id];
     q.exp = e; q.explanation = richToText(e); return;
   }
-  // 富解析还没拉过 → 首次打开某题才触发下载，拉到后回填当前题解析区
-  if (!sub.explainLoaded && sub.explainFile) loadExplain(sub);
+  // 富解析可能尚未拉到（进科预加载进行中/失败）→ 触发该科加载，拉到后回填当前题解析区
+  if (!sub.explainLoaded && sub.explainChapters) loadExplain(sub);
 }
 /* 富解析分片到达后，定向刷新当前正在查看的题目解析区（尽量不整页重绘） */
 function refreshExpDom() {
@@ -303,8 +305,8 @@ function aiCardHtml(q, i) {
   </div>`;
 }
 async function doAiGen(q) {
-  if (!aiEnabled()) { toast('AI 功能需先登录后使用 🔒'); return; }
-  openModal(`<h3>🤖 AI 基于本题出题</h3><div class="empty">正在生成 1/3…</div>`);
+  if (!aiEnabled()) { toast(ICON('lock') + ' AI 功能需先登录后使用'); return; }
+  openModal(`<h3>${ICON('robot')}AI 基于本题出题</h3><div class="empty">正在生成 1/3…</div>`);
   try {
     const r = await fetch(QUIZ_API, {
       method: 'POST',
@@ -322,7 +324,7 @@ async function doAiGen(q) {
   }
 }
 function doAiGenQid(qid) {
-  if (!aiEnabled()) { toast('AI 功能需先登录后使用 🔒'); return; }
+  if (!aiEnabled()) { toast(ICON('lock') + ' AI 功能需先登录后使用'); return; }
   const x = qById(qid); if (x) doAiGen(x.q);
 }
 function showAiResult(srcQ, raw) {
@@ -332,7 +334,7 @@ function showAiResult(srcQ, raw) {
   st.aiGen.unshift(batch);
   save(); if (window.QuizSync) window.QuizSync.forceFlush();
   const cards = batch.questions.map((q, i) => aiCardHtml(q, i)).join('');
-  openModal(`<h3>🤖 AI 出题 · 3 道变式</h3>
+  openModal(`<h3>${ICON('robot')}AI 出题 · 3 道变式</h3>
     <p class="muted small">已存入「AI 题库」存档，可随时复习。</p>
     ${cards}
     <button class="btn" data-act="ai-practice" data-bid="${batch.batchId}">开始练习这 3 题</button>
@@ -348,21 +350,21 @@ function startAiPractice(bid) {
 }
 function openAiGenList() {
   const list = curState().aiGen || [];
-  if (!list.length) { openModal(`<h3>🤖 AI 题库</h3><p class="muted">还没有生成记录。在题目中点「🤖 AI出题」试试。</p><button class="btn ghost" data-act="close-modal">关闭</button>`); return; }
+  if (!list.length) { openModal(`<h3>${ICON('robot')}AI 题库</h3><p class="muted">还没有生成记录。在题目中点「${ICON('robot')}AI出题」试试。</p><button class="btn ghost" data-act="close-modal">关闭</button>`); return; }
   const items = list.map(b => `<div class="qitem" data-act="ai-gen-open" data-bid="${b.batchId}">
     <div class="q">基于：${esc((b.fromContent || '').slice(0, 40))}…</div>
     <div class="meta"><span class="tag">${b.questions.length} 题</span><span class="tag">${new Date(b.createdAt).toLocaleDateString('zh-CN')}</span></div></div>`).join('');
-  openModal(`<h3>🤖 AI 题库</h3><div id="bkList">${items}</div><button class="btn ghost" data-act="close-modal">关闭</button>`);
+  openModal(`<h3>${ICON('robot')}AI 题库</h3><div id="bkList">${items}</div><button class="btn ghost" data-act="close-modal">关闭</button>`);
 }
 function openAiGenBatch(bid) {
   const b = (curState().aiGen || []).find(x => x.batchId === bid);
   if (!b) { toast('记录已失效'); return; }
   const cards = b.questions.map((q, i) => aiCardHtml(q, i)).join('');
-  openModal(`<h3>🤖 AI 题库 · ${b.questions.length} 道</h3>
+  openModal(`<h3>${ICON('robot')}AI 题库 · ${b.questions.length} 道</h3>
     <p class="muted small">基于：${esc(b.fromContent)}</p>
     ${cards}
     <button class="btn" data-act="ai-practice" data-bid="${b.batchId}">开始练习这 ${b.questions.length} 题</button>
-    <button class="btn soft sm" data-act="ai-trace" data-bid="${b.batchId}">🔍 溯源（看原型题）</button>
+    <button class="btn soft sm" data-act="ai-trace" data-bid="${b.batchId}">${ICON('search')}溯源（看原型题）</button>
     <button class="btn ghost" data-act="close-modal">关闭</button>`);
 }
 
@@ -376,7 +378,7 @@ function aiQuestions() {
 function aiTrace(bid) {
   const b = (curState().aiGen || []).find(x => x.batchId === bid);
   if (!b) { toast('原型题已失效'); return; }
-  openModal(`<h3>🔍 溯源 · 原型题</h3>
+  openModal(`<h3>${ICON('search')} · 原型题</h3>
     <p class="muted small">本批 AI 题由下面这道题衍生生成：</p>
     <div class="qstem">${esc(b.fromContent)}</div>
     ${b.fromExplanation ? `<div class="exp"><h4>原题解析</h4>${md(b.fromExplanation)}</div>` : '<p class="muted small">原题无附带解析</p>'}
@@ -384,9 +386,9 @@ function aiTrace(bid) {
 }
 /* AI 再解析（仅 lql）：基于医学知识独立重新解析，覆盖可能错误的原解析 */
 function doAiExplain(q) {
-  if (!aiEnabled()) { toast('AI 功能需先登录后使用 🔒'); return; }
+  if (!aiEnabled()) { toast(ICON('lock') + ' AI 功能需先登录后使用'); return; }
   const userAnswer = (P && P.answers[q.id] && P.answers[q.id].chosen) ? P.answers[q.id].chosen.join('') : '';
-  openModal(`<h3>🧠 AI 再解析</h3><div class="empty">正在重新解析…</div>`);
+  openModal(`<h3>${ICON('brain')}</h3><div class="empty">正在重新解析…</div>`);
   fetch(QUIZ_API, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'X-Quiz-Token': quizToken() },
@@ -398,14 +400,14 @@ function doAiExplain(q) {
   }).catch(e => openModal(`<h3>解析失败</h3><p class="muted">${esc(String(e))}</p><button class="btn ghost" data-act="close-modal">关闭</button>`));
 }
 function doAiExplainQid(qid) {
-  if (!aiEnabled()) { toast('AI 功能需先登录后使用 🔒'); return; }
+  if (!aiEnabled()) { toast(ICON('lock') + ' AI 功能需先登录后使用'); return; }
   const x = qById(qid); if (x) doAiExplain(x.q);
 }
 function showAiExplain(res, qid) {
   const items = (res.items || []).map(it => `<div class="row between" style="gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
     <span class="pill ${it.isCorrect ? 'pill-correct' : 'pill-wrong'}" style="flex:0 0 auto">${esc(it.option)}</span>
     <span class="small">${esc(it.why)}</span></div>`).join('');
-  openModal(`<h3>🧠 AI 再解析 <span class="tag">${esc(res.model || '')}</span></h3>
+  openModal(`<h3>${ICON('brain')} <span class="tag">${esc(res.model || '')}</span></h3>
     <div class="exp"><h4>考点</h4><p>${esc(res.summary || '')}</p>${res.keyPoint ? `<p class="muted small">${esc(res.keyPoint)}</p>` : ''}</div>
     <div class="exp"><h4>逐项分析</h4>${items}</div>
     ${res.commonTrap ? `<div class="exp"><h4>常见陷阱</h4><p class="muted small">${esc(res.commonTrap)}</p></div>` : ''}
@@ -420,7 +422,7 @@ const DEFAULT_SETTINGS = {
   autoSubmit: false, autoNext: false, swipe: true, optShuffle: false, showMeta: true, plain: false,
 };
 function defaultState() {
-  return { global: { xp: 0, badges: [], checkin: [], lastBackup: null, settings: Object.assign({}, DEFAULT_SETTINGS) }, subjects: {}, sessions: {} };
+  return { global: { xp: 0, badges: [], badgeTimes: {}, checkin: [], lastBackup: null, settings: Object.assign({}, DEFAULT_SETTINGS) }, subjects: {}, sessions: {} };
 }
 let S = load();
 /* 补齐 + 迁移：本地启动时走 load()，导入备份时也走这里，
@@ -466,7 +468,7 @@ function save() {
     const quota = e && (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014);
     if (quota && !window.__quotaWarned) {
       window.__quotaWarned = true;
-      toast('⚠️ 浏览器本地存储空间已满，最新作答可能未保存。请在「我的」→「清空学习进度」释放空间。');
+      toast(ICON('warn') + ' 浏览器本地存储空间已满，最新作答可能未保存。请在「我的」→「清空学习进度」释放空间。');
     }
   }
 }
@@ -476,7 +478,7 @@ function imgFail(el) {
   el.dataset.failed = '1';
   const ph = document.createElement('div');
   ph.className = 'qimg-ph';
-  ph.textContent = '🖼️ 图片加载失败（源站未同步或网络受限）';
+  ph.innerHTML = ICON('img') + '图片加载失败（源站未同步或网络受限）';
   if (el.parentNode) el.parentNode.replaceChild(ph, el);
 }
 function subState(id) {
@@ -541,10 +543,71 @@ function qById(id) {
 function level() { return Math.floor(S.global.xp / 200) + 1; }
 function addXp(n) { S.global.xp += n; }
 function cssVar(n) { return getComputedStyle(document.body).getPropertyValue(n).trim() || '#888'; }
-function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 1800); }
+function toast(msg) { const t = $('#toast'); t.innerHTML = msg; t.classList.remove('hidden'); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.add('hidden'), 1800); }
+/* C-1：徽章墙以外的图标统一换回 emoji（实测线性 SVG 小尺寸不如 emoji 直观，
+ * 且 iOS/Android/Win 渲染一致）。ICON(name) 返回 emoji + 尾随空格（替代原 SVG 的 margin-right）。
+ * 成就徽章保留彩色 SVG（见 BADGE_SVG）。 */
+function ICON(name) {
+  const E = {
+    cal:'📅', target:'🎯', book:'📚', abc:'🔤', pin:'📍', grad:'🎓', fire:'🔥', star:'⭐',
+    cross:'❌', question:'❓', check:'✅', new:'🆕', repeat:'🔁', planet:'🪐', book2:'📖',
+    leaf:'🍃', search:'🔍', chart:'📊', trash:'🗑️', brain:'🧠', lock:'🔒', bell:'🔔', img:'🖼️',
+    art:'🎨', moon:'🌙', type:'🔠', gear:'⚙️', warn:'⚠️', trophy:'🏆', dotr:'🔴', doty:'🟡',
+    bolt:'⚡', next:'➡️', swipe:'👆', shuffle:'🔀', puzzle:'🧩', key:'🔑', scale:'⚖️',
+    download:'⬇️', upload:'⬆️', clock:'⏱️', doc:'📄', bulb:'💡', cloud:'☁️', flag:'🚩',
+    robot:'🤖', party:'🎉', speaker:'🔊', pencil:'✏️'
+  };
+  return (E[name] || '⭐') + ' ';
+}
+/* 成就徽章：彩色 SVG（圆形底色 + 描边图标），比 emoji 更统一精致。BADGES.em 调用。 */
+function BADGE_SVG(name) {
+  const M = {
+    leaf:   { c:'#2e9e5b', bg:'#e7f6ee', p:'<path d="M5 19c0-8 6-14 14-14 0 8-6 14-14 14z"/><path d="M5 19C9 15 13 12 18 10" fill="none" stroke-width="1.4"/>' },
+    star:   { c:'#e0a400', bg:'#fff6da', p:'<path d="M12 3l2.6 5.6L20 9.2l-4.4 4 1.2 6L12 16.8 7.2 19.2l1.2-6L4 9.2l5.4-.6z"/>' },
+    target: { c:'#2b7cd3', bg:'#e6f0fb', p:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1.6" fill="#2b7cd3" stroke="none"/>' },
+    trophy: { c:'#d99a00', bg:'#fff3d6', p:'<path d="M7 4h10v4a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M9 14h6l1 6H8z"/>' },
+    fire:   { c:'#e8531a', bg:'#fde9df', p:'<path d="M12 3c1 3-1.5 4-1.5 6.5A2.5 2.5 0 0 0 13 12c.5-1 .3-2 1-2.8C16 11 17 13 17 15a5 5 0 1 1-10 0c0-3.5 3-5.5 5-12z"/>' },
+    book2:  { c:'#3a7bd5', bg:'#e8f0fd', p:'<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z"/><path d="M4 5.5v15"/>' },
+    grad:   { c:'#7b54c9', bg:'#efe9fb', p:'<path d="M22 9.5 12 4 2 9.5 12 15z"/><path d="M6 12v4c0 1.5 2.7 3 6 3s6-1.5 6-3v-4"/>' },
+    book:   { c:'#1aa0a0', bg:'#e2f6f6', p:'<path d="M12 6c-1.7-1.2-4.2-1.4-6-.5v11c1.8-.9 4.3-.7 6 .5 1.7-1.2 4.2-1.4 6-.5V5.5c-1.8-.9-4.3-.7-6 .5z"/><path d="M12 6v11"/>' },
+    trash:  { c:'#c0473b', bg:'#fbe6e3', p:'<path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/>' }
+  };
+  const m = M[name] || M.star;
+  return `<svg class="badge-ic" viewBox="0 0 24 24" width="1.6em" height="1.6em" fill="none" stroke="${m.c}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="11" fill="${m.bg}" stroke="none"/>${m.p}</svg>`;
+}
+/* 轻量 markdown：标题 / 粗体 / 列表 / 表格。
+ * 解析顺序：先扫行抽取 markdown 表格（| 表头 | + | --- | 分隔 + 表体），
+ * 不在普通文本里跑表格正则（避免误伤）。易错点（pf）常以 p 型块内嵌 markdown 表格，
+ * 旧版 md() 不认表格 → 渲染成裸竖线文本；这里补上 .exp-tbl 渲染，与 tb 型块同款外观。 */
+function isMdTableRow(l) { return /^\s*\|.*\|\s*$/.test(l) && l.trim().split('|').length >= 3; }
+function isMdTableSep(l) {
+  const t = l.trim().replace(/^\|/, '').replace(/\|$/, '');
+  if (!t.length) return false;
+  return t.split('|').every(c => /^[\s:|-]*$/.test(c) && c.indexOf('-') >= 0);
+}
+function splitMdRow(l) { return l.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(x => x.trim()); }
+function mdTableHtml(cols, rows) {
+  const th = '<thead><tr>' + cols.map(c => '<th>' + c + '</th>').join('') + '</tr></thead>';
+  const tb = '<tbody>' + rows.map(r =>
+    '<tr>' + r.map((c, i) => '<td data-label="' + (cols[i] || '') + '">' + c + '</td>').join('') + '</tr>'
+  ).join('') + '</tbody>';
+  return '<div class="exp-tblwrap"><table class="exp-tbl">' + th + tb + '</table></div>';
+}
 function md(s) {
   if (!s) return '';
   s = esc(s);
+  const lines = s.split('\n'), out = [];
+  for (let i = 0; i < lines.length; i++) {
+    if (isMdTableRow(lines[i]) && i + 1 < lines.length && isMdTableSep(lines[i + 1])) {
+      const cols = splitMdRow(lines[i]); i += 2;
+      const rows = [];
+      while (i < lines.length && isMdTableRow(lines[i])) { rows.push(splitMdRow(lines[i])); i++; }
+      out.push(mdTableHtml(cols, rows));
+      continue;
+    }
+    out.push(lines[i]);
+  }
+  s = out.join('\n');
   s = s.replace(/^### (.*)$/gm, '<h4>$1</h4>').replace(/^## (.*)$/gm, '<h4>$1</h4>').replace(/^# (.*)$/gm, '<h3>$1</h3>');
   s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
   s = s.replace(/^- (.*)$/gm, '<div>• $1</div>');
@@ -627,7 +690,7 @@ function reservedBlocksHtml(q) {
     h += `<section class="exp-sec" data-sec="op">${explSecHead('op', '逐项辨析')}${q.optionExplanations.map(o => `<div class="exp-opt"><span class="k">${esc(o.option || o.key || '')}</span><div><div>${md(o.explanation || o.text || '')}</div>${o.typicalScenario ? `<div class="muted small">典型场景：${esc(o.typicalScenario)}</div>` : ''}</div></div>`).join('')}</section>`;
   }
   if (Array.isArray(q.memoryCards) && q.memoryCards.length) {
-    h += `<details class="exp-fold"><summary>知识点背诵 · ${q.memoryCards.length} 张</summary>${q.memoryCards.map(c => `<div class="exp-mc"><div class="exp-mc-t">${esc(c.title || '')}</div><div>${md(c.content || '')}</div>${c.memoryCue ? `<div class="exp-mc-cue">🔑 ${esc(c.memoryCue)}</div>` : ''}${c.contrast ? `<div class="exp-mc-ct">⚖️ 对比：${esc(c.contrast)}</div>` : ''}</div>`).join('')}</details>`;
+    h += `<details class="exp-fold"><summary>知识点背诵 · ${q.memoryCards.length} 张</summary>${q.memoryCards.map(c => `<div class="exp-mc"><div class="exp-mc-t">${esc(c.title || '')}</div><div>${md(c.content || '')}</div>${c.memoryCue ? `<div class="exp-mc-cue">${ICON('key')}${esc(c.memoryCue)}</div>` : ''}${c.contrast ? `<div class="exp-mc-ct">${ICON('scale')}对比：${esc(c.contrast)}</div>` : ''}</div>`).join('')}</details>`;
   }
   const meta = q.explanationMeta;
   if (meta && typeof meta === 'object') {
@@ -655,7 +718,7 @@ function hasExplain(q) { return !!(q.exp || q.explanation); }
 /* 题干下方的元信息 chip 行：真题徽标 / 来源 / 考频 / 知识点标签 */
 function qChipsHtml(q) {
   const bits = [];
-  if (q.year) bits.push(`<span class="meta-pill y">🎓 ${esc(q.year)} 年真题</span>`);
+  if (q.year) bits.push(`<span class="meta-pill y">${ICON('grad')} ${esc(q.year)} 年真题</span>`);
   if (q.qsource) bits.push(`<span class="meta-pill s">${esc(q.qsource)}</span>`);
   if (q.frequencyLevel) bits.push(`<span class="meta-pill f">考频 ${esc(FREQ_CN[q.frequencyLevel] || q.frequencyLevel)}</span>`);
   const tg = [...new Set([].concat(q.tags || []))];
@@ -669,15 +732,23 @@ const REVIEW_INTERVALS = [1, 3, 7, 15, 30]; // 天 · stage 0→1→2→3→4，
 
 /* ---------- 成就 / 徽章 ---------- */
 const BADGES = [
-  { id: 'first', em: '🌱', nm: '初次作答', ds: '完成第 1 题' },
-  { id: 'h100', em: '💯', nm: '百题斩', ds: '累计作答 100 题' },
-  { id: 'h500', em: '⚔️', nm: '五百勇士', ds: '累计作答 500 题' },
-  { id: 'h1000', em: '👑', nm: '千题宗师', ds: '累计作答 1000 题' },
-  { id: 's7', em: '🔥', nm: '七日打卡', ds: '连续打卡 7 天' },
-  { id: 's30', em: '🏆', nm: '月度坚持', ds: '连续打卡 30 天' },
-  { id: 'exam90', em: '🎓', nm: '学霸附体', ds: '考试得分 ≥ 90%' },
-  { id: 'clear', em: '🧹', nm: '错题清零', ds: '当前学科错题清空' },
-  { id: 'm50', em: '✨', nm: '融会贯通', ds: '掌握 50 题' },
+  { id: 'first', em: BADGE_SVG('leaf'), nm: '初次作答', ds: '完成第 1 题' },
+  { id: 'h100', em: BADGE_SVG('star'), nm: '百题斩', ds: '累计作答 100 题' },
+  { id: 'h500', em: BADGE_SVG('target'), nm: '五百勇士', ds: '累计作答 500 题' },
+  { id: 'h1000', em: BADGE_SVG('trophy'), nm: '千题宗师', ds: '累计作答 1000 题' },
+  { id: 'h2000', em: BADGE_SVG('star'), nm: '两千题', ds: '累计作答 2000 题' },
+  { id: 'h5000', em: BADGE_SVG('star'), nm: '五千题', ds: '累计作答 5000 题' },
+  { id: 's7', em: BADGE_SVG('fire'), nm: '七日打卡', ds: '连续打卡 7 天' },
+  { id: 's30', em: BADGE_SVG('trophy'), nm: '月度坚持', ds: '连续打卡 30 天' },
+  { id: 's100', em: BADGE_SVG('fire'), nm: '百日坚持', ds: '连续打卡 100 天' },
+  { id: 'exam80', em: BADGE_SVG('book2'), nm: '优良', ds: '考试得分 ≥ 80%' },
+  { id: 'exam90', em: BADGE_SVG('grad'), nm: '学霸附体', ds: '考试得分 ≥ 90%' },
+  { id: 'exam100', em: BADGE_SVG('star'), nm: '满分', ds: '考试得分 100%' },
+  { id: 'm50', em: BADGE_SVG('star'), nm: '融会贯通', ds: '掌握 50 题' },
+  { id: 'm100', em: BADGE_SVG('trophy'), nm: '百题掌握', ds: '掌握 100 题' },
+  { id: 'nm', em: BADGE_SVG('leaf'), nm: '单词入门', ds: '英语掌握 50 词' },
+  { id: 'ne', em: BADGE_SVG('book'), nm: '单词达人', ds: '英语掌握 200 词' },
+  { id: 'clear', em: BADGE_SVG('trash'), nm: '错题清零', ds: '当前学科错题清空' },
 ];
 function totalAnswered() { let n = 0; for (const id in S.subjects) { const st = S.subjects[id]; for (const d in st.daily) n += st.daily[d].answered; } return n; }
 function streak() {
@@ -686,19 +757,32 @@ function streak() {
   if (!set.has(ymd(cur))) { cur.setDate(cur.getDate() - 1); if (!set.has(ymd(cur))) return 0; }
   let s = 0; while (set.has(ymd(cur))) { s++; cur.setDate(cur.getDate() - 1); } return s;
 }
-function addBadge(id) { if (!inSet(S.global.badges, id)) { S.global.badges.push(id); const b = BADGES.find(x => x.id === id); if (b) toast('🎉 解锁徽章：' + b.nm); } }
+function addBadge(id) { if (!inSet(S.global.badges, id)) { S.global.badges.push(id); if (!S.global.badgeTimes) S.global.badgeTimes = {}; S.global.badgeTimes[id] = Date.now(); const b = BADGES.find(x => x.id === id); if (b) toast(ICON('party') + ' 解锁徽章：' + b.nm); } }
 function checkBadges() {
   const g = S.global, got = new Set(g.badges), ta = totalAnswered();
-  const add = id => { if (!got.has(id)) { got.add(id); const b = BADGES.find(x => x.id === id); if (b) toast('🎉 解锁徽章：' + b.nm); } };
-  if (ta >= 1) add('first');
-  if (ta >= 100) add('h100');
-  if (ta >= 500) add('h500');
-  if (ta >= 1000) add('h1000');
-  if (streak() >= 7) add('s7');
-  if (streak() >= 30) add('s30');
-  if (curState().mastered.length >= 50) add('m50');
+  if (!g.badgeTimes) g.badgeTimes = {};
+  const mark = id => { if (!got.has(id)) { got.add(id); g.badgeTimes[id] = Date.now(); const b = BADGES.find(x => x.id === id); if (b) toast(ICON('party') + ' 解锁徽章：' + b.nm); } };
+  if (ta >= 1) mark('first');
+  if (ta >= 100) mark('h100');
+  if (ta >= 500) mark('h500');
+  if (ta >= 1000) mark('h1000');
+  if (ta >= 2000) mark('h2000');
+  if (ta >= 5000) mark('h5000');
+  if (streak() >= 7) mark('s7');
+  if (streak() >= 30) mark('s30');
+  if (streak() >= 100) mark('s100');
+  const eh = curState().examHistory || [];
+  const maxScore = eh.reduce((m, e) => Math.max(m, e.score || 0), 0);
+  if (maxScore >= 80) mark('exam80');
+  if (maxScore >= 90) mark('exam90');
+  if (maxScore >= 100) mark('exam100');
+  if (curState().mastered.length >= 50) mark('m50');
+  if (curState().mastered.length >= 100) mark('m100');
+  const engM = (window.Eng && Eng.engMasteredSync) ? Eng.engMasteredSync() : 0;
+  if (engM >= 50) mark('nm');
+  if (engM >= 200) mark('ne');
   // 「错题清零」须：本学科曾经有过错题（hadWrong）且当前错题已清空，避免第一题答对就误发
-  if (curState().hadWrong && curState().wrong.length === 0) add('clear');
+  if (curState().hadWrong && curState().wrong.length === 0) mark('clear');
   g.badges = Array.from(got);
 }
 
@@ -728,7 +812,7 @@ function show(tab) {
   else if (tab === 'me') v.innerHTML = renderMe();
   /* 医学英语走异步：先占位，数据到位后回填（分片 fetch 不能卡住首屏切换） */
   else if (tab === 'english') {
-    v.innerHTML = '<div class="card"><h3>🔤 医学英语词库</h3><p class="muted small">加载中…</p></div>';
+    v.innerHTML = '<div class="card"><h3>' + ICON('abc') + ' 医学英语词库</h3><p class="muted small">加载中…</p></div>';
     if (window.Eng) {
       Eng.loadMan().then(async () => {
         if (activeTab !== 'english') return;          // 用户已切走，别覆盖
@@ -743,57 +827,88 @@ function show(tab) {
   /* 词库是跨科室内容域，与「刷题三科」不是同一套学科 → 此时学科下拉无意义，隐藏 */
   const ss = $('#subjectSelect');
   if (ss) ss.style.display = (tab === 'english') ? 'none' : '';
+  if (tab !== 'english') v.classList.remove('eng-card-mode');   // A06：离开单词页，撤掉卡片居中布局
+  updateGroupToggle();
+  const gt = document.getElementById('grpToggle');
+  if (gt) gt.style.display = (tab === 'english') ? 'none' : '';
   updateTabDot();
   updateBackupBanner();
   v.scrollTop = 0;
 }
 
+/* A11：跨模块启动英语复习 / 定位（先挂载英语视图，再借道 Eng API；不重写刷题播放器） */
+async function ensureEnglishMounted() {
+  if (activeTab !== 'english') {
+    show('english');
+    for (let i = 0; i < 60; i++) { if (document.getElementById('engModeCard')) break; await new Promise(r => setTimeout(r, 50)); }
+  }
+}
+async function launchEngReview() {
+  closeModal();
+  if (!window.Eng) return;
+  await ensureEnglishMounted();
+  await Eng.launchReview();
+}
+async function launchEngFamiliar(s) {
+  closeModal();
+  if (!window.Eng) return;
+  await ensureEnglishMounted();
+  await Eng.showFamiliar(s);
+}
+async function launchEngImmersive(wordId) {
+  closeModal();
+  if (!window.Eng) return;
+  await ensureEnglishMounted();
+  await Eng.launchImmersive(wordId);
+}
+
 function examCountdownHtml() {
   const d = S.global.settings.examDate;
-  if (!d) return `<div class="row between"><h3 style="margin:0">📅 考试倒计时</h3></div><p class="muted small" style="margin:10px 0 0">去「设置」设置考试日期，开启倒计时。</p>`;
+  if (!d) return `<div class="row between"><h3 style="margin:0">${ICON('cal')}考试倒计时</h3></div><p class="muted small" style="margin:10px 0 0">去「设置」设置考试日期，开启倒计时。</p>`;
   const target = new Date(d + 'T00:00:00');
   const days = Math.ceil((target - new Date()) / 86400000);
-  if (days < 0) return `<div class="row between"><h3 style="margin:0">📅 考试倒计时</h3></div><div class="cd-num">🎓</div><p class="muted small" style="margin:6px 0 0">考试已结束，继续加油！</p>`;
-  return `<div class="row between"><h3 style="margin:0">📅 考试倒计时</h3></div><div class="cd-num">${days}<span>天</span></div><p class="muted small" style="margin:6px 0 0">目标日 ${d}</p>`;
+  if (days < 0) return `<div class="row between"><h3 style="margin:0">${ICON('cal')}考试倒计时</h3></div><div class="cd-num">${ICON('grad', '1.1em')}</div><p class="muted small" style="margin:6px 0 0">考试已结束，继续加油！</p>`;
+  return `<div class="row between"><h3 style="margin:0">${ICON('cal')}考试倒计时</h3></div><div class="cd-num">${days}<span>天</span></div><p class="muted small" style="margin:6px 0 0">目标日 ${d}</p>`;
 }
 function dailyRingHtml() {
   const goal = S.global.settings.dailyGoal || 0;
   const todayA = (curState().daily[today()] || {}).answered || 0;
   const pct = goal ? Math.min(100, Math.round(todayA / goal * 100)) : 0;
-  const r = 26, c = 2 * Math.PI * r;
-  return `<div class="row between"><h3 style="margin:0">🎯 今日目标</h3><span class="muted small">${goal ? goal + ' 题' : '未设'}</span></div>
-    <div class="ring"><svg width="84" height="84" viewBox="0 0 84 84">
-      <circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="8"></circle>
-      <circle cx="42" cy="42" r="${r}" fill="none" stroke="var(--primary)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - pct / 100)).toFixed(1)}" transform="rotate(-90 42 42)"></circle>
+  const r = 22, c = 2 * Math.PI * r;
+  return `<div class="row between"><h3 style="margin:0">${ICON('target')}今日目标</h3><span class="muted small">${goal ? goal + ' 题' : '未设'}</span></div>
+    <div class="ring"><svg width="72" height="72" viewBox="0 0 72 72">
+      <circle cx="36" cy="36" r="${r}" fill="none" stroke="var(--surface2)" stroke-width="8"></circle>
+      <circle cx="36" cy="36" r="${r}" fill="none" stroke="var(--primary)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c.toFixed(1)}" stroke-dashoffset="${(c * (1 - pct / 100)).toFixed(1)}" transform="rotate(-90 36 36)"></circle>
     </svg><div class="ring-c"><b>${todayA}</b><span>/ ${goal || '–'}</span></div></div>
     <p class="muted small" style="margin:8px 0 0">今日完成度 ${pct}%</p>`;
+}
+function renderCheckinSlot(sk, checked) {
+  if (!checked) return `<button class="btn soft sm checkin-btn" data-act="checkin">打卡</button>`;
+  return `<button class="btn ghost sm checkin-btn" data-act="checkin-info">${ICON('fire')}连续打卡 ${sk} 天</button>`;
 }
 function renderHome() {
   const st = curState(), sub = curSub();
   const saved = latestSession();
   const subjName = saved && SB[saved.subject] ? SB[saved.subject].name : '';
   const cont = saved ? `<div class="card cont-card" data-act="resume-home" style="cursor:pointer">
-    <div class="row between"><div><b>📌 继续刷题</b><div class="muted small">${esc(subjName)} · ${sessionLabel(saved)} · 第 ${saved.idx + 1}/${saved.qids.length} 题</div></div>
+    <div class="row between"><div><b>${ICON('pin')}继续刷题</b><div class="muted small">${esc(subjName)} · ${sessionLabel(saved)} · 第 ${saved.idx + 1}/${saved.qids.length} 题</div></div>
     <button class="btn sm">继续 →</button></div></div>` : '';
   const totalQ = sub.meta ? sub.meta.count : 0;
-  const jgN = groupCount(sub, 'jg'), extN = groupCount(sub, 'ext');
-  const grpBar = `<div class="groupbar">
-    <button class="gbtn ${sub.activeGroup === 'jg' ? 'on' : ''}" data-act="set-group" data-k="jg"><b>极光题库</b><span>${jgN} 题</span></button>
-    <button class="gbtn ${sub.activeGroup === 'ext' && extN ? 'on' : ''}${extN ? '' : ' off'}" data-act="set-group" data-k="ext"><b>扩展题库</b><span>${extN} 题</span></button>
-  </div>`;
   const lv = level(), xpIn = S.global.xp % 200, todayA = (st.daily[today()] || {}).answered || 0, sk = streak();
   const checked = S.global.checkin.includes(today());
   return `
   <div class="hero">
-    <div class="row between"><span class="lv">Lv.${lv} · ${esc(sub.semester || '')} ${esc(sub.name)}</span><span class="lv">${S.global.xp} XP</span></div>
+    <div class="hero-top">
+      <span class="lv hero-lv">Lv.${lv} · ${esc(sub.semester || '')} ${esc(sub.name)}</span>
+      <select id="subjectSelect" class="subject-select hero-subj" aria-label="切换学科">${subjOptionsHtml()}</select>
+    </div>
+    <div class="row between" style="margin-top:4px"><span class="lv hero-xp">${S.global.xp} XP</span><span class="muted small xp-rem">距下一级还差 ${200 - xpIn} XP</span></div>
     <div class="xpbar"><i style="width:${xpIn / 200 * 100}%"></i></div>
-    <div class="lv" style="margin-top:6px">距下一级还差 ${200 - xpIn} XP</div>
   </div>
-  ${grpBar}
   <div class="stat-grid">
     <div class="stat"><b>${totalQ}</b><span>总题数</span></div>
     <div class="stat"><b>${todayA}</b><span>今日已练</span></div>
-    <div class="stat"><b>${sk}🔥</b><span>连续打卡</span></div>
+    <div class="stat">${renderCheckinSlot(sk, checked)}</div>
   </div>
   <div class="cols2">
     <div class="card">${examCountdownHtml()}</div>
@@ -803,16 +918,13 @@ function renderHome() {
   <div class="mode-grid">
     <div class="mode" data-act="start-order"><div class="tile-wrap"><div class="em tile-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></div></div><div class="t">顺序刷题</div><div class="d">按章节逐项过</div></div>
     <div class="mode" data-act="filter-setup"><div class="tile-wrap"><div class="em tile-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg></div></div><div class="t">组卷中心</div><div class="d">筛选 · 练习/限时考试</div></div>
-    <div class="mode" data-act="start-review"><div class="tile-wrap"><div class="em tile-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></div></div><div class="t">间隔回顾</div><div class="d">待回顾 ${dueReviewIds(st).length} 题</div></div>
+    <div class="mode" data-act="start-review"><div class="tile-wrap"><div class="em tile-green"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg></div></div><div class="t">间隔回顾</div><div class="d">待回顾 ${reviewDueTotal(st)} 题</div></div>
     <div class="mode" data-act="start-ai"><div class="tile-wrap"><div class="em tile-pink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5 13.9 8l5.6 1.9-5.6 1.9L12 17.5l-1.9-5.7L4.5 9.9 10.1 8z"/><path d="M19 15.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/></svg></div></div><div class="t">AI 题库</div><div class="d">基于本题的变式</div></div>
+    <div class="mode" data-act="go-english"><div class="tile-wrap"><div class="em tile-purple"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6c-1.7-1.2-4.2-1.4-6-.5v11c1.8-.9 4.3-.7 6 .5 1.7-1.2 4.2-1.4 6-.5V5.5c-1.8-.9-4.3-.7-6 .5z"/><path d="M12 6v11"/></svg></div></div><div class="t">单词背诵</div><div class="d">医学英语速记</div></div>
+    <div class="mode" data-act="go-leisure"><div class="tile-wrap"><div class="em tile-orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="9" width="18" height="7" rx="3.5"/><path d="M6.5 11.5h2M7.5 10.5v2M15.5 11.5h.01M17.5 13.5h.01"/></svg></div></div><div class="t">休闲娱乐</div><div class="d">学累了来放松</div></div>
   </div>
   ${Feat.statsCardHtml()}
-  ${Feat.kpCardHtml()}
-  <div class="card" style="margin-top:12px">
-    <div class="row between"><h3 style="margin:0">每日打卡</h3>
-      <button class="btn soft sm" data-act="checkin">${checked ? '已打卡 ✓' : '立即打卡 +10'}</button></div>
-    <p class="muted small" style="margin:8px 0 0">连续打卡 ${sk} 天 · 累计 ${S.global.checkin.length} 天</p>
-  </div>`;
+  ${Feat.kpCardHtml()}`;
 }
 
 /* ---------- 题库检索：分页 + 关键词高亮（C09） ---------- */
@@ -840,27 +952,28 @@ function renderBankList() {
   if (total > slice.length) html += `<div class="row" style="margin-top:8px"><button class="btn ghost sm" data-act="bk-more">加载更多（还剩 ${total - slice.length}）</button></div>`;
   list.innerHTML = html;
 }
-function renderBank() {
+/* 把题库检索框抽成可复用片段，挂到题库页顶部（原独立题库页已并入题库 tab） */
+function bankSearchHtml() {
   const sub = curSub();
   const chOpts = '<option value="">全部章节</option>' + (() => {
     const G = { jg: '极光', ext: '扩展' }; let s = '';
     for (const g of ['jg', 'ext']) { const chs = (sub.groups && sub.groups[g] && sub.groups[g].chapters) || []; if (chs.length) s += `<optgroup label="${G[g]}">` + chs.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('') + '</optgroup>'; }
     return s;
   })();
-  return `<div class="section-title">题库检索</div>
-  <div class="search"><input id="bkSearch" placeholder="输入关键词 / 选项内容…" autocomplete="off"><button class="btn ghost sm" data-act="clear-search">清空</button></div>
+  return `<div class="search"><input id="bkSearch" placeholder="搜索题库题目 / 选项内容…" autocomplete="off"><button class="btn ghost sm" data-act="clear-search">清空</button></div>
   <div class="row" style="gap:8px;margin-bottom:10px">
     <select id="bkChapter" class="subject-select" style="flex:1;margin:0">${chOpts}</select>
-    <button class="btn soft sm" data-act="filter-setup" title="按难度/年份/来源/作答状态组卷">🔎 筛选组卷</button>
   </div>
   <div id="bkList"></div>`;
 }
-function bindBank() {
+function bindBankSearch() {
   const list = $('#bkList');
+  if (!list) return;            // 非题库检索视图（词库模式 / 不在错题页）时安全跳过
   const run = () => {
     const kw = ($('#bkSearch').value || '').trim().toLowerCase();
-    if (kw && kw.length < 3) { list.innerHTML = '<div class="empty">请输入至少 3 个字符后再搜索</div>'; return; }
     const cid = $('#bkChapter').value;
+    if (!kw && !cid) { list.innerHTML = ''; _bkArr = []; _bkPage = 1; return; }   // 默认不显示题目，只等搜索 / 选章节
+    if (kw && kw.length < 3) { list.innerHTML = '<div class="empty">请输入至少 3 个字符后再搜索</div>'; return; }
     let arr = allQuestionsBoth(curSub());
     if (cid) arr = arr.filter(x => x.chapterId === cid);
     if (kw) arr = arr.filter(x => (x.q.content + ' ' + Object.values(x.q.options).join(' ')).toLowerCase().includes(kw));
@@ -872,9 +985,12 @@ function bindBank() {
   $('#bkChapter').addEventListener('change', run);
   run();
 }
+function renderBank() { return bankSearchHtml(); }   // 保留兼容：独立题库页（检索框已并入错题页，本函数暂未被调用）
+function bindBank() { bindBankSearch(); }
 
 let wrongTab = 'wrong';
 let wrongMasteryFilter = null;
+let wrongBankMode = 'bank';   // A12：错题页 题库 / 词库 双视图切换
 function chapterAccHtml() {
   const st = curState(), sub = curSub();
   if (!sub.chapters.length) return '<p class="muted small">暂无章节</p>';
@@ -884,9 +1000,31 @@ function chapterAccHtml() {
     return `<div style="margin:6px 0"><div class="row between"><span class="small">${esc(c.name)}</span><span class="muted small">${tot ? cor + '/' + tot : '未练'}</span></div><div class="xpbar" style="background:var(--surface2)"><i style="width:${w}%;background:${pct >= 60 ? 'var(--ok)' : pct >= 30 ? 'var(--warn)' : 'var(--bad)'}"></i></div></div>`;
   }).join('');
 }
+function chapterAccModal() {
+  const st = curState(), sub = curSub();
+  const rows = sub.chapters.length ? chapterAccHtml() : '<p class="muted small">暂无章节数据</p>';
+  const avg = (() => { let t = 0, c = 0; for (const ch of sub.chapters) { const bc = st.byChapter[ch.id]; if (bc && bc.total) { t += bc.total; c += bc.correct; } } return t ? Math.round(c / t * 100) : 0; })();
+  openModal(`<h3>${ICON('chart')}各章正确率（全部章节）</h3>
+    <p class="muted small" style="margin:0 0 12px">本学科平均正确率 <b>${avg}%</b> · 共 ${sub.chapters.length} 章 · 悬停星图看单章详情</p>
+    <div class="chacc-list">${rows}</div>
+    <button class="btn ghost" data-act="modal-close" style="margin-top:12px">关闭</button>`);
+}
 function renderWrong() {
   const st = curState();
-  const tabs = [['wrong', '❌ 错题', st.wrong.length], ['fav', '⭐ 收藏', st.fav.length], ['doubt', '❓ 疑点', st.doubt.length]];
+  const modeToggle = `<div class="wrap" style="margin-bottom:10px;gap:8px">
+    <button class="chip ${wrongBankMode === 'bank' ? 'on' : ''}" data-act="wbank-mode" data-v="bank">${ICON('book')}题库</button>
+    <button class="chip ${wrongBankMode === 'words' ? 'on' : ''}" data-act="wbank-mode" data-v="words">${ICON('abc')}词库</button>
+  </div>`;
+  if (wrongBankMode === 'words') {
+    return `${modeToggle}
+      <div class="search"><input id="ewSearch" placeholder="搜索英文 / 中文（全库）" autocomplete="off"><button class="btn ghost sm" data-act="ew-clear">清空</button></div>
+      <div class="row" style="gap:8px;margin-bottom:10px">
+        <select id="ewDept" class="subject-select" style="flex:1;margin:0"><option value="all">全部分类</option></select>
+      </div>
+      <div class="card"><div class="row between"><h3 style="margin:0" id="ewTitle">${ICON('book')}英语生词（模糊 / 忘记）</h3><span class="muted small" id="engWrongCnt"></span></div>
+      <div id="engWrongList" class="eng-wrong-list"></div></div>`;
+  }
+  const tabs = [['wrong', ICON('cross') + ' 错题', st.wrong.length], ['fav', ICON('star') + ' 收藏', st.fav.length], ['doubt', ICON('question') + ' 疑点', st.doubt.length]];
   const head = tabs.map(([k, n, c]) => `<button class="btn ${wrongTab === k ? '' : 'ghost'} sm" data-act="wtab" data-k="${k}" style="flex:1">${n} ${c}</button>`).join('');
   const baseIds = (wrongTab === 'wrong' ? st.wrong : wrongTab === 'fav' ? st.fav : st.doubt) || [];
   let shownIds = baseIds;
@@ -895,29 +1033,70 @@ function renderWrong() {
       <button class="chip sm ${wrongMasteryFilter === null ? 'on' : ''}" data-act="wmastery" data-k="">全部状态</button>
       ${Feat.MASTERY.map((m, i) => `<button class="chip sm ${wrongMasteryFilter === String(i) ? 'on' : ''}" data-act="wmastery" data-k="${i}">${m.em} ${m.n}</button>`).join('')}
     </div>`;
-  return `<div class="section-title">我的题目</div>
+  return `${modeToggle}
+    ${bankSearchHtml()}
     <div class="row" style="gap:8px;margin-bottom:10px">${head}</div>
-    <div class="card" style="margin-bottom:10px"><h3>各章正确率</h3>${chapterAccHtml()}</div>
     <div class="card tight" style="margin-bottom:10px"><div class="row between"><span class="muted small">按掌握状态筛选</span><span class="muted small">当前 ${shownIds.length} / ${baseIds.length} 题</span></div>${mChips}</div>
     <div id="wList"></div>`;
 }
 function bindWrong() {
+  bindBankSearch();            // 题库检索框（挂在题库页顶部）统一在此绑定
   const list = $('#wList');
   const st = curState();
-  let ids = (wrongTab === 'wrong' ? st.wrong : wrongTab === 'fav' ? st.fav : st.doubt) || [];
-  if (wrongMasteryFilter !== null) ids = ids.filter(id => String(Feat.masteryOf(st, id)) === wrongMasteryFilter);
-  if (!ids.length) { list.innerHTML = '<div class="empty">这里还空空如也</div>'; return; }
-  list.innerHTML = ids.map(id => {
-    const x = qById(id); if (!x) return '';
-    return `<div class="qitem" data-act="qview" data-id="${id}">
-      <div class="q">${esc(x.q.content)}</div>
-      <div class="meta"><span class="tag">${esc(x.chapterName)}</span>${Feat.masteryTag(st, id)}</div></div>`;
-  }).join('');
+  if (list) {   // 词库模式下页面无 #wList（仅英语生词列表），跳过避免 null.innerHTML 崩溃
+    let ids = (wrongTab === 'wrong' ? st.wrong : wrongTab === 'fav' ? st.fav : st.doubt) || [];
+    if (wrongMasteryFilter !== null) ids = ids.filter(id => String(Feat.masteryOf(st, id)) === wrongMasteryFilter);
+    if (!ids.length) { list.innerHTML = '<div class="empty">这里还空空如也</div>'; }
+    else {
+      list.innerHTML = ids.map(id => {
+        const x = qById(id); if (!x) return '';
+        return `<div class="qitem" data-act="qview" data-id="${id}">
+          <div class="q">${esc(x.q.content)}</div>
+          <div class="meta"><span class="tag">${esc(x.chapterName)}</span>${Feat.masteryTag(st, id)}</div></div>`;
+      }).join('');
+    }
+  }
+  /* A11/B21：题库页「词库」子 tab —— 英语搜索框 + 分类下拉。默认显示生词（模糊/忘记），
+     输入搜索或选分类 → 词库检索；点击任一词进入沉浸式背诵并定位。 */
+  const el = document.getElementById('engWrongList');
+  if (el) {
+    if (!window.Eng) { return; }
+    const cnt = document.getElementById('engWrongCnt');
+    const title = document.getElementById('ewTitle');
+    const deptSel = $('#ewDept');
+    if (deptSel && Eng.depts) Eng.depts().then(list => {
+      deptSel.innerHTML = '<option value="all">全部分类</option>' + list.map(d => `<option value="${d.id}">${esc(d.n)} · ${d.c}</option>`).join('');
+    }).catch(() => {});
+    const wordRow = (w, extra) => `<div class="qitem eng-wrong-item" data-act="eng-wrong-word" data-id="${w.id}">
+        <div class="q">${esc(w.e)}</div>
+        <div class="meta"><span class="tag">${esc(w._d || '')}</span>${extra || esc(w.c || '')}</div></div>`;
+    const draw = async () => {
+      const kw = (($('#ewSearch') || {}).value || '').trim();
+      const dv = ($('#ewDept') || {}).value || 'all';
+      if (!kw && dv === 'all') {                     // 默认：生词（模糊 / 忘记）
+        if (title) title.innerHTML = ICON('book') + '英语生词（模糊 / 忘记）';
+        const f0 = await Eng.wordsByFamiliar(0), f1 = await Eng.wordsByFamiliar(1);
+        const items = [...f0.map(w => ({ w, s: 0 })), ...f1.map(w => ({ w, s: 1 }))];
+        if (cnt) cnt.textContent = items.length + ' 词';
+        el.innerHTML = items.length ? items.map(({ w, s }) => wordRow(w, `<span class="tag" style="color:${s === 0 ? '#c81f23' : '#E07800'}">${s === 0 ? '忘记' : '模糊'}</span>`)).join('') : '<div class="empty">暂无生词</div>';
+        return;
+      }
+      if (title) title.innerHTML = ICON('abc') + '词库检索';
+      const arr = await Eng.searchWords(kw, dv);
+      if (cnt) cnt.textContent = arr.length + ' 词';
+      el.innerHTML = arr.length ? arr.map(w => wordRow(w, '')).join('') : '<div class="empty">没有匹配的词</div>';
+    };
+    const sEl = $('#ewSearch');
+    if (sEl) { let t = null; sEl.addEventListener('input', () => { clearTimeout(t); t = setTimeout(draw, 260); }); }
+    if (deptSel) deptSel.addEventListener('change', draw);
+    draw();
+  }
 }
 
 function renderHonor() {
   const g = S.global, st = curState(), lv = level(), xpIn = S.global.xp % 200, sk = streak();
-  const badges = BADGES.map(b => { const got = inSet(g.badges, b.id); return `<div class="badge ${got ? '' : 'locked'}"><div class="em">${b.em}</div><div class="nm">${b.nm}</div><div class="ds">${b.ds}</div></div>`; }).join('');
+  const badgeItem = b => { const got = inSet(g.badges, b.id); const t = (g.badgeTimes && g.badgeTimes[b.id]) ? new Date(g.badgeTimes[b.id]).toLocaleString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' }) : ''; return `<div class="badge ${got ? '' : 'locked'}" data-act="badge-detail" data-id="${b.id}" title="${got && t ? '获得于 ' + t : '未获得'}"><div class="em">${b.em}</div><div class="nm">${b.nm}</div><div class="ds">${got ? (t || '已获得') : '未获得'}</div></div>`; };
+  const shownBadges = BADGES.slice(0, 9);
   const eh = (st.examHistory || []).slice().reverse();
   const ehHtml = eh.length ? eh.map(e => {
     const cond = e.cond ? `<span class="muted small" style="display:block">${esc(e.cond)}</span>` : '';
@@ -927,9 +1106,9 @@ function renderHonor() {
   const hmDays = []; for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); hmDays.push(d); }
   const hmCnt = hmDays.map(d => { const dy = st.daily[ymd(d)] || {}; return { a: dy.answered || 0, c: dy.correct || 0 }; });
   const hmMax = Math.max(1, ...hmCnt.map(o => o.a));
-  const hmColors = ['var(--surface2)', '#ffe3e6', '#ffb8be', '#ff8b94', '#c81f23'];
-  const HM_COL = 7, HM_CELL = 18, HM_GAP = 5;
-  const hmW = HM_COL * (HM_CELL + HM_GAP) - HM_GAP, hmH = 5 * (HM_CELL + HM_GAP) - HM_GAP;
+  const hmColors = ['var(--surface2)', '#e6f4ea', '#b7e0c2', '#6cc78a', '#1f9d55'];
+  const HM_COL = 15, HM_CELL = 16, HM_GAP = 4, HM_ROWS = 2;
+  const hmW = HM_COL * (HM_CELL + HM_GAP) - HM_GAP, hmH = HM_ROWS * (HM_CELL + HM_GAP) - HM_GAP;
   let hmSvg = `<svg class="hm-svg" width="${hmW}" height="${hmH}" viewBox="0 0 ${hmW} ${hmH}" role="img" aria-label="近30天刷题热力图">`;
   hmDays.forEach((d, i) => {
     const o = hmCnt[i];
@@ -940,26 +1119,26 @@ function renderHonor() {
   });
   hmSvg += `</svg>`;
   return `
-  <div class="section-title">成就与荣誉</div>
   <div class="hero"><div class="row between"><span class="lv">Lv.${lv} · ${esc(curSub().name)}</span><span class="lv">${g.xp} XP</span></div>
     <div class="xpbar"><i style="width:${xpIn / 200 * 100}%"></i></div>
-    <div class="lv" style="margin-top:6px">距下一级还差 ${200 - xpIn} XP · 🔥连续 ${sk} 天</div></div>
-  <div class="card"><h3>刷题热度（近 30 天）</h3><div class="heatmap">${hmSvg}</div>
+    <div class="lv" style="margin-top:6px">距下一级还差 ${200 - xpIn} XP · ${ICON('fire')}连续 ${sk} 天</div></div>
+  <div class="card"><h3>刷题热度（近 30 天）</h3><div class="heatmap" data-act="hm-click" title="点击查看刷题段位">${hmSvg}</div>
     <div class="hm-foot"><span>${hmDays[0].getMonth() + 1}/${hmDays[0].getDate()}</span>
-      <div class="hm-legend">少 <i style="background:var(--surface2);border:1px solid var(--border)"></i> <i style="background:#ffe3e6"></i> <i style="background:#ffb8be"></i> <i style="background:#ff8b94"></i> <i style="background:#c81f23"></i> 多</div>
-      <span>今天</span></div></div>
-  <div class="card"><h3>徽章墙</h3><div class="badge-grid">${badges}</div></div>
-  <div class="card"><h3>🪐 知识星图 · 章节掌握度</h3><div id="kmWrap" class="km-wrap"></div>
+      <div class="hm-legend">少 <i style="background:var(--surface2);border:1px solid var(--border)"></i> <i style="background:#e6f4ea"></i> <i style="background:#b7e0c2"></i> <i style="background:#6cc78a"></i> <i style="background:#1f9d55"></i> 多</div>
+      <span>今天</span></div>
+    <p class="muted small" style="margin:6px 0 0;cursor:pointer" data-act="hm-click">点击热力图查看你的刷题段位 ▾</p></div>
+  <div class="card"><div class="row between" style="margin-bottom:10px"><h3 style="margin:0">徽章墙</h3><button class="chip sm" data-act="badge-more">全部 ${BADGES.length} 枚 ›</button></div><div class="badge-grid">${shownBadges.map(badgeItem).join('')}</div></div>
+  <div class="card"><div class="row between" style="margin-bottom:8px"><h3 style="margin:0">${ICON('planet')}知识星图 · 章节掌握度</h3><button class="chip sm" data-act="chacc-more">各章正确率 ›</button></div><div id="kmWrap" class="km-wrap"></div>
     <div class="km-legend"><span class="km-dot km-lo"></span>薄弱<span class="km-dot km-mi"></span>一般<span class="km-dot km-hi"></span>扎实<span class="km-dot km-un"></span>未练<b id="kmStat" class="km-stat small"></b></div>
     <p class="muted small" style="margin:8px 0 0">星点越大越偏红＝越薄弱；悬停可查看章节作答详情。</p></div>
   <div class="honor-duo">
     <div class="card"><h3>正确率趋势（近 14 天）</h3><canvas id="trend" width="320" height="180"></canvas></div>
-    <div class="card"><h3>📚 医学英语掌握度</h3><div id="engDonut" class="eng-donut"></div>
+    <div class="card"><h3>${ICON('book')}医学英语掌握度</h3><div id="engDonut" class="eng-donut"></div>
       <div class="eng-donut-legend" id="engDonutLegend"></div></div>
   </div>
-  <div class="card lxg-card"><h3>📖 学累了？放松一下</h3>
+  <div class="card lxg-card" id="leisureCard"><h3>${ICON('book2')}学累了？放松一下</h3>
     <p class="muted small" style="margin:0 0 10px">读一段《理想国》导读，给脑子放个假。</p>
-    <button class="btn soft" data-act="open-lixiangguo">🌿 打开《理想国》导读</button></div>
+    <button class="btn soft" data-act="open-lixiangguo">${ICON('leaf')}打开《理想国》导读</button></div>
   <div class="card"><h3>历史成绩</h3>${ehHtml}</div>`;
 }
 function buildConstellation(sub, st) {
@@ -1051,16 +1230,16 @@ function renderMe() {
   ${Feat.prefCardHtml()}
   ${Feat.themeCardHtml()}
   <div class="card">
-    <h3>⚑ 答案纠错</h3>
+    <h3>${ICON('flag')}答案纠错</h3>
     <p class="muted small" style="margin:0 0 8px">遇到答案 / 解析 / 题干有问题的题，在题目页点「纠错」记录，这里统一导出。</p>
     <div class="lib-list">${Feat.feedbackListHtml(st)}</div>
     <div class="wrap" style="margin-top:10px">
-      <button class="btn soft sm" data-act="fb-export">⬇️ 导出纠错记录</button>
+      <button class="btn soft sm" data-act="fb-export">${ICON('download')}导出纠错记录</button>
       <button class="btn ghost sm" data-act="fb-clear">清空本学科</button>
     </div>
   </div>
   <div class="card">
-    <h3>🤖 AI 题库</h3>
+    <h3>${ICON('robot')}AI 题库</h3>
     <p class="muted small" style="margin:0 0 10px">基于本题让 AI 生成的变式题，已存档并云端同步。仅 lql 账号可生成。</p>
     <div class="row between"><span class="muted small">共 ${(curState().aiGen || []).length} 批</span>
       <button class="btn soft sm" data-act="ai-gen-list">查看</button></div>
@@ -1070,13 +1249,13 @@ function renderMe() {
     <p class="muted small" style="margin:0 0 10px">所有数据只存在这台设备的浏览器里。换设备 / 清缓存 / 用 QQ、微信等 App 内置浏览器打开都可能丢失，建议定期导出 JSON 备份。</p>
     <div class="wrap" style="margin-bottom:10px"><span class="muted small">上次备份：</span><b class="small">${g.lastBackup ? new Date(g.lastBackup).toLocaleString('zh-CN') : '尚未导出'}</b></div>
     <div class="wrap">
-      <button class="btn sm" data-act="export-data">⬇️ 导出 JSON 备份</button>
-      <button class="btn ghost sm" data-act="import-data">⬆️ 导入恢复</button>
+      <button class="btn sm" data-act="export-data">${ICON('download')}导出 JSON 备份</button>
+      <button class="btn ghost sm" data-act="import-data">${ICON('upload')}导入恢复</button>
     </div>
     <input type="file" id="fileInput" accept="application/json,.json" class="hidden">
   </div>
   <div class="card">
-    <h3>🧹 清空学习进度</h3>
+    <h3>${ICON('trash')}清空学习进度</h3>
     <p class="muted small" style="margin:0 0 10px">只清「作答类」记录：错题 / 收藏 / 疑点 / 掌握度 / 间隔回顾 / 每日统计 / 考试记录。
       <b>不动</b>成就徽章、连续打卡、XP 等级与偏好设置；可按题库分别清（极光 / 扩展 / AI 变式）。</p>
     <button class="btn ghost" data-act="reset-setup">选择范围并清空…</button>
@@ -1131,20 +1310,20 @@ function openQDetail(qid) {
     optHtml += `<div class="${cls}"><div class="k">${o.disp}</div><div class="v">${esc(o.text)}</div></div>`;
   }
   openModal(`<h3>${esc(x.chapterName)}</h3>
-    ${q.caseInfo ? `<div class="qcase">${esc(q.caseInfo)}</div>` : (q.type === 'A3' ? `<div class="qcase qcase-miss">📋 本题为病例组题，源数据未附带共享病例正文，题干可能不完整</div>` : '')}
+    ${q.caseInfo ? `<div class="qcase">${esc(q.caseInfo)}</div>` : (q.type === 'A3' ? `<div class="qcase qcase-miss">${ICON('doc')}本题为病例组题，源数据未附带共享病例正文，题干可能不完整</div>` : '')}
     <div class="qstem">${esc(q.content)}</div>
     ${qChipsHtml(q)}
-    ${q.images && q.images.length ? q.images.map(im => `<img class="qimg" src="${esc(im)}" onerror="imgFail(this)">`).join('') : (q.img ? `<div class="qimg-ph">🖼️ 本题原始数据带图片，图未随题库下发，请对照教材原图作答</div>` : '')}
+    ${q.images && q.images.length ? q.images.map(im => `<img class="qimg" src="${esc(im)}" onerror="imgFail(this)">`).join('') : (q.img ? `<div class="qimg-ph">${ICON('img')}本题原始数据带图片，图未随题库下发，请对照教材原图作答</div>` : '')}
     ${optHtml}
     <div class="ans-line ok">正确答案：${esc(q.noChoice ? q.correct : dispAns)} ${Feat.masteryTag(st, qid, true)}</div>
     <div id="expWrap">${hasExplain(q) ? explainHtml(q) : ''}</div>
     <div class="wrap" style="margin-top:12px">
-      ${aiEnabled() ? `<button class="btn soft sm" data-act="ai-gen-q" data-id="${qid}">🤖 AI出题</button>` : ''}
-      ${aiEnabled() ? `<button class="btn soft sm" data-act="ai-explain-q" data-id="${qid}">🧠 AI再解析</button>` : ''}
-      <button class="btn soft sm" data-act="toggle-fav" data-id="${qid}">${isFav ? '★ 取消收藏' : '☆ 收藏'}</button>
+      ${aiEnabled() ? `<button class="btn soft sm" data-act="ai-gen-q" data-id="${qid}">${ICON('robot')}AI出题</button>` : ''}
+      ${aiEnabled() ? `<button class="btn soft sm" data-act="ai-explain-q" data-id="${qid}">${ICON('brain')}AI再解析</button>` : ''}
+      <button class="btn soft sm" data-act="toggle-fav" data-id="${qid}">${isFav ? ICON('star') + ' 取消收藏' : ICON('star') + ' 收藏'}</button>
       <button class="btn soft sm" data-act="toggle-doubt" data-id="${qid}">${isDoubt ? '已标记疑点' : '标记疑点'}</button>
       <button class="btn soft sm" data-act="remove-wrong" data-id="${qid}">${isWrong ? '移出错题' : '非错题'}</button>
-        <button class="btn soft sm" data-act="fb-open" data-id="${qid}">⚑ 纠错</button>
+        <button class="btn soft sm" data-act="fb-open" data-id="${qid}">${ICON('flag')}纠错</button>
     </div>
     <button class="btn ghost" data-act="close-modal" style="margin-top:8px">关闭</button>`);
 }
@@ -1241,6 +1420,12 @@ function dueReviewIds(st) {
   }
   return ids;
 }
+/* A11：待回顾总数 = 刷题到期 + 英语到期（英语依赖已加载的 allCache；未访问英语页时仅计刷题） */
+function reviewDueTotal(st) {
+  let n = dueReviewIds(st).length;
+  if (window.Eng && Eng.dueCountSync) n += Eng.dueCountSync();
+  return n;
+}
 function updateReview(q, correct, chosen) {
   const st = curState();
   if (!st.review) st.review = {};
@@ -1309,25 +1494,44 @@ function startReviewPool(ids) {
   saveSession();
   renderPlayer();
 }
-function openReviewCenter() {
+let reviewCenterMode = 'bank';   // A11：间隔回顾中心双模式（题库 / 词库）
+async function openReviewCenter() {
   const st = curState();
   const s = reviewStats(st);
   const dueQ = reviewQueue(st);
   const repeat = s.repeat.slice().sort((a, b) => ((st.qstat[b] || {}).w || 0) - ((st.qstat[a] || {}).w || 0)).slice(0, 100);
   const mastered = s.mastered;
+  const engDue = (window.Eng && Eng.dueCountSync) ? Eng.dueCountSync() : 0;
+  const f0 = (window.Eng && Eng.wordsByFamiliar) ? (await Eng.wordsByFamiliar(0)).length : 0;
+  const f1 = (window.Eng && Eng.wordsByFamiliar) ? (await Eng.wordsByFamiliar(1)).length : 0;
   const desc = { due: '真正该复习的：到期且未掌握', new: '错过但还没稳住的新错题', repeat: '错 ≥2 次，优先啃硬骨头' };
-  const card = (k, em, t, cnt) => `<div class="rv-card"><div class="rv-card-h"><span class="rv-em">${em}</span><b>${t}</b><span class="rv-cnt">${cnt}</span></div><div class="rv-card-d">${desc[k]}</div><button class="btn ${cnt ? '' : 'ghost'} sm" data-act="rv-start" data-pool="${k}" ${cnt ? '' : 'disabled'}>开始复习${cnt ? ' ' + cnt + ' 题' : ''}</button></div>`;
+  const card = (k, em, t, cnt, act, arg) => `<div class="rv-card"><div class="rv-card-h"><span class="rv-em">${em}</span><b>${t}</b><span class="rv-cnt">${cnt}</span></div><div class="rv-card-d">${desc[k] || ''}</div><button class="btn ${cnt ? '' : 'ghost'} sm" data-act="${act}"${arg ? ` data-pool="${arg}"` : ''} ${cnt ? '' : 'disabled'}>开始复习${cnt ? ' ' + cnt + ' 词' : ''}</button></div>`;
+  const wcard = (em, t, cnt, act, v) => `<div class="rv-card"><div class="rv-card-h"><span class="rv-em">${em}</span><b>${t}</b><span class="rv-cnt">${cnt}</span></div><div class="rv-card-d">${v}</div><button class="btn ${cnt ? '' : 'ghost'} sm" data-act="${act}"${act === 'eng-fam-launch' ? ` data-v="${v === '忘记' ? 0 : 1}"` : ''} ${cnt ? '' : 'disabled'}>${cnt ? '去背诵' : '暂无'}</button></div>`;
+  const toggle = `<div class="wrap" style="margin-bottom:10px;gap:8px"><button class="chip ${reviewCenterMode === 'bank' ? 'on' : ''}" data-act="rv-mode" data-v="bank">${ICON('book')}题库</button><button class="chip ${reviewCenterMode === 'words' ? 'on' : ''}" data-act="rv-mode" data-v="words">${ICON('abc')}词库</button></div>`;
+  let body;
+  if (reviewCenterMode === 'bank') {
+    body = `<div class="rv-grid">${card('due', ICON('cal'), '今日到期', dueQ.length, 'rv-start', 'due')}${card('new', ICON('new'), '新错题', s.newWrong.length, 'rv-start', 'new')}${card('repeat', ICON('repeat'), '反复错误', repeat.length, 'rv-start', 'repeat')}</div>`;
+  } else {
+    body = `<div class="rv-grid">
+      ${wcard(ICON('abc'), '英语到期复习', engDue, 'eng-review-launch', '模糊 / 忘记 到期词，用单词页 SRS 播放器逐词过')}
+      ${wcard(ICON('dotr'), '忘记', f0, 'eng-fam-launch', '熟悉度=忘记 的生词')}
+      ${wcard(ICON('doty'), '模糊', f1, 'eng-fam-launch', '熟悉度=模糊 的生词')}
+    </div>`;
+  }
   const mList = mastered.length ? mastered.map(id => {
     const x = qById(id);
     return `<div class="rv-m-item" data-act="qview" data-id="${id}"><span class="q">${x ? esc(x.q.content) : esc(id)}</span><button class="chip sm" data-act="rv-restore" data-id="${id}">恢复复习</button></div>`;
   }).join('') : '<div class="empty">还没有已掌握的题</div>';
-  openModal(`<h3>🔄 间隔回顾中心</h3>
-    <div class="rv-grid">${card('due', '📅', '今日到期', dueQ.length)}${card('new', '🆕', '新错题', s.newWrong.length)}${card('repeat', '🔁', '反复错误', repeat.length)}</div>
-    <div class="card tight" style="margin-top:10px"><div class="row between"><span>✅ 已掌握（点击可恢复自动复习）</span><b>${mastered.length}</b></div><div class="rv-m-list">${mList}</div></div>
+  openModal(`<h3>${ICON('repeat')}间隔回顾中心</h3>${toggle}
+    ${body}
+    <div class="card tight" style="margin-top:10px"><div class="row between"><span>${ICON('check')}已掌握（点击可恢复自动复习）</span><b>${mastered.length}</b></div><div class="rv-m-list">${mList}</div></div>
     <p class="muted small" style="margin-top:10px">答对需「连对 ≥4 次且跨度 ≥21 天」才毕业；复习中可标「还不熟 / 掌握」手动调控。</p>
     <button class="btn ghost" data-act="modal-close">关闭</button>`);
 }
-function startReview() { openReviewCenter(); }   // 入口统一走复习中心
+async function startReview() {
+  if (window.Eng) { try { await Eng.loadMan(); await Eng.ensureAll(); } catch (e) {} }
+  openReviewCenter();
+}
 function rvFeelHtml(st, qid) {
   const r = st.review && st.review[qid];
   const cur = r ? r.feeling : 'unknown';
@@ -1457,7 +1661,7 @@ async function resumeSession(saved) {
   };
   if (saved.mode === 'exam' && !P.submitted) {
     P.timeLeft = saved.timeLeft || (P.modeOpt.minutes || 30) * 60;  // 恢复考试剩余时间，防退出后续时刷分
-    P.timer = setInterval(() => { P.timeLeft--; const el = $('#examTimer'); if (el) el.textContent = '⏱️ ' + fmtTime(P.timeLeft); if (P.timeLeft <= 0) { clearInterval(P.timer); submitExam(); } }, 1000);
+    P.timer = setInterval(() => { P.timeLeft--; const el = $('#examTimer'); if (el) el.textContent = ICON('clock') + ' ' + fmtTime(P.timeLeft); if (P.timeLeft <= 0) { clearInterval(P.timer); submitExam(); } }, 1000);
   }
   saveSession();
   openPlayer();
@@ -1483,7 +1687,7 @@ function startPractice(pool, mode, opt, sessionKey) {
   P = { pool, mode, idx: 0, answers: {}, modeOpt: opt || {}, submitted: false, start: Date.now(), timer: null, timeLeft: 0, sessionKey: sessionKey || 'adhoc' };
   if (mode === 'exam') {
     P.timeLeft = (opt.minutes || 30) * 60;
-    P.timer = setInterval(() => { P.timeLeft--; const el = $('#examTimer'); if (el) el.textContent = '⏱️ ' + fmtTime(P.timeLeft); if (P.timeLeft <= 0) { clearInterval(P.timer); submitExam(); } }, 1000);
+    P.timer = setInterval(() => { P.timeLeft--; const el = $('#examTimer'); if (el) el.textContent = ICON('clock') + ' ' + fmtTime(P.timeLeft); if (P.timeLeft <= 0) { clearInterval(P.timer); submitExam(); } }, 1000);
   }
   saveSession();
   openPlayer();
@@ -1511,7 +1715,7 @@ function renderPlayer() {
   let head = '';
   if (P.mode === 'exam') {
     head = `<div class="phead-row"><span class="pill">${P.idx + 1}/${P.pool.length}</span>
-      <span id="examTimer" class="pill">⏱️ ${fmtTime(P.timeLeft)}</span>
+      <span id="examTimer" class="pill">${ICON('clock')}${fmtTime(P.timeLeft)}</span>
       <button class="btn soft sm" data-act="sheet">答题卡</button>
       <button class="btn ghost sm" data-act="exit-player">✕</button></div>`;
   } else if (P.mode === 'review') {
@@ -1524,12 +1728,12 @@ function renderPlayer() {
   }
   const dispAns = String(q.correct || '').split('').map(k => Feat.dispOfKey(q, k)).sort().join('');
   const typeTxt = (TYPE_FULL[q.type] || q.typeLabel || (q.multi ? '多选题' : '单选题')) + (q.multi ? ' · 可选多个' : ' · 只选一个');
-  let body = `<div class="qtype"><span class="pill ${q.multi ? 'pill-multi' : 'pill-single'}">${typeTxt}</span></div>${Feat.playerMetaHtml(q, st)}${Feat.playerWarnHtml(q)}${q.caseInfo ? `<div class="qcase">${esc(q.caseInfo)}</div>` : (q.type === 'A3' ? `<div class="qcase qcase-miss">📋 本题为病例组题，源数据未附带共享病例正文，题干可能不完整</div>` : '')}<div class="qstem">${esc(q.content)}</div>${qChipsHtml(q)}`;
+  let body = `<div class="qtype"><span class="pill ${q.multi ? 'pill-multi' : 'pill-single'}">${typeTxt}</span></div>${Feat.playerMetaHtml(q, st)}${Feat.playerWarnHtml(q)}${q.caseInfo ? `<div class="qcase">${esc(q.caseInfo)}</div>` : (q.type === 'A3' ? `<div class="qcase qcase-miss">${ICON('doc')}本题为病例组题，源数据未附带共享病例正文，题干可能不完整</div>` : '')}<div class="qstem">${esc(q.content)}</div>${qChipsHtml(q)}`;
   // 间隔回顾：上轮错选提示
   const rv = st.review ? st.review[q.id] : null;
-  if (rv && rv.wrongAns && rv.wrongAns.length) body += `<div class="rv-hint">📝 上次错选：${esc(rv.wrongAns.map(k => Feat.dispOfKey(q, k)).join('、'))} · 已进入第 ${rv.stage + 1} 轮回顾</div>`;
+  if (rv && rv.wrongAns && rv.wrongAns.length) body += `<div class="rv-hint">${ICON('pencil')}${esc(rv.wrongAns.map(k => Feat.dispOfKey(q, k)).join('、'))} · 已进入第 ${rv.stage + 1} 轮回顾</div>`;
   if (q.images && q.images.length) for (const im of q.images) body += `<img class="qimg" src="${esc(im)}" onerror="imgFail(this)">`;
-  else if (q.img) body += `<div class="qimg-ph">🖼️ 本题原始数据带图片，图未随题库下发，请对照教材原图作答</div>`;
+  else if (q.img) body += `<div class="qimg-ph">${ICON('img')}本题原始数据带图片，图未随题库下发，请对照教材原图作答</div>`;
   if (q.noChoice) {
     // 非选择题（源数据无选项）：输入框 + 自评，不硬判
     body += Feat.noChoiceHtml(q, a);
@@ -1545,10 +1749,10 @@ function renderPlayer() {
     body += optHtml;
   }
   if (a.revealed) {
-    body += `<div class="ans-line ${a.correct ? 'ok' : 'bad'}">${a.correct ? '✅ 回答正确' : '❌ 回答错误'} · 正确答案：${esc(q.noChoice ? q.correct : dispAns)}</div>`;
+    body += `<div class="ans-line ${a.correct ? 'ok' : 'bad'}">${a.correct ? ICON('check') + '回答正确' : ICON('cross') + '回答错误'} · 正确答案：${esc(q.noChoice ? q.correct : dispAns)}</div>`;
     body += `<div id="expWrap">${hasExplain(q) ? explainHtml(q) : ''}</div>`;
     const fbrec = Feat.feedbackOf(st, q.id);
-    if (fbrec) body += `<div class="qfb">⚑ 你已报过纠错：${esc((Feat.FB_TYPES.find(x => x.v === fbrec.type) || {}).n || '')}${fbrec.text ? ' · ' + esc(fbrec.text) : ''}</div>`;
+    if (fbrec) body += `<div class="qfb">${ICON('flag')}你已报过纠错：${esc((Feat.FB_TYPES.find(x => x.v === fbrec.type) || {}).n || '')}${fbrec.text ? ' · ' + esc(fbrec.text) : ''}</div>`;
     if (P.reviewMode) body += rvFeelHtml(st, q.id);   // 间隔回顾主观三键
   } else if (P.mode !== 'exam') {
     body += `<div id="expWrap">${hasExplain(q) ? `<details class="exp"><summary>提前看解析</summary>${explainInner(q)}</details>` : ''}</div>`;
@@ -1577,13 +1781,13 @@ function renderPlayer() {
   const prog = Math.round((P.idx + 1) / P.pool.length * 100);
   let aiBtns = '';
   if (aiEnabled()) {
-    aiBtns += `<button class="chip" data-act="ai-gen">🤖 AI出题</button>`;
-    if (P.mode !== 'exam') aiBtns += `<button class="chip" data-act="ai-explain">🧠 AI再解析</button>`;
-    if (q.ai && it.chapterId && it.chapterId.indexOf('aigen:') === 0) aiBtns += `<button class="chip" data-act="ai-trace" data-bid="${it.chapterId.slice(6)}">🔍 溯源</button>`;
+    aiBtns += `<button class="chip" data-act="ai-gen">${ICON('robot')}AI出题</button>`;
+    if (P.mode !== 'exam') aiBtns += `<button class="chip" data-act="ai-explain">${ICON('brain')}AI再解析</button>`;
+    if (q.ai && it.chapterId && it.chapterId.indexOf('aigen:') === 0) aiBtns += `<button class="chip" data-act="ai-trace" data-bid="${it.chapterId.slice(6)}">${ICON('search')}</button>`;
   }
   body += `<div class="q-actions">
-    <button class="chip ${isFav ? 'on' : ''}" data-act="pfav" data-id="${q.id}">${isFav ? '★ 已收藏' : '☆ 收藏'}</button>
-    <button class="chip ${isDoubt ? 'on' : ''}" data-act="pdoubt" data-id="${q.id}">${isDoubt ? '❓ 已标记' : '❓ 疑点'}</button>
+    <button class="chip ${isFav ? 'on' : ''}" data-act="pfav" data-id="${q.id}">${isFav ? ICON('star') + ' 已收藏' : ICON('star') + ' 收藏'}</button>
+    <button class="chip ${isDoubt ? 'on' : ''}" data-act="pdoubt" data-id="${q.id}">${isDoubt ? ICON('question') + ' 已标记' : ICON('question') + ' 疑点'}</button>
     ${Feat.playerExtraChips(q)}
     ${aiBtns}
   </div>`;
@@ -1641,7 +1845,7 @@ function nextQ() {
   if (P.idx >= P.pool.length - 1) finishPractice(); else { P.idx++; saveSession(); renderPlayer(); }
 }
 function prevQ() { if (P.idx > 0) { P.idx--; saveSession(); renderPlayer(); } }
-function finishPractice() { if (window.QuizSync) window.QuizSync.forceFlush(); clearSession(); closePlayer(); show(activeTab); toast('本组练习完成 🎉'); }
+function finishPractice() { if (window.QuizSync) window.QuizSync.forceFlush(); clearSession(); closePlayer(); show(activeTab); toast('本组练习完成 ' + ICON('party')); }
 function submitExam() {
   if (!P) return;
   if (P.timer) clearInterval(P.timer);
@@ -1710,35 +1914,81 @@ function smoothPath(ctx, pts) {
   for (let i = 0; i < pts.length - 1; i++) { const xc = (pts[i].x + pts[i + 1].x) / 2, yc = (pts[i].y + pts[i + 1].y) / 2; ctx.quadraticCurveTo(pts[i].x, pts[i].y, xc, yc); }
   ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
 }
+const HM_TIERS = ['查无此人', '轻轻路过', '持续输出', '效率拉满', '卷王模式'];
+function openHeatmapModal() {
+  const st = curState();
+  const hmDays = []; for (let i = 29; i >= 0; i--) { const d = new Date(); d.setDate(d.getDate() - i); hmDays.push(d); }
+  const hmCnt = hmDays.map(d => { const dy = st.daily[ymd(d)] || {}; return dy.answered || 0; });
+  const hmMax = Math.max(1, ...hmCnt);
+  let peak = 0;
+  hmCnt.forEach(a => { const lv = a === 0 ? 0 : a <= hmMax * 0.2 ? 1 : a <= hmMax * 0.45 ? 2 : a <= hmMax * 0.7 ? 3 : 4; if (lv > peak) peak = lv; });
+  const sw = ['var(--surface2)', '#e6f4ea', '#b7e0c2', '#6cc78a', '#1f9d55'];
+  const rows = HM_TIERS.map((n, i) => `<div class="hm-tier ${i === peak ? 'on' : ''}"><span class="hm-tier-sw" style="background:${sw[i]}"></span><span class="hm-tier-n">${n}</span>${i === peak ? '<b class="hm-tier-tag">当前段位</b>' : ''}</div>`).join('');
+  openModal(`<h3>${ICON('fire')}刷题段位</h3>
+    <p class="muted small" style="margin:0 0 12px">近 30 天单日最高刷题 <b>${hmMax}</b> 题 · 你的段位：<b style="color:var(--primary-d)">${HM_TIERS[peak]}</b></p>
+    <div class="hm-tiers">${rows}</div>
+    <button class="btn ghost" data-act="modal-close" style="margin-top:14px">关闭</button>`);
+}
+let _badgeBackToWall = false;   // 徽章详情由「徽章墙」打开时，关闭/返回应回到徽章墙，而非成就页
+function openBadgeListModal() {
+  _badgeBackToWall = false;     // 进入徽章墙本级：此后关闭即回成就页
+  const g = S.global;
+  const items = BADGES.map(b => {
+    const got = inSet(g.badges, b.id);
+    const t = (g.badgeTimes && g.badgeTimes[b.id]) ? new Date(g.badgeTimes[b.id]).toLocaleString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+    return `<div class="badge ${got ? '' : 'locked'}" data-act="badge-detail" data-id="${b.id}"><div class="em">${b.em}</div><div class="nm">${b.nm}</div><div class="ds">${got ? (t || '已获得') : '未获得'}</div></div>`;
+  }).join('');
+  openModal(`<h3>${ICON('trophy')}全部徽章（${BADGES.length}）</h3><p class="muted small" style="margin:0 0 12px">已获得 ${g.badges.length} / ${BADGES.length} 枚 · 点击查看详情</p><div class="badge-grid">${items}</div><button class="btn ghost" data-act="modal-close" style="margin-top:14px">关闭</button>`);
+}
+function openBadgeDetail(id) {
+  const m = $('#modal');
+  _badgeBackToWall = !!(m && !m.classList.contains('hidden') && m.querySelector('.modal-box .badge-grid'));   // 当前弹层是徽章墙 → 返回时回到墙
+  const g = S.global, b = BADGES.find(x => x.id === id); if (!b) return;
+  const got = inSet(g.badges, id);
+  const t = (g.badgeTimes && g.badgeTimes[id]) ? new Date(g.badgeTimes[id]).toLocaleString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+  openModal(`<div class="badge-detail"><div class="em">${b.em}</div>
+    <h3 style="margin:6px 0">${b.nm}</h3>
+    <p class="muted small" style="margin:0">${b.ds}</p>
+    <div class="badge-status ${got ? 'got' : 'no'}">${got ? ICON('check') + '已获得' : ICON('lock') + '未获得'}</div>
+    ${got && t ? `<p class="muted small" style="margin:8px 0 0">获得时间：${t}</p>` : ''}
+    <button class="btn ghost" data-act="badge-detail-back" style="margin-top:12px">${_badgeBackToWall ? '‹ 返回徽章墙' : '关闭'}</button></div>`);
+}
 function drawTrend(canvas, data, labels) {
   if (!canvas) return;
   const W = 320, H = 180, ctx = fitCanvas(canvas, W, H); if (!ctx) return;
   ctx.clearRect(0, 0, W, H);
-  const text = cssVar('--muted'), grid = cssVar('--border'), line = cssVar('--ok');
-  if (!data || data.length < 2) { ctx.fillStyle = text; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('暂无正确率数据', W / 2, H / 2); return; }
+  const text = cssVar('--muted'), grid = cssVar('--border'), bar = cssVar('--primary'), barLast = cssVar('--ok');
+  if (!data || data.length < 1) { ctx.fillStyle = text; ctx.font = '12px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('暂无正确率数据', W / 2, H / 2); return; }
   labels = labels || data.map(() => '');
   const padL = 32, padR = 14, padT = 18, padB = 24, x0 = padL, x1 = W - padR, y0 = padT, y1 = H - padB;
-  const X = i => x0 + i * (x1 - x0) / (data.length - 1), Y = v => y1 - v / 100 * (y1 - y0);
+  const Y = v => y1 - v / 100 * (y1 - y0);
   ctx.font = '9px sans-serif'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
   for (let g = 0; g <= 100; g += 25) {
     const y = Y(g);
     ctx.strokeStyle = grid; ctx.globalAlpha = g === 0 ? 0.85 : 0.3; ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke(); ctx.globalAlpha = 1;
     ctx.fillStyle = text; ctx.fillText(g + '%', x0 - 5, y);
   }
-  const pts = data.map((v, i) => (v == null ? null : { x: X(i), y: Y(v), v, i }));
-  let seg = [];
-  const areaFlush = () => { if (seg.length >= 2) { const grad = ctx.createLinearGradient(0, y0, 0, y1); grad.addColorStop(0, toRGBA(line, 0.22)); grad.addColorStop(1, toRGBA(line, 0.02)); ctx.beginPath(); ctx.moveTo(seg[0].x, y1); ctx.lineTo(seg[0].x, seg[0].y); smoothPath(ctx, seg); ctx.lineTo(seg[seg.length - 1].x, y1); ctx.closePath(); ctx.fillStyle = grad; ctx.fill(); } seg = []; };
-  pts.forEach(p => { if (p) seg.push(p); else areaFlush(); }); areaFlush();
-  ctx.strokeStyle = line; ctx.lineWidth = 2.5; ctx.lineJoin = 'round'; ctx.lineCap = 'round'; seg = [];
-  const lineFlush = () => { if (seg.length >= 2) { ctx.beginPath(); ctx.moveTo(seg[0].x, seg[0].y); smoothPath(ctx, seg); ctx.stroke(); } seg = []; };
-  pts.forEach(p => { if (p) seg.push(p); else lineFlush(); }); lineFlush();
-  pts.forEach(p => { if (!p) return; ctx.beginPath(); ctx.arc(p.x, p.y, 3, 0, 7); ctx.fillStyle = line; ctx.fill(); ctx.lineWidth = 1.5; ctx.strokeStyle = cssVar('--surface'); ctx.stroke(); });
-  let last = null; for (let i = data.length - 1; i >= 0; i--) if (data[i] != null) { last = i; break; }
-  if (last != null) { ctx.font = 'bold 11px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillStyle = line; const lx = X(last), ly = Y(data[last]); const bx = Math.min(Math.max(lx, x0 + 12), x1 - 12); ctx.fillText(data[last] + '%', bx, ly - 7); }
+  const n = data.length, slot = (x1 - x0) / n, bw = Math.min(22, slot * 0.62);
+  data.forEach((v, i) => {
+    if (v == null) return;
+    const cx = x0 + slot * (i + 0.5);
+    const top = Y(v), h = y1 - top;
+    ctx.fillStyle = (i === n - 1) ? barLast : bar;
+    ctx.globalAlpha = 0.92;
+    roundRectTop(ctx, cx - bw / 2, top, bw, h, 4); ctx.fill(); ctx.globalAlpha = 1;
+    if (i === n - 1) { ctx.font = 'bold 11px sans-serif'; ctx.fillStyle = barLast; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; ctx.fillText(v + '%', cx, top - 5); }
+  });
   ctx.font = '9px sans-serif'; ctx.fillStyle = text; ctx.textBaseline = 'top';
   ctx.textAlign = 'left'; ctx.fillText(labels[0] || '', x0, y1 + 6);
-  ctx.textAlign = 'center'; ctx.fillText(labels[Math.floor((data.length - 1) / 2)] || '', X(Math.floor((data.length - 1) / 2)), y1 + 6);
-  ctx.textAlign = 'right'; ctx.fillText(labels[data.length - 1] || '', x1, y1 + 6);
+  ctx.textAlign = 'center'; ctx.fillText(labels[Math.floor((n - 1) / 2)] || '', x0 + slot * (Math.floor((n - 1) / 2) + 0.5), y1 + 6);
+  ctx.textAlign = 'right'; ctx.fillText(labels[n - 1] || '', x1, y1 + 6);
+}
+function roundRectTop(ctx, x, y, w, h, r) {
+  if (h <= 0) return; r = Math.min(r, w / 2, h);
+  ctx.beginPath();
+  ctx.moveTo(x, y + h); ctx.lineTo(x, y + r); ctx.arcTo(x, y, x + r, y, r);
+  ctx.lineTo(x + w - r, y); ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h); ctx.closePath();
 }
 function redrawCharts() { const t = $('#trend'); if (t) drawTrend(t, _trend, _trendLabels); }  // B17：切主题后按新 cssVar 重绘
 
@@ -1878,7 +2128,7 @@ function resetSetup() {
     for (const k in agg) agg[k] += (c[k] || 0);
   }
   const total = agg.wrong + agg.fav + agg.doubt + agg.mastered + agg.stat + agg.review;
-  openModal(`<h3>🧹 清空学习进度</h3>
+  openModal(`<h3>${ICON('trash')}清空学习进度</h3>
     <p class="muted small" style="margin:0 0 8px">选择要清掉的题库范围。成就徽章、连续打卡、XP 等级、偏好设置<b>一律保留</b>。</p>
     <div class="rscope">${['jg', 'ext', 'ai'].map(k => `<button class="rpick ${groups.has(k) ? 'on' : ''}" data-act="rst-pick" data-k="${k}">
       <b>${RST_NAME[k]}</b><span>${k === 'ai' ? '自生成变式题' : '客观题库'}</span></button>`).join('')}</div>
@@ -1888,7 +2138,7 @@ function resetSetup() {
       <button class="chip sm ${RST.clearEng ? 'on' : ''}" data-act="rst-eng">同时清空医学英语进度</button>
     </div>
     <div class="row" style="gap:8px;margin-top:6px">
-      <button class="chip sm ${RST.chOpen || chActive ? 'on' : ''}" data-act="rst-chmode">📄 按章节筛选${chActive ? `（已选 ${RST.chapters.length} 章 / ${chQn} 题）` : ''}</button>
+      <button class="chip sm ${RST.chOpen || chActive ? 'on' : ''}" data-act="rst-chmode">${ICON('doc')}按章节筛选${chActive ? `（已选 ${RST.chapters.length} 章 / ${chQn} 题）` : ''}</button>
       ${chActive ? `<button class="chip sm" data-act="rst-ch-none">清除章节选择</button>` : ''}
     </div>
     ${RST.chOpen ? `<div class="rst-chlist">${chList.map(c => `<div class="rst-ch ${chSet && chSet.has(c.id) ? 'on' : ''}" data-act="rst-ch" data-cid="${esc(c.id)}" role="checkbox" aria-checked="${chSet && chSet.has(c.id)}">
@@ -1900,7 +2150,7 @@ function resetSetup() {
       <div class="rl"><span>纠错记录</span><b>${agg.fb}（保留）</b></div>
       <div class="rl hi"><span>每日统计 / 考试记录</span><b>${agg.daily} 次作答 · ${agg.exam} 场</b></div>
       ${groups.has('ai') ? `<div class="rl hi"><span>AI 变式题存档</span><b>${agg.ai} 批${chActive ? '（章节筛选下不动）' : ''}</b></div>` : ''}
-      <div class="rkeep">⚠️ 每日统计与考试记录是「按天 / 按场汇总」的，没法按题拆开 —— 只要清了任意题库，这两项就整体归零。纠错是你自己写的，不删。${chActive ? '<br>📄 章节筛选生效：仅清所选章节内题目的记录；章节筛选只对当前学科可用，AI 变式题无法按章节归属、保持不动。' : ''}</div>
+      <div class="rkeep">${ICON('warn')}每日统计与考试记录是「按天 / 按场汇总」的，没法按题拆开 —— 只要清了任意题库，这两项就整体归零。纠错是你自己写的，不删。${chActive ? '<br>' + ICON('doc') + ' 章节筛选生效：仅清所选章节内题目的记录；章节筛选只对当前学科可用，AI 变式题无法按章节归属、保持不动。' : ''}</div>
     </div>
     <p class="muted small" style="margin:10px 0 0">保留：${S.global.xp} XP · ${S.global.badges.length} 枚徽章 · ${S.global.checkin.length} 天打卡${total ? '' : '（当前所选范围没有可清的数据）'}</p>
     <div class="wrap" style="margin-top:10px">
@@ -1920,7 +2170,7 @@ async function doReset() {
   const subjName = chActive ? (SB[cur] ? SB[cur].name : cur) : (RST.allSubjects ? `全部 ${subs.length} 个学科` : (SB[cur] ? SB[cur].name : cur));
   const chNames = chActive ? rstChList().filter(c => chSet.has(c.id)) : [];
   const chTxt = chActive ? `\n章节范围：${chNames.length} 章（${chNames.slice(0, 4).map(c => c.name).join('、')}${chNames.length > 4 ? ' 等' : ''}）` : '';
-  const engNote = RST.clearEng ? '\n\n⚠️ 同时会清空「医学英语」的单词熟悉度进度（此项不可恢复）。' : '';
+  const engNote = RST.clearEng ? '\n\n' + ICON('warn') + '同时会清空「医学英语」的单词熟悉度进度（此项不可恢复）。' : '';
   if (!confirm(`确定清空「${subjName}」中「${scope}」的学习进度？${chTxt}\n\n会删除：所选范围内题目的错题、收藏、疑点、掌握度、间隔回顾${chActive ? '' : '、每日统计、考试记录'}。\n会保留：成就徽章、连续打卡、XP 等级、偏好设置、纠错记录。${engNote}\n\n此操作不可恢复。`)) return;
   /* 分类依赖 QGROUP（分片加载时登记）——未载入的学科先补上，否则扩展题会被误判成极光题删掉 */
   for (const sid of subs) { if (SB[sid] && !LOADED.has(sid)) { try { await ensureSubject(sid); } catch (e) {} } }
@@ -1949,9 +2199,19 @@ function onAct(e) {
   if (act === 'resume-yes') { const p = pendingResume; pendingResume = null; closeModal(); if (p) resumeSession(p.saved); return; }
   if (act === 'resume-no') { const p = pendingResume; pendingResume = null; closeModal(); if (p) { clearSessionKey(p.saved.key); p.freshStartFn(); } return; }
   if (act === 'checkin') { doCheckin(); return; }
+  if (act === 'checkin-info') { openCheckinInfo(); return; }
   if (act === 'start-order') { orderSetup(); return; }
   if (act === 'start-review') { startReview(); return; }
+  if (act === 'rv-mode') { reviewCenterMode = t.dataset.v; openReviewCenter(); return; }
+  if (act === 'eng-review-launch') { launchEngReview(); return; }
+  if (act === 'eng-fam-launch') { launchEngFamiliar(t.dataset.v); return; }
+  if (act === 'eng-wrong-word') { launchEngImmersive(t.dataset.id); return; }
   if (act === 'modal-close') { closeModal(); return; }
+  if (act === 'badge-more') { openBadgeListModal(); return; }
+  if (act === 'badge-detail') { openBadgeDetail(t.dataset.id); return; }
+  if (act === 'badge-detail-back') { if (_badgeBackToWall) openBadgeListModal(); else closeModal(); return; }
+  if (act === 'hm-click') { openHeatmapModal(); return; }
+  if (act === 'chacc-more') { chapterAccModal(); return; }
   if (act === 'rv-start') {
     const st = curState(), key = t.dataset.pool;
     let ids;
@@ -1967,6 +2227,24 @@ function onAct(e) {
     save(); openReviewCenter(); return;
   }
   if (act === 'start-ai') { openAiGenList(); return; }
+  if (act === 'go-english') {
+    show('english');
+    /* 单词页异步渲染（loadMan→view）：等挂载 → 切「卡片背诵」模式（非默认列表）→ 滚动居中（B19/B20） */
+    (async () => {
+      for (let i = 0; i < 60; i++) { if (document.getElementById('engModeCard')) break; await new Promise(r => setTimeout(r, 50)); }
+      if (window.Eng && Eng.enterCardMode) { try { await Eng.enterCardMode(); } catch (e) {} }
+      requestAnimationFrame(() => {
+        const tgt = document.querySelector('#engBody .eng-card-stage') || document.getElementById('engModeCard');
+        if (tgt) tgt.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+    })();
+    return;
+  }
+  if (act === 'go-leisure') {
+    show('honor');
+    setTimeout(() => { const c = document.getElementById('leisureCard'); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 60);
+    return;
+  }
   if (act === 'set-group') { setGroup(cur, t.dataset.k); closePlayer(); show(activeTab); return; }
   if (act === 'chapter') {
     const c = curSub().chapters.find(x => x.id === t.dataset.id);
@@ -1991,10 +2269,11 @@ function onAct(e) {
   if (act === 'ai-practice') { startAiPractice(t.dataset.bid); closeModal(); return; }
   if (act === 'ai-gen-list') { openAiGenList(); return; }
   if (act === 'ai-gen-open') { openAiGenBatch(t.dataset.bid); return; }
-  if (act === 'toggle-fav') { const st = curState(), id = t.dataset.id; inSet(st.fav, id) ? remSet(st.fav, id) : addSet(st.fav, id); save(); closeModal(); toast(inSet(st.fav, id) ? '已收藏 ⭐' : '已取消收藏'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
+  if (act === 'toggle-fav') { const st = curState(), id = t.dataset.id; inSet(st.fav, id) ? remSet(st.fav, id) : addSet(st.fav, id); save(); closeModal(); toast(inSet(st.fav, id) ? '已收藏 ' + ICON('star') : '已取消收藏'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
   if (act === 'toggle-doubt') { const st = curState(), id = t.dataset.id; inSet(st.doubt, id) ? remSet(st.doubt, id) : addSet(st.doubt, id); save(); closeModal(); toast(inSet(st.doubt, id) ? '已标记疑点 ❓' : '已取消疑点'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
   if (act === 'remove-wrong') { const st = curState(), id = t.dataset.id; remSet(st.wrong, id); save(); closeModal(); toast('已移出错题'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
   if (act === 'wtab') { wrongTab = t.dataset.k; show('wrong'); return; }
+  if (act === 'ew-clear') { const s = document.getElementById('ewSearch'); if (s) s.value = ''; show('wrong'); return; }
   if (act === 'pick' || act === 'pick-exam') { pick(t.dataset.k); return; }
   if (act === 'confirm') { confirmAns(); return; }
   if (act === 'reveal') { revealAns(); return; }
@@ -2006,7 +2285,7 @@ function onAct(e) {
     inSet(st[set], id) ? remSet(st[set], id) : addSet(st[set], id);
     save(); renderPlayer();
     const on = inSet(st[set], id);
-    toast(act === 'pfav' ? (on ? '已收藏 ⭐' : '已取消收藏') : (on ? '已标记疑点 ❓' : '已取消疑点'));
+    toast(act === 'pfav' ? (on ? '已收藏 ' + ICON('star') : '已取消收藏') : (on ? '已标记疑点 ' + ICON('question') : '已取消疑点'));
     return;
   }
   if (act === 'sheet') { openSheet(); return; }
@@ -2021,6 +2300,7 @@ function onAct(e) {
   if (act === 'import-data') { const fi = $('#fileInput'); if (fi) fi.click(); return; }
   if (act === 'banner-close') { bannerDismissed = true; updateBackupBanner(); return; }
   if (act === 'wmastery') { wrongMasteryFilter = t.dataset.k === '' ? null : t.dataset.k; show('wrong'); return; }
+  if (act === 'wbank-mode') { wrongBankMode = t.dataset.v; show('wrong'); return; }
   /* 非选择题（无选项）自评 */
   if (act === 'nc-reveal') {
     const it = P.pool[P.idx], q = it.q, a = P.answers[q.id] || (P.answers[q.id] = { chosen: [] });
@@ -2059,7 +2339,14 @@ function onAct(e) {
 }
 function doCheckin() {
   const d = today(); if (inSet(S.global.checkin, d)) { toast('今天已打卡'); return; }
-  S.global.checkin.push(d); addXp(10); checkBadges(); save(); toast('打卡成功 +10 XP 🔥'); show(activeTab);
+  S.global.checkin.push(d); addXp(10); checkBadges(); save(); toast('打卡成功 +10 XP ' + ICON('fire')); show(activeTab);
+}
+function openCheckinInfo() {
+  const sk = streak();
+  openModal(`<div class="checkin-info"><div class="em">${ICON('fire')}</div>
+    <h3 style="margin:6px 0">今日已打卡</h3>
+    <p class="muted small" style="margin:0">连续打卡 <b style="color:var(--primary)">${sk}</b> 天 · 明天再来保持火苗不灭</p>
+    <button class="btn ghost" data-act="modal-close" style="margin-top:14px">好的</button></div>`);
 }
 function applySettings() {
   document.body.classList.toggle('dark', !!S.global.settings.dark);
@@ -2116,8 +2403,8 @@ function updateBackupBanner() {
   const showIt = !bannerDismissed && (isInAppBrowser() || !S.global.lastBackup);
   if (!showIt) { b.classList.add('hidden'); return; }
   const msg = isInAppBrowser()
-    ? '⚠️ 你正用 App 内置浏览器打开，进度可能随缓存清理丢失。建议点右上角菜单「在浏览器中打开」，或到「设置」导出 JSON 备份。'
-    : '💡 数据只存在本机浏览器，换设备 / 清缓存会丢失，建议到「设置」导出 JSON 备份。';
+    ? ICON('warn') + ' 你正用 App 内置浏览器打开，进度可能随缓存清理丢失。建议点右上角菜单「在浏览器中打开」，或到「设置」导出 JSON 备份。'
+    : ICON('bulb') + ' 数据只存在本机浏览器，换设备 / 清缓存会丢失，建议到「设置」导出 JSON 备份。';
   b.innerHTML = `<span>${msg}</span><button class="banner-x" data-act="banner-close" aria-label="关闭">✕</button>`;
   b.classList.remove('hidden');
 }
@@ -2160,13 +2447,21 @@ function updateTabDot() {
   else dot.style.display = 'none';
 }
 
-function rebuildSubjectSelect() {
-  const sel = $('#subjectSelect'); if (!sel) return;
-  sel.innerHTML = MANIFEST.semesters.map(sem =>
+function subjOptionsHtml() {
+  return (MANIFEST.semesters || []).map(sem =>
     `<optgroup label="${esc(sem.name)} · ${sem.count} 题">` +
-    sem.subjects.map(s => `<option value="${s.id}">${esc(s.name)}（${s.count}）</option>`).join('') +
+    sem.subjects.map(s => `<option value="${s.id}" ${s.id === cur ? 'selected' : ''}>${esc(s.name)}（${s.count}）</option>`).join('') +
     '</optgroup>').join('');
-  sel.value = cur;
+}
+/* A09：顶栏「极光 / 扩展」切换框 —— 按当前学科 activeGroup 同步高亮（已去小方块与题数） */
+function updateGroupToggle() {
+  const sub = curSub();
+  const ag = (sub && sub.activeGroup) || 'jg';
+  document.querySelectorAll('.grp-toggle').forEach(el => {
+    el.querySelectorAll('.gt-cell').forEach(c => {
+      c.classList.toggle('on', c.dataset.k === ag);
+    });
+  });
 }
 
 /* ---------- 初始化 ---------- */
@@ -2179,23 +2474,67 @@ async function init() {
   }
   cur = (S.cur && SB[S.cur]) ? S.cur : (SB[cur] ? cur : defaultSubject());
   await ensureSubject(cur);
+  /* A11：预载英语全词表，使首页「待回顾」计数含英语到期词（异步、缓存，不阻塞首屏） */
+  if (window.Eng) { try { await Eng.loadMan(); await Eng.ensureAll(); } catch (e) {} }
 
-  const sel = $('#subjectSelect');
-  rebuildSubjectSelect();
-  sel.addEventListener('change', async () => {
+  /* 学科下拉已移入首页 hero（每次 show('home') 重建），改用事件委托，
+     元素重建也不丢 change 绑定；切换后软刷新当前 tab。 */
+  document.addEventListener('change', async (e) => {
+    const sel = e.target;
+    if (!sel || sel.id !== 'subjectSelect') return;
     cur = sel.value; closePlayer();
     sel.disabled = true;
-    try { await ensureSubject(cur); } catch (e) { toast('该学科数据加载失败'); }
+    try { await ensureSubject(cur); } catch (err) { toast('该学科数据加载失败'); }
     sel.disabled = false;
     show(activeTab);
   });
+  const bi = document.getElementById('brandIco');
+  if (bi) bi.addEventListener('click', e => { e.preventDefault(); showEncourage(); });
+  updateGroupToggle();
 
   $$('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
   document.addEventListener('click', onAct);
-  $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') closeModal(); });
+  $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') { if (_badgeBackToWall) openBadgeListModal(); else closeModal(); } });
   bindSwipe();
   applySettings();
   applyUrlPreview();   // ?bg= / ?dark= 临时预览（不写盘），必须在 applySettings 之后
   show('home');
 }
+
+/* B1：点击左上角「刷题记」品牌图标 → 随机弹一句中二治愈鼓励语，动画进出，多次点击只换词不堆叠 */
+const ENC_SPARK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 2l1.9 5.8L19.5 9l-5.6 1.2L12 16l-1.9-5.8L4.5 9l5.6-1.2z" fill="currentColor"/></svg>';
+const ENCOURAGE = [
+  '今天的你，比昨天离上岸又近了一厘米 ✦',
+  '细胞的分裂有周期，你的努力也有回响',
+  '三羧酸循环转一圈，你的知识也转一圈',
+  '别慌，线粒体都在为你疯狂产 ATP',
+  '刷题如磷酸化，慢一点也会点亮终点',
+  '你不是一个人，全宇宙的核糖体都挺你',
+  '错题是大脑在悄悄重排突触，别怕',
+  '碱基配对要专一，你的目标也要专一',
+  '把焦虑交给 GABA，把坚持交给自己',
+  '今天的 50 题，是未来录取通知书的像素',
+  '钠钾泵一直在逆浓度搬运，你也能逆风翻盘',
+  'DNA 会复制，勇气也会；再来一题',
+  '你的海马体正在偷偷记下每一个知识点',
+  '星光不问赶路人，题库不负有心人',
+  '去吧，把今天也刷成一条漂亮的高保真曲线',
+];
+let _encTimer = null, _encLast = -1;
+function showEncourage() {
+  let el = document.getElementById('encouragePop');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'encouragePop';
+    el.innerHTML = '<span class="enc-spk">' + ENC_SPARK + '</span><span class="enc-tx"></span>';
+    (document.getElementById('app') || document.body).appendChild(el);
+  }
+  let i; do { i = (Math.random() * ENCOURAGE.length) | 0; } while (ENCOURAGE.length > 1 && i === _encLast);
+  _encLast = i;
+  el.querySelector('.enc-tx').textContent = ENCOURAGE[i];
+  el.classList.remove('hide'); void el.offsetWidth; el.classList.add('show');
+  clearTimeout(_encTimer);
+  _encTimer = setTimeout(() => { el.classList.remove('show'); el.classList.add('hide'); }, 1900);
+}
+
 init();

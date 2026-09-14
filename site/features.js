@@ -151,7 +151,7 @@ window.Feat = (function () {
     const arr = poolFor(F), n = arr.length;
     const nS = arr.filter(x => !x.q.multi).length, nM = arr.filter(x => x.q.multi).length;
     const srcs = srcOptions(curSub());
-    openModal(`<h3>🎯 组卷中心</h3>
+    openModal(`<h3>${ICON('target')}组卷中心</h3>
       <p class="muted small" style="margin:0 0 10px">先挑条件，再决定「练习」还是「限时考试」。条件可自由组合。</p>
       <div class="frow"><span class="flabel">模式</span><div class="wrap fchips">
         <button class="chip sm ${isExam ? '' : 'on'}" data-act="f-mode" data-v="practice"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h6a2 2 0 0 1 2 2v12a2 2 0 0 0-2-2H3z"/><path d="M21 5h-6a2 2 0 0 0-2 2v12a2 2 0 0 1 2-2h6z"/></svg>练习</button>
@@ -270,7 +270,7 @@ window.Feat = (function () {
     return bits.join(' · ');
   }
   /* 组卷开局：mode 决定走练习还是限时考试。
-   * ⚠️ 题源统一走 poolFor()（底层是 allQuestionsBoth + grp 条件）—— 不再跟随首页「极光/扩展」分组切换，
+   * ${ICON('warn')}题源统一走 poolFor()（底层是 allQuestionsBoth + grp 条件）—— 不再跟随首页「极光/扩展」分组切换，
    *    否则同一套筛选条件在首页切一下分组就得到不同题量（老版本的口径冲突）。 */
   function filterGo() {
     collectFilterNums();
@@ -403,23 +403,24 @@ window.Feat = (function () {
 
   /* ================= 6. 偏好开关 ================= */
   const PREFS = [
-    ['autoSubmit', '⚡ 选完自动提交', '单选题点选项即判定，不用再点「确认」'],
-    ['autoNext', '⏩ 答对自动下一题', '答对后 0.7 秒自动翻页（练习模式）'],
-    ['swipe', '👆 左右滑动翻题', '关闭后只能点按钮翻页，避免误触'],
-    ['optShuffle', '🔀 选项乱序', '同一题每次顺序固定，防止背题号'],
-    ['showMeta', '📊 显示题目元信息', '题干下方显示年份 / 来源 / 难度 / 热度'],
-    ['plain', '🧹 简洁模式', '隐藏热度条、滑动提示等装饰元素'],
+    ['autoSubmit', '选完自动提交', '单选题点选项即判定，不用再点「确认」'],
+    ['autoNext', '答对自动下一题', '答对后 0.7 秒自动翻页（练习模式）'],
+    ['swipe', '左右滑动翻题', '关闭后只能点按钮翻页，避免误触'],
+    ['optShuffle', '选项乱序', '同一题每次顺序固定，防止背题号'],
+    ['showMeta', '显示题目元信息', '题干下方显示年份 / 来源 / 难度 / 热度'],
+    ['plain', '简洁模式', '隐藏热度条、滑动提示等装饰元素'],
   ];
+  const PREF_ICON = { autoSubmit: 'bolt', autoNext: 'next', swipe: 'swipe', optShuffle: 'shuffle', showMeta: 'chart', plain: 'trash' };
   function prefCardHtml() {
     const s = S.global.settings;
     return `<div class="card"><h3>偏好设置</h3>
-      <div class="set-row"><span>🌙 暗色模式</span><div class="switch ${s.dark ? 'on' : ''}" data-act="toggle-dark"><i></i></div></div>
-      <div class="set-row"><span>🔠 字号</span><div class="wrap">${[['s', '小'], ['m', '中'], ['l', '大']].map(([k, n]) => `<button class="btn ${s.font === k ? '' : 'ghost'} sm" data-act="set-font" data-k="${k}">${n}</button>`).join('')}</div></div>
+      <div class="set-row"><span>${ICON('moon')}暗色模式</span><div class="switch ${s.dark ? 'on' : ''}" data-act="toggle-dark"><i></i></div></div>
+      <div class="set-row"><span>${ICON('type')}字号</span><div class="wrap">${[['s', '小'], ['m', '中'], ['l', '大']].map(([k, n]) => `<button class="btn ${s.font === k ? '' : 'ghost'} sm" data-act="set-font" data-k="${k}">${n}</button>`).join('')}</div></div>
       <div style="border-top:1px solid var(--line);margin:8px 0"></div>
-      ${PREFS.map(([k, n, d]) => `<div class="set-row"><span>${n}<div class="muted small">${d}</div></span>
+      ${PREFS.map(([k, n, d]) => `<div class="set-row"><span>${ICON(PREF_ICON[k] || 'star')}${n}<div class="muted small">${d}</div></span>
         <div class="switch ${s[k] ? 'on' : ''}" data-act="pref" data-k="${k}"><i></i></div></div>`).join('')}
-      <div class="set-row"><span>📅 考试日期</span><input type="date" id="setExam" class="inp" value="${s.examDate || ''}"></div>
-      <div class="set-row"><span>🎯 每日目标题数</span><input type="number" id="setGoal" class="inp" min="1" max="200" style="width:72px" value="${s.dailyGoal || 50}"></div>
+      <div class="set-row"><span>${ICON('cal')}考试日期</span><input type="date" id="setExam" class="inp" value="${s.examDate || ''}"></div>
+      <div class="set-row"><span>${ICON('target')}每日目标题数</span><input type="number" id="setGoal" class="inp" min="1" max="200" style="width:72px" value="${s.dailyGoal || 50}"></div>
       <button class="btn sm" data-act="save-settings" style="margin-top:8px">保存考试日期 / 目标</button>
     </div>`;
   }
@@ -441,7 +442,7 @@ window.Feat = (function () {
   ];
   function themeCardHtml() {
     const k = S.global.settings.bg || 'classic';
-    return `<div class="card"><h3>🎨 背景主题</h3>
+    return `<div class="card"><h3>${ICON('art')}背景主题</h3>
       <p class="muted small" style="margin:0 0 10px">只换底色与气质，题目、进度、布局一律不变。开暗色模式时自动回到暗色配色。</p>
       <div class="thmgrid">${BG_THEMES.map(([v, n, d]) => `<button class="thmbtn ${k === v ? 'on' : ''}" data-act="set-bg" data-k="${v}" title="${d}">
         <span class="thm t-${v}"><i></i></span>
@@ -471,9 +472,9 @@ window.Feat = (function () {
   }
   function playerWarnHtml(q) {
     if (q.type === 'A3' && String(q.content || '').length < 24) {
-      return `<div class="qwarn">⚠️ 本题属于病例组题，源数据缺共享病例正文，题干可能不完整</div>`;
+      return `<div class="qwarn">${ICON('warn')}本题属于病例组题，源数据缺共享病例正文，题干可能不完整</div>`;
     }
-    if (q.img) return `<div class="qwarn">🖼️ 本题原始数据带图片，图未随题库下发，请对照教材原图作答</div>`;
+    if (q.img) return `<div class="qwarn">${ICON('img')}本题原始数据带图片，图未随题库下发，请对照教材原图作答</div>`;
     return '';
   }
 
@@ -635,7 +636,7 @@ window.Feat = (function () {
     const agg = tagAgg(sub, st);
     if (!agg.size) return '';                     // 该学科没有带知识点标签的题 → 整卡不出现
     const tagged = [...agg.values()].reduce((a, b) => a + b.total, 0);
-    const head = `<div class="row between"><h3 style="margin:0">🧩 最弱知识点</h3><span class="muted small">${agg.size} 个知识点 · 累计 ${tagged} 题次</span></div>`;
+    const head = `<div class="row between"><h3 style="margin:0">${ICON('puzzle')}最弱知识点</h3><span class="muted small">${agg.size} 个知识点 · 累计 ${tagged} 题次</span></div>`;
     const row = (tag, right, sub2) => `<div class="kp-row" role="button" tabindex="0" data-act="kp-drill" data-tag="${escp(tag)}" aria-label="练习知识点：${escp(tag)}">
         <div class="kp-t">${escp(tag)}</div>
         <div class="kp-bar"><i style="width:${right.pct}%;background:${right.color}"></i></div>

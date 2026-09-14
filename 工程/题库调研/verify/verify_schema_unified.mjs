@@ -147,21 +147,33 @@ console.log('== 5) 富解析分片（blocks + 文本补全）==');
 const EX_SUB = [['大二', '生物化学', 'bio'], ['大二', '生理学', 'physiology'], ['大二', '医学免疫学', 'immunology']];
 let exN = 0, exObj = 0, exStr = 0, exBrief = 0, exBlocks = 0, exTx = 0, exTb = 0, exCallout = 0, exList = 0;
 const secSeen = {}, tySeen = {};
+// 聚合 site 按章节拆分的分片（explain/<学期>/<sid>/<章节>.json）为单对象，便于与 packs 源逐条比对
+function loadSiteExplain(sem, sid) {
+  const dir = path.join(DATA, 'explain', sem, sid);
+  if (!fs.existsSync(dir)) return null;
+  const agg = {};
+  for (const f of fs.readdirSync(dir)) {
+    if (!f.endsWith('.json')) continue;
+    Object.assign(agg, rd(path.join(dir, f)));
+  }
+  return agg;
+}
 for (const [sem, sub, sid] of EX_SUB) {
   const pp = path.join(PACKS, sem, 'explain', sub + '.json');
-  const sp = path.join(DATA, 'explain', sem, sid + '.json');
-  ok(fs.existsSync(pp) && fs.existsSync(sp), `${sub} packs/site 两侧 explain 分片都存在`);
-  if (!fs.existsSync(pp) || !fs.existsSync(sp)) continue;
-  const po = rd(pp), so = rd(sp);
+  const spDir = path.join(DATA, 'explain', sem, sid);
+  const spFiles = fs.existsSync(spDir) ? fs.readdirSync(spDir).filter(f => f.endsWith('.json')) : [];
+  ok(fs.existsSync(pp) && spFiles.length > 0, `${sub} packs/site 两侧 explain 分片都存在（site 章节文件 ${spFiles.length} 个）`);
+  if (!fs.existsSync(pp) || spFiles.length === 0) continue;
+  const po = rd(pp), so = loadSiteExplain(sem, sid);
   const pk = Object.keys(po), sk = Object.keys(so);
-  ok(sk.length === pk.length, `${sub} site explain 条目数 = packs（${pk.length}）`);
+  ok(sk.length === pk.length, `${sub} site explain 条目数 = packs（${pk.length} vs ${sk.length}）`);
   // site 分片必须是 packs 的逐条复制（富解析结构不丢）
   let mismatch = 0;
   for (const k of pk.slice(0, 50)) if (JSON.stringify(so[k]) !== JSON.stringify(po[k])) mismatch++;
   ok(mismatch === 0, `${sub} site explain 与 packs 内容一致（抽检 50 条）`);
-  for (const k of pk) {
+  for (const k of sk) {
     exN++;
-    const v = po[k];
+    const v = so[k];
     if (v && typeof v === 'object' && !Array.isArray(v)) exObj++;
     else if (typeof v === 'string') exStr++;
     if (v && v.bf) exBrief++;

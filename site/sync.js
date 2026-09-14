@@ -362,7 +362,7 @@
     accountBtnLabel();
     toast(mode === "register" ? "注册成功，正在同步云端进度" : "登录成功，正在同步云端进度");
     /* 登录成功即接管同步：开节流定时器 + 拉起云端进度做逐题合并。
-     * ⚠️ 这两步必须放在 doLogin 里 —— 门禁默认隐藏后，用户只能从顶栏账号弹窗登录，
+     * ${ICON('warn')}这两步必须放在 doLogin 里 —— 门禁默认隐藏后，用户只能从顶栏账号弹窗登录，
      * 而 openAccount 的提交分支不会调 startSync，漏在这里就等于「登录了但永不同步」。 */
     startSync();
     refreshMeCard();
@@ -411,7 +411,7 @@
     const b = $("#accountBtn");
     if (!b) return;
     const u = getUser();
-    b.textContent = u ? "👤 " + u : "👤 登录/注册";
+    b.textContent = u ? u : "登录/注册";
     b.classList.toggle("is-guest", !u);
   }
 
@@ -425,17 +425,17 @@
     const u = getUser();
     if (u) {
       const status = mergeNote
-        ? ("☁️ " + escapeHtml(mergeNote))
-        : "☁️ 云端已连接 · 错题 / 进度自动同步（断点续练只存本机）";
+        ? (ICON('cloud') + " " + escapeHtml(mergeNote))
+        : ICON('cloud') + " 云端已连接 · 错题 / 进度自动同步（断点续练只存本机）";
       return '<div class="card account-card logged" data-account-card>' +
-        '<div class="ac-row"><span class="ac-avatar">👤</span>' +
+        '<div class="ac-row">' +
         '<div class="ac-meta"><div class="ac-name">' + escapeHtml(u) + '</div>' +
         '<div class="muted small" id="acStatus">' + status + '</div></div>' +
         '<button class="btn ghost sm" id="acLogout">退出</button></div></div>';
     }
     return '<div class="card account-card" data-account-card>' +
       '<div class="ac-row"><div class="ac-meta">' +
-      '<div class="ac-title">☁️ 云同步 · 多设备不掉队（可选）</div>' +
+      '<div class="ac-title">' + ICON('cloud') + ' 云同步 · 多设备不掉队（可选）</div>' +
       '<div class="muted small">不登录也能正常刷题，进度只存本机。登录后错题 / 进度存到云端，换设备接着刷。</div></div>' +
       '<button class="btn" id="acLogin">登录 / 注册</button></div></div>';
   }
@@ -471,7 +471,7 @@
     g.className = "auth-gate";
     g.innerHTML =
       '<div class="auth-card">' +
-      '<div class="auth-brand">📚 刷题记</div>' +
+      '<div class="auth-brand">' + ICON('book') + ' 刷题记</div>' +
       '<div class="auth-sub">登录后即可同步进度，手机 / 电脑接着刷</div>' +
       '<div class="am-tabs">' +
       '<button class="btn sm g-tab active" data-mode="login">登录</button>' +
@@ -615,13 +615,13 @@
 
   function init() {
     createGate();
-    const row = $(".topbar-row");
-    if (row && !$("#accountBtn")) {
+    const left = $(".tb-left");
+    if (left && !$("#accountBtn")) {
       const btn = document.createElement("button");
       btn.id = "accountBtn";
       btn.className = "account-btn";
       btn.onclick = openAccount;
-      row.appendChild(btn);
+      left.insertBefore(btn, left.firstChild);   // A09：登录/账号置于左侧簇最左
     }
     accountBtnLabel();
     // 登录是「可选增强」：不登录也必须能刷题（local-first，本站全部功能都可离线用）。

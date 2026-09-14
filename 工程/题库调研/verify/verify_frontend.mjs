@@ -52,7 +52,7 @@ console.log(`  data-act 共 ${acts.size} 个；Feat 处理 ${featActs.size} 个�
 /* A3. 新增 CSS 类是否有定义 */
 const cssClasses = new Set([...cssSrc.matchAll(/\.([a-z][\w-]*)/g)].map(m => m[1]));
 /* 掌握度改版后旧的 12px 小胶囊图例 .mlegend 已被四宫格 .mgrid/.mcell 取代 */
-const newCls = ['mstag', 'mrow', 'mseg', 'mgrid', 'mcell', 'kp-row', 'kp-bar', 'frow', 'flabel', 'fchips', 'fpreview', 'qmeta', 'mtag', 'qwarn', 'qfb', 'nochoice', 'lib-list', 'lib-item', 'lib-txt', 'sheet-sum', 'plain', 'eng-go', 'engr', 'engr-head', 'engr-back', 'engr-idx', 'engr-body', 'engr-word', 'engr-ph', 'engr-cn', 'engr-sec', 'engr-et', 'engr-ex', 'engr-tr', 'engr-pm', 'engr-foot', 'engr-nav', 'engr-tip', 'ph-row', 'ph-spk', 'eng-dept', 'eng-review-btn', 'eng-quiz', 'eng-q-cn', 'eng-q-en', 'eng-q-audio', 'eng-q-replay', 'eng-qopts', 'eng-qopt', 'eng-qk', 'eng-q-next-row', 'eng-done', 'eng-done-t', 'eng-modes', 'engr-blank', 'engr-blank-t', 'eng-card-blank', 'eng-item-ph'];
+const newCls = ['mstag', 'mrow', 'mseg', 'mgrid', 'mcell', 'kp-row', 'kp-bar', 'frow', 'flabel', 'fchips', 'fpreview', 'qmeta', 'mtag', 'qwarn', 'qfb', 'nochoice', 'lib-list', 'lib-item', 'lib-txt', 'sheet-sum', 'plain', 'eng-go', 'engr', 'engr-head', 'engr-back', 'engr-idx', 'engr-body', 'engr-word', 'engr-ph', 'engr-cn', 'engr-sec', 'engr-et', 'engr-ex', 'engr-tr', 'engr-pm', 'engr-foot', 'engr-nav', 'engr-tip', 'ph-row', 'ph-spk', 'eng-dept', 'eng-quiz', 'eng-q-cn', 'eng-q-en', 'eng-q-audio', 'eng-q-replay', 'eng-qopts', 'eng-qopt', 'eng-qk', 'eng-q-next-row', 'eng-done', 'eng-done-t', 'eng-modes', 'engr-blank', 'engr-blank-t', 'eng-card-blank', 'eng-item-ph'];
 const noCss = newCls.filter(c => !cssClasses.has(c));
 ok('A3 新增 CSS 类均有样式', noCss.length === 0, '缺样式: ' + noCss.join(', '));
 console.log(`  新增类 ${newCls.length} 个 → 缺样式 ${noCss.length}`);
@@ -183,6 +183,7 @@ const sandbox = {
   shuffle: a => a.slice().reverse(),
   save: () => { },
   toast: () => { },
+  ICON: n => '<i>' + n + '</i>',   // features.js 引用的跨文件全局（浏览器里由 app.js 提供），vm 沙箱补桩
   show: t => { sandbox.__shown = t; },
   openModal: html => { sandbox.__modal = html; },
   closeModal: () => { sandbox.__closed = true; },

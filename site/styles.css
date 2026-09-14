@@ -34,10 +34,24 @@ input,select,textarea{font-size:16px;}
 #app{max-width:600px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;background:var(--bg);position:relative;}
 
 /* 顶部栏 */
-.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 14px;box-shadow:0 1px 0 rgba(0,0,0,.02);}
-.topbar-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-.brand{font-weight:800;font-size:1.15em;letter-spacing:.5px;}
-.subject-select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:.95em;font-weight:600;max-width:55%;}
+.topbar{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--border);padding:8px 14px;box-shadow:0 1px 0 rgba(0,0,0,.02);}
+.topbar-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+/* A09：顶栏重做 —— 左簇（登录/账号 + 品牌图标），右簇（极光/扩展切换框） */
+.tb-left{display:flex;align-items:center;gap:8px;min-width:0;}
+.brand-ico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:0 0 auto;border-radius:9px;cursor:pointer;transition:transform .12s,background .12s;-webkit-tap-highlight-color:transparent;}
+.brand-ico:active{transform:scale(.92);background:var(--surface2);}
+.brand-svg{width:26px;height:26px;display:block;}
+/* 极光/扩展 切换：长方形框内两个正方形格 */
+.grp-toggle{display:inline-flex;align-items:center;gap:2px;background:var(--surface2);border:1px solid var(--border);border-radius:11px;padding:3px;flex:0 0 auto;max-width:62%;overflow:hidden;}
+.gt-cell{display:flex;align-items:center;gap:5px;padding:5px 9px;border-radius:8px;font-size:.8em;font-weight:700;color:var(--muted);cursor:pointer;border:none;background:transparent;font-family:inherit;white-space:nowrap;transition:background .12s,color .12s;min-width:0;}
+.gt-cell.on{background:var(--surface);color:var(--primary);box-shadow:0 1px 2px rgba(0,0,0,.07);}
+/* 左栏（桌面端）切换块：手机端底部 tabbar 不放，默认隐藏；桌面端媒体查询内显示 */
+.grp-toggle-side{display:none;}
+/* 切换框：hero 内学科下拉（下沉到 Lv. 行右侧） */
+.subject-select{background:var(--surface2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:6px 10px;font-size:.95em;font-weight:600;flex:1 1 auto;min-width:0;max-width:50%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hero-top{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px;}
+.hero .lv.hero-lv{min-width:0;font-size:1.3em;font-weight:800;line-height:1.25;}  /* 特异度须高于 .hero .lv(0,2,0)，否则被覆盖成 .85em */
+.hero-subj{flex:0 0 auto;max-width:42%;font-size:.8em;padding:4px 22px 4px 8px;font-weight:600;}
 
 /* 视图 */
 .view{flex:1;padding:14px 14px 84px;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
@@ -69,8 +83,10 @@ input,select,textarea{font-size:16px;}
 .tag.ok{background:var(--ok-soft);color:var(--ok);font-weight:700;}
 
 /* 首页统计 */
-.hero{background:linear-gradient(135deg,var(--primary),var(--primary-d));color:#fff;border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);}
+.hero{background:linear-gradient(135deg,color-mix(in srgb,var(--primary) 90%,#0f1a3a),var(--primary-d));color:#fff;border-radius:var(--radius);padding:16px;margin-bottom:12px;box-shadow:var(--shadow);}
 .hero .lv{font-size:.85em;opacity:.92;}
+.hero .lv.hero-xp{font-size:.9em;font-weight:800;opacity:.95;text-shadow:0 1px 3px rgba(0,0,0,.28);}  /* 同 .hero-lv：显式加 .lv 提高特异度，免受 .hero .lv 与书写顺序影响 */
+.hero .xp-rem{color:#fff;font-weight:700;font-size:.92em;opacity:1;text-shadow:0 1px 3px rgba(0,0,0,.3);}
 .hero .xpbar{height:8px;background:rgba(255,255,255,.3);border-radius:999px;margin-top:8px;overflow:hidden;}
 .hero .xpbar>i{display:block;height:100%;background:#fff;border-radius:999px;}
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px;}
@@ -247,11 +263,25 @@ input[type=range]{width:140px;}
 
 /* 成就 / 徽章 */
 .badge-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
-.badge{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;box-shadow:var(--shadow);}
+.badge{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center;box-shadow:var(--shadow);
+  cursor:pointer;transition:transform .16s ease,box-shadow .16s ease;}
+.badge:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(31,39,51,.13);}
+.badge:active{transform:scale(.93);}
 .badge.locked{opacity:.45;filter:grayscale(1);}
 .badge .em{font-size:1.8em;}
 .badge .nm{font-weight:700;font-size:.85em;margin-top:4px;}
 .badge .ds{font-size:.72em;color:var(--muted);}
+@keyframes badgePop{0%{transform:scale(.8);opacity:0}60%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+.badge-detail{text-align:center;animation:badgePop .26s ease;padding:6px 4px;}
+.badge-detail .em{font-size:3.2em;line-height:1.1;filter:drop-shadow(0 4px 10px rgba(31,39,51,.18));}
+.badge-detail h3{font-size:1.25em;margin:8px 0 4px;}
+.badge-detail p.muted{margin:0;}
+.badge-status{display:inline-block;margin-top:14px;padding:6px 18px;border-radius:999px;font-weight:700;font-size:.9em;}
+.badge-status.got{background:var(--ok-soft);color:var(--ok);}
+.badge-status.no{background:var(--surface2);color:var(--muted);}
+.checkin-info{text-align:center;animation:badgePop .26s ease;padding:6px 4px;}
+.checkin-info .em{font-size:3em;filter:drop-shadow(0 4px 10px rgba(31,39,51,.18));}
+.checkin-info h3{margin:8px 0 4px;}
 canvas{max-width:100%;}
 
 /* 历史成绩 */
@@ -283,11 +313,11 @@ canvas{max-width:100%;}
 .inp{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:7px 10px;font-size:.95em;color:var(--text);}
 .cols2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
 .cols2 .card{margin-bottom:0;}
-.cd-num{font-size:2.4em;font-weight:800;color:var(--primary);line-height:1.1;margin-top:8px;}
+.cd-num{font-size:2em;font-weight:800;color:var(--primary);line-height:1.1;margin-top:6px;}
 .cd-num span{font-size:.38em;margin-left:4px;color:var(--muted);font-weight:700;}
-.ring{display:flex;align-items:center;gap:14px;margin-top:10px;}
+.ring{display:flex;align-items:center;gap:12px;margin-top:8px;}
 .ring-c{display:flex;flex-direction:column;align-items:center;line-height:1.1;}
-.ring-c b{font-size:1.7em;color:var(--primary);}
+.ring-c b{font-size:1.5em;color:var(--primary);}
 .ring-c span{font-size:.8em;color:var(--muted);}
 .banner{background:#fff7e6;color:#7a5b16;border:1px solid #f3d9a0;border-radius:12px;padding:10px 12px;margin:10px 14px 0;font-size:.85em;display:flex;gap:8px;align-items:flex-start;line-height:1.5;}
 .banner.hidden{display:none;}
@@ -298,7 +328,7 @@ canvas{max-width:100%;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
 /* ===== 云端账号同步 ===== */
-.account-btn{margin-left:auto;background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:5px 12px;font-size:.82em;color:var(--text);cursor:pointer;white-space:nowrap;}
+.account-btn{background:var(--surface2);border:1px solid var(--border);border-radius:999px;padding:5px 12px;font-size:.82em;color:var(--text);cursor:pointer;white-space:nowrap;}
 .account-btn:hover{border-color:var(--primary);}
 .account-btn.is-guest{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700;}
 .account-btn.is-guest:hover{filter:brightness(1.06);}
@@ -361,6 +391,9 @@ body.dark .auth-gate{background:var(--bg);}  /* B24：强制登录墙跟随暗�
   .tabbar .tab .ic{width:26px;height:24px;justify-content:flex-start;background:transparent;}
   .tab.active{background:var(--primary-soft);}
   .tab-dot{position:static;margin-left:auto;}
+  /* 桌面端：极光/扩展切换从顶栏移到左栏（侧边导航），顶栏不再显示 */
+  .topbar .grp-toggle{display:none;}
+  .grp-toggle-side{display:inline-flex;align-self:stretch;max-width:none;margin:10px 12px 2px;justify-content:center;}
   .mode-grid{grid-template-columns:repeat(4,1fr);}
   .subject-select{min-width:240px;}
 }
@@ -548,9 +581,9 @@ body.plain .qchips{display:none;}
 .chip.off,.chip[disabled]{opacity:.5;background:var(--surface2);color:var(--muted);border-style:dashed;cursor:not-allowed;}
 
 /* —— 背景主题选择器（缩略图本身在 themes.css 里画） —— */
-.thmgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;}
-.thmbtn{background:none;border:1px solid var(--border);border-radius:12px;padding:8px;cursor:pointer;text-align:left;
-  display:flex;flex-direction:column;gap:4px;transition:.15s;color:var(--text);font:inherit;}
+.thmgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+.thmbtn{background:none;border:1px solid var(--border);border-radius:14px;padding:9px;cursor:pointer;text-align:left;
+  display:flex;flex-direction:column;gap:6px;transition:.15s;color:var(--text);font:inherit;}
 .thmbtn:hover{background:var(--surface2);}
 .thmbtn.on{border-color:var(--primary);background:var(--primary-soft);}
 .thmbtn .thmnm{font-size:.82em;font-weight:700;}
@@ -580,6 +613,34 @@ body.dark .mstag.el1{background:#3a2f18;color:#e8b45c;}
 .eng-item.lv1{border-left-color:var(--warn);}
 .eng-item.lv2{border-left-color:var(--ok);}
 .eng-chips{gap:6px;}
+/* 基础筛选行：科室下拉 + 高级筛选按钮同排，空间变宽 */
+.eng-filter-row{display:flex;gap:10px;align-items:center;margin:10px 0 4px;}
+.eng-dept-basic{flex:3 1 0;min-width:0;font-size:.9em;}
+.eng-adv-btn{flex:1 1 0;justify-content:center;white-space:nowrap;padding:8px 10px;border-radius:999px;font-weight:700;background:var(--primary-soft);color:var(--primary-d);border:1px solid transparent;}
+.eng-adv-btn:hover{background:var(--primary);color:#fff;}
+
+/* A08：高级筛选 → 弹出式底部抽屉（科室选择 + 遮罩/题型/熟悉度 全收进弹窗，主视图省空间） */
+/* 窄屏（≤440px）才让高级筛选按钮整行占满，宽屏与科室下拉同行 3/4 + 1/4 */
+@media (max-width:440px){.eng-adv-btn{width:100%;margin-top:8px;}}
+.eng-adv-btn .cnt{font-weight:600;color:var(--muted);font-size:.82em;margin-left:4px;}
+.eng-adv-modal{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;}
+.eng-adv-modal.hidden{display:none;}
+.eng-adv-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.45);}
+.eng-adv-panel{position:relative;width:100%;max-width:520px;max-height:88vh;overflow:auto;
+  background:var(--surface);border-radius:16px;padding:16px;
+  box-shadow:0 12px 44px rgba(0,0,0,.24);animation:engAdvPop .18s ease-out;}
+@keyframes engAdvPop{from{transform:scale(.96);opacity:.5}to{transform:scale(1);opacity:1}}
+.eng-adv-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.eng-adv-head b{font-size:1.05em;}
+.eng-adv-x{border:none;background:var(--surface2);border-radius:50%;width:30px;height:30px;font-size:.95em;cursor:pointer;color:var(--text);line-height:1;}
+.eng-adv-sec{margin-bottom:16px;}
+.eng-adv-label{font-size:.74em;font-weight:800;color:var(--muted);margin-bottom:8px;letter-spacing:.6px;text-transform:uppercase;}
+.eng-adv-sec .eng-chips{margin:0;}
+.eng-adv-foot{display:flex;justify-content:space-between;gap:8px;margin-top:4px;}
+.eng-adv-foot .btn{flex:1;}
+/* 到期复习高亮入口（模式卡顶部，due>0 显示） */
+.eng-review-hl{width:100%;margin-top:8px;justify-content:center;background:var(--bad-soft);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 22%,transparent);font-weight:800;}
+.eng-review-hl:hover{border-color:var(--bad);}
 
 /* 词条行：左侧色条 = 当前熟悉度 */
 .eng-item-h{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
@@ -633,7 +694,7 @@ body.dark .eng-mk.el1.on{background:#3a2f18;color:#e8b45c;border-color:#6b5320;}
 .eng-card{border:1px solid var(--border);border-radius:16px;padding:22px 18px;background:var(--surface);
   text-align:center;cursor:pointer;box-shadow:var(--shadow);transition:.15s;}
 .eng-card:active{transform:scale(.995);}
-.eng-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.eng-card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
 .eng-card-w{font-size:1.55em;font-weight:800;line-height:1.25;letter-spacing:.01em;}
 .eng-card-cn{display:inline-block;margin-top:10px;font-size:1.05em;font-weight:700;padding:2px 10px;border-radius:8px;}
 .eng-card-detail{margin-top:14px;text-align:left;}
@@ -663,6 +724,11 @@ body.reading{overflow:hidden;}
 .eng-card{min-height:250px;display:flex;flex-direction:column;}
 .eng-card-blank{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;
   border:1.5px dashed var(--border);border-radius:14px;margin-top:12px;}
+/* A06：卡片背诵居中 —— #view 在卡片模式下变 flex 列，engBody 撑满剩余高度，
+   舞台内 justify-center 让卡片在可用视口垂直居中，无需下滑 */
+#view.eng-card-mode{display:flex;flex-direction:column;}
+#view.eng-card-mode #engBody{flex:1;display:flex;flex-direction:column;min-height:0;}
+.eng-card-stage{flex:1;display:flex;flex-direction:column;justify-content:center;gap:0;}
 /* 列表行内音标（纯对照，无交互） */
 .eng-item-ph{font-size:.82em;color:var(--muted);font-family:ui-monospace,monospace;}
 .engr-blank-t{font-weight:700;color:var(--muted);}
@@ -694,17 +760,16 @@ body.reading{overflow:hidden;}
 .engr-tip{text-align:center;margin-top:7px;font-size:.72em;}
 .eng-go{margin-left:auto;font-size:.74em;color:var(--primary-d);font-weight:700;opacity:.85;}
 .eng-dept{font-size:.7em;color:var(--muted);background:var(--surface2);border-radius:999px;padding:2px 8px;white-space:nowrap;}
-.eng-review-btn{flex:0 0 auto;padding:7px 14px;}
-/* —— 测验模式 —— */
-.eng-quiz{border:1px solid var(--border);border-radius:16px;padding:18px 16px;background:var(--surface);}
-.eng-q-cn{font-size:1.25em;font-weight:800;line-height:1.7;padding:10px 2px 14px;}
-.eng-q-en{font-size:1.6em;font-weight:800;letter-spacing:.01em;text-align:center;padding:14px 2px 16px;}
-.eng-q-audio{padding:6px 0 14px;}
-.eng-q-replay{font:inherit;font-weight:700;color:var(--primary-d);background:var(--primary-soft);border:none;border-radius:12px;padding:12px 20px;cursor:pointer;}
-.eng-qopts{display:flex;flex-direction:column;gap:9px;}
-.eng-qopt{display:flex;gap:10px;align-items:center;padding:13px 14px;border:1.5px solid var(--border);border-radius:12px;
+/* —— 测验模式（紧凑化 A09） —— */
+.eng-quiz{border:1px solid var(--border);border-radius:14px;padding:14px 13px;background:var(--surface);}
+.eng-q-cn{font-size:1.12em;font-weight:800;line-height:1.55;padding:6px 2px 10px;}
+.eng-q-en{font-size:1.42em;font-weight:800;letter-spacing:.01em;text-align:center;padding:9px 2px 12px;}
+.eng-q-audio{padding:4px 0 12px;}
+.eng-q-replay{font:inherit;font-weight:700;color:var(--primary-d);background:var(--primary-soft);border:none;border-radius:12px;padding:10px 18px;cursor:pointer;}
+.eng-qopts{display:flex;flex-direction:column;gap:7px;}
+.eng-qopt{display:flex;gap:10px;align-items:center;padding:11px 12px;border:1.5px solid var(--border);border-radius:12px;
   background:var(--surface);color:var(--text);font:inherit;font-weight:700;cursor:pointer;text-align:left;transition:.12s;}
-.eng-qopt .eng-qk{flex:0 0 26px;height:26px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:.82em;font-weight:800;color:var(--muted);}
+.eng-qopt .eng-qk{flex:0 0 24px;height:24px;border-radius:50%;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:.8em;font-weight:800;color:var(--muted);}
 .eng-qopt:disabled{cursor:default;opacity:.75;}
 .eng-qopt.correct{border-color:var(--ok);background:var(--ok-soft);opacity:1;}
 .eng-qopt.correct .eng-qk{background:var(--ok);color:#fff;}
@@ -747,7 +812,7 @@ body{font-family:var(--font);}
 .inp{width:100%;border:1.5px solid var(--border);border-radius:12px;padding:10px 12px;font:inherit;color:var(--text);background:var(--surface);resize:vertical;box-sizing:border-box;}
 .qimg-ph{margin:10px 0;padding:14px 16px;border:1.5px dashed var(--border);border-radius:12px;background:var(--surface2);color:var(--muted);font-size:.9em;text-align:center;}
 .qcase-miss{border-left-color:var(--warn);background:var(--accent-soft);color:var(--text);}
-.eng-q-next-row{display:flex;justify-content:flex-end;margin-top:12px;}
+.eng-q-next-row{display:flex;justify-content:flex-end;margin-top:10px;}
 /* —— 完成/复习完成面板 —— */
 .eng-done{border:1px solid var(--border);border-radius:16px;padding:26px 16px;background:var(--surface);text-align:center;}
 .eng-done-t{font-size:1.2em;font-weight:800;margin-bottom:6px;}
@@ -837,3 +902,57 @@ body{font-family:var(--font);}
 .rv-feel{margin-top:12px;padding:10px 12px;background:var(--surface2);border-radius:10px;border:1px solid var(--border);}
 .rv-feel-q{display:block;font-size:.9em;margin-bottom:8px;}
 .rv-feel-btns{display:flex;gap:8px;flex-wrap:wrap;}
+
+/* ================= 追加增强（2026-09-14 收尾：B1 / A5 / A3） ================= */
+
+/* —— B1：点击品牌图标弹出的中二治愈鼓励语 —— */
+#encouragePop{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-10px);
+  z-index:95;display:flex;align-items:center;gap:9px;max-width:min(92vw,520px);
+  padding:11px 18px;border-radius:999px;
+  background:linear-gradient(135deg,var(--primary),var(--primary-d));
+  color:#fff;box-shadow:0 10px 30px rgba(31,39,51,.24);
+  opacity:0;pointer-events:none;
+  transition:opacity .28s var(--ease),transform .28s var(--ease);}
+#encouragePop.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#encouragePop.hide{opacity:0;transform:translateX(-50%) translateY(-10px);}
+#encouragePop .enc-spk{flex:0 0 auto;display:inline-flex;width:22px;height:22px;color:#fff;}
+#encouragePop .enc-tx{font-weight:700;font-size:.95em;line-height:1.45;}
+body.dark #encouragePop{box-shadow:0 10px 30px rgba(0,0,0,.5);}
+
+/* —— A5：考试倒计时数字收敛，与「今日目标」环卡等高对齐 —— */
+.cd-num{font-size:1.5em;margin-top:14px;}
+.cd-sm{font-size:.8em;color:var(--muted);margin-top:2px;}
+
+/* —— A5：四主题 hero 渐变增强（通用蓝由 .hero 提供，此处补专属气质 + 顶部柔光） —— */
+.hero{position:relative;overflow:hidden;}
+.hero::after{content:'';position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(120% 80% at 100% 0%,rgba(255,255,255,.18),transparent 55%);}
+[data-bg="classic"]:not(.dark) .hero{
+  background:linear-gradient(135deg,#3a78f6,#1b54d6 60%,#1846bf);
+  box-shadow:0 8px 26px rgba(45,111,242,.30);}
+[data-bg="grid"]:not(.dark) .hero{
+  background:linear-gradient(135deg,#a4632f,#7a3f1f 60%,#5e3016);
+  box-shadow:0 8px 24px rgba(154,91,50,.28);}
+[data-bg="grid"]:not(.dark) .hero::after{
+  background:radial-gradient(120% 80% at 100% 0%,rgba(255,245,230,.22),transparent 55%);}
+
+/* —— A3：沉浸式背单词放宽间距，不再拥挤 —— */
+.engr-body{padding:30px 22px 40px;}
+.engr-word{font-size:2.35em;line-height:1.25;margin-bottom:4px;}
+.engr-ph{margin-top:10px;font-size:1.1em;}
+.engr-cn{margin-top:16px;padding:6px 18px;font-size:1.4em;border-radius:12px;}
+.engr-sec{margin-top:30px;padding-top:18px;}
+.engr-sec h4{margin:0 0 10px;}
+.engr-ex,.engr-et,.engr-pm{line-height:2.05;}
+.engr-blank{min-height:260px;margin-top:20px;border-radius:18px;padding:30px;font-size:1.02em;}
+.engr-nav{margin-top:14px;}
+.eng-card-stage{gap:8px;}
+.eng-card-blank{min-height:200px;margin-top:16px;border-radius:16px;}
+
+/* ================= 移动端放大：极光/扩展 题库切换框 ================= */
+@media(max-width:560px){
+  .grp-toggle{border-radius:9px;padding:2px;gap:2px;max-width:58%;
+    box-shadow:0 2px 8px rgba(45,111,242,.10);}
+  .gt-cell{padding:5px 9px;border-radius:7px;font-size:.82em;font-weight:700;gap:4px;}
+  .gt-cell.on{box-shadow:0 2px 6px rgba(45,111,242,.18);}
+}

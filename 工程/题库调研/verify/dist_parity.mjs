@@ -17,7 +17,8 @@ import crypto from 'crypto';
 const WS = 'D:/朝花夕拾 闲暇随笔/李沁玲/大二上/生物化学与分子生物学';
 const SRC = path.join(WS, 'site');
 const DIST = path.join(WS, 'site_dist');
-const bd = fs.readFileSync(path.join(WS, '工程/题库调研/build_dist.mjs'), 'utf8');
+// 白名单单一真源在 _whitelist.mjs（被 build_dist/_sync_dist/deploy 共享），直接解析它，避免与 build_dist 漂移
+const bd = fs.readFileSync(path.join(WS, '工程/题库调研/_whitelist.mjs'), 'utf8');
 const arrOf = name => {
   const m = bd.match(new RegExp('const ' + name + '\\s*=\\s*\\[([\\s\\S]*?)\\]'));
   if (!m) return [];

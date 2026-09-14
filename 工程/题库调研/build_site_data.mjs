@@ -6,7 +6,7 @@
  * 写  site/data/manifest.json                          首屏唯一必载文件（只有计数与路径）
  *     site/data/packs/<学期>/<学科>-jg.json            极光分片
  *     site/data/packs/<学期>/<学科>-ext.json           扩展分片
- *     site/data/explain/<学期>/<学科>.json             解析分片（做题按需）
+ *     site/data/explain/<学期>/<学科>/<章节>.json       解析分片（按章节拆，做题按需加载）
  *
  * 学科 id 兼容：生化/生理/免疫沿用站点既有 id（bio/physiology/immunology），
  * 保证 localStorage 里的既有进度、收藏、错题、复习计划全部不失效。
@@ -14,6 +14,7 @@
  */
 import fs from 'fs';
 import path from 'path';
+import { safeRmSync } from './_safeRm.mjs';
 
 const WS = 'D:/朝花夕拾 闲暇随笔/李沁玲/大二上/生物化学与分子生物学';
 const PACKS = path.join(WS, '工程', '题库调研', 'packs');
@@ -187,7 +188,11 @@ function canonChapters(items, subject) {
 }
 
 function ensureDir(d) { fs.mkdirSync(d, { recursive: true }); if (!fs.existsSync(d)) throw new Error('mkdir failed ' + d); }
-function cleanDir(d) { if (fs.existsSync(d)) fs.rmSync(d, { recursive: true, force: true }); ensureDir(d); }
+function cleanDir(d) { if (fs.existsSync(d)) safeRmSync(d); ensureDir(d); }
+// 章节名 → 安全文件名（去非法字符、空格转下划线）。前端按 chapters[].name 精确匹配 file，不重算此名。
+function safeChapName(ch) {
+  return String(ch).replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, '_').slice(0, 80) || '未分类';
+}
 
 cleanDir(path.join(OUT, 'packs'));
 cleanDir(path.join(OUT, 'explain'));
@@ -214,7 +219,7 @@ const manifest = {
     st: '抓取来源类型（network|contribution|legacy）'
   },
   explainHelp: {
-    note: '解析分片 explain/<学期>/<sid>.json = {题目id: 富解析}。富解析 {bf, b}：bf=一句话解析；b=块数组 [type, sec, title, …payload]。',
+    note: '解析分片 explain/<学期>/<sid>/<章节>.json = {题目id: 富解析}（按章节拆，前端按需加载）。富解析 {bf, b}：bf=一句话解析；b=块数组 [type, sec, title, …payload]。每个学科 manifest 里 entry.explain = {dir, chapters:[{name,file,count}], count}。',
     type: { p: '段落', c: '提示框', l: '列表', tb: '表格' },
     sec: { an: '考点解析', ab: '答案依据', pf: '易错点', cn: '临床与操作要点', tx: '教材出处' },
     fallback: '极少数无小节标题的题为 {t: 纯文本}，前端必须两种都兼容'
@@ -224,6 +229,23 @@ const manifest = {
 let grandQ = 0, grandJg = 0, grandExt = 0, mD = 0, mN = 0, mY = 0, subCount = 0;
 
 const usedIds = new Set();   // 全站已发主 id 集合（含主包与已写孤儿），防跨包 id 碰撞覆盖
+
+// —— 兜底断言（防整科静默丢失）：packs 中「实际存在分片且属于 ONLY 白名单」的学科，build 后必须产出 >0 题。
+// 注意：医学英语在 ONLY 但若 packs 无分片则不属于期望，不会误伤（尚未提供数据）。
+const expectedSubs = new Set();
+for (const sem of SEM_ORDER) {
+  const semDir = path.join(PACKS, sem);
+  if (!fs.existsSync(semDir)) continue;
+  for (const grp of ['极光', '扩展']) {
+    const gp = path.join(semDir, grp);
+    if (!fs.existsSync(gp)) continue;
+    for (const f of fs.readdirSync(gp)) {
+      const s = f.replace(/\.json$/, '');
+      if (ONLY.has(s)) expectedSubs.add(s);
+    }
+  }
+}
+const producedSubs = new Set();   // 实际产出 >0 题的学科（sub 名）
 
 for (const sem of SEM_ORDER) {
   const semDir = path.join(PACKS, sem);
@@ -242,6 +264,7 @@ for (const sem of SEM_ORDER) {
     const id = subId(sub);
     const entry = { id, name: sub, semester: sem };
     let total = 0;
+    const chapOf = new Map();   // 本学科「题id → 章节」映射（极光+扩展两组都收），供 explain 按章节拆分
 
     for (const [grp, key] of [['极光', 'jiguang'], ['扩展', 'extension']]) {
       const src = path.join(semDir, grp, sub + '.json');
@@ -254,6 +277,7 @@ for (const sem of SEM_ORDER) {
       const aliases = {};
       if (isExt) { const r = canonChapters(arr0, sub); arr = r.items; Object.assign(aliases, r.aliases); }
       else arr = arr0.slice().sort((a, b) => (chapNum(a.chapter) ?? 998) - (chapNum(b.chapter) ?? 998));
+      for (const q of arr) if (q.id && q.chapter) chapOf.set(q.id, q.chapter);   // 收进 id→章节 映射
       if (isExt && Object.keys(aliases).length) {
         manifest.chapterAliases = manifest.chapterAliases || {};
         manifest.chapterAliases[subId(sub)] = Object.assign({}, manifest.chapterAliases[subId(sub)], aliases);
@@ -298,11 +322,22 @@ for (const sem of SEM_ORDER) {
       const o = JSON.parse(fs.readFileSync(exSrc, 'utf8'));
       const n = Object.keys(o).length;
       if (n) {
-        const dir = path.join(OUT, 'explain', sem);
+        // 按章节拆分（性能：避免首次看解析整科拉 6MB+；按章节小文件 + 前端按需加载）
+        const byChap = new Map();
+        for (const [qid, exp] of Object.entries(o)) {
+          const ch = chapOf.get(qid) || '未分类';
+          if (!byChap.has(ch)) byChap.set(ch, {});
+          byChap.get(ch)[qid] = exp;
+        }
+        const dir = path.join(OUT, 'explain', sem, id);
         ensureDir(dir);
-        const dst = path.join(dir, `${id}.json`);
-        fs.writeFileSync(dst, JSON.stringify(o), 'utf8');
-        entry.explain = { file: `explain/${sem}/${id}.json`, count: n, bytes: fs.statSync(dst).size };
+        const chapters = [];
+        for (const [ch, obj] of byChap) {
+          const fn = safeChapName(ch) + '.json';
+          fs.writeFileSync(path.join(dir, fn), JSON.stringify(obj), 'utf8');
+          chapters.push({ name: ch, file: `explain/${sem}/${id}/${fn}`, count: Object.keys(obj).length });
+        }
+        entry.explain = { dir: `explain/${sem}/${id}`, chapters, count: n };
       }
     }
 
@@ -310,6 +345,7 @@ for (const sem of SEM_ORDER) {
     entry.jgCount = entry.jiguang ? entry.jiguang.count : 0;
     entry.extCount = entry.extension ? entry.extension.count : 0;
     if (!total) continue;
+    producedSubs.add(sub);   // 该科成功产出 >0 题
     semEntry.subjects.push(entry);
     grandQ += total;
     subCount++;
@@ -371,6 +407,14 @@ manifest.totals = {
   subjects: subCount, questions: grandQ, jiguang: grandJg, extension: grandExt,
   withMeta: { difficulty: mD, answerCount: mN, year: mY }
 };
+
+// —— 兜底断言：期望学科必须产出 >0 题，否则视为整科静默丢失，阻断发布 ——
+for (const s of expectedSubs) {
+  if (!producedSubs.has(s)) {
+    console.error(`FATAL 学科「${s}」在 packs 中存在分片，但 build_site_data 后未产出任何题目（整科静默丢失？请检查 merged2/by_subject 与该学科分片）`);
+    process.exit(1);
+  }
+}
 
 ensureDir(OUT);
 fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest), 'utf8');

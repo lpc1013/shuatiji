@@ -10,7 +10,7 @@
  */
 
 /* ============ 0. 主题色板（缩略图 / 选择器用，不依赖当前主题） ============ */
-.thm{width:100%;height:46px;border-radius:10px;border:1px solid #dfe4ee;position:relative;overflow:hidden;display:block;}
+.thm{width:100%;aspect-ratio:1/1;border-radius:12px;border:1px solid #dfe4ee;position:relative;overflow:hidden;display:block;}
 .thm::after{content:'';position:absolute;left:8px;right:8px;bottom:7px;height:16px;border-radius:5px;background:rgba(255,255,255,.72);box-shadow:0 1px 3px rgba(31,39,51,.10);}
 .thm i{position:absolute;left:8px;top:8px;width:34px;height:7px;border-radius:99px;display:block;}
 .thm.t-classic{background:linear-gradient(160deg,#e9efff,#f7f9ff);} .thm.t-classic i{background:#4f6ef7;}
@@ -58,6 +58,9 @@
   padding:14px 14px 14px 34px;
 }
 [data-bg="grid"]:not(.dark) .card + .card{margin-top:12px;}
+/* 例外：.cols2 是 2 列网格（靠 align-items:stretch 等高），无外边距合并；
+   若继承上面的 margin-top，第 2 张卡会被下推 12px 变矮 → 第 1 张显得更高。 */
+[data-bg="grid"]:not(.dark) .cols2 > .card{margin-top:0;}
 /* 正文踩线：卡片内常规文本行高 = 横线间距 */
 [data-bg="grid"]:not(.dark) .card p,
 [data-bg="grid"]:not(.dark) .card .muted,
@@ -120,6 +123,42 @@
   box-shadow:0 6px 22px rgba(39,75,82,.25);
 }
 [data-bg="ink"]:not(.dark) .card{backdrop-filter:saturate(1.02);}
+
+/* ============ 细节增强：在「组件结构不动」前提下，给四套主题各加一层装饰 ============ */
+/* 经典蓝白：角落柔光 + 极淡斜向发丝纹，让大片面不再死板 */
+[data-bg="classic"]:not(.dark) .view,[data-bg="classic"]:not(.dark) .player{
+  background-image:
+    radial-gradient(120% 60% at 100% 0%,rgba(79,110,247,.10),transparent 55%),
+    repeating-linear-gradient(135deg,transparent 0 26px,rgba(79,110,247,.022) 26px 27px);
+  background-repeat:no-repeat,repeat;
+}
+[data-bg="classic"]:not(.dark) .card{border-top:2px solid rgba(79,110,247,.16);}
+/* 横线练习本：装订线卡片顶边补一道暖色细线，呼应左侧双红边 */
+[data-bg="grid"]:not(.dark) .card{border-top:2px solid rgba(154,91,50,.30);}
+/* 中国风：卡片顶加一道朱砂描金细线，印章感 */
+[data-bg="cn"]:not(.dark) .card{border-top:2px solid rgba(168,64,47,.38);}
+[data-bg="cn"]:not(.dark) .card h3{color:var(--primary-d);}
+/* 水墨青岚：再叠一层远山淡影，层次更足 */
+[data-bg="ink"]:not(.dark) .view,[data-bg="ink"]:not(.dark) .player{
+  background-image:
+    radial-gradient(120% 62% at 10% -4%,rgba(60,111,120,.13),transparent 62%),
+    radial-gradient(86% 46% at 104% 16%,rgba(120,152,143,.13),transparent 60%),
+    radial-gradient(72% 44% at 18% 104%,rgba(60,111,120,.09),transparent 62%),
+    radial-gradient(60% 38% at 96% 96%,rgba(95,135,120,.10),transparent 60%);
+  background-repeat:no-repeat;
+}
+
+/* A5：中 / 墨 hero 渐变加一层光泽，与经典 / 横线呼应（.hero 已在 styles.css 设 position:relative + 顶部柔光） */
+[data-bg="cn"]:not(.dark) .hero{
+  background:linear-gradient(135deg,#b14a36,#8a3225 55%,#6f271d);
+  box-shadow:0 8px 26px rgba(120,50,35,.26);}
+[data-bg="cn"]:not(.dark) .hero::after{
+  background:radial-gradient(120% 80% at 0% 0%,rgba(255,235,200,.22),transparent 55%);}
+[data-bg="ink"]:not(.dark) .hero{
+  background:linear-gradient(135deg,#427f89,#274b52 55%,#1f3b41);
+  box-shadow:0 8px 26px rgba(31,75,82,.28);}
+[data-bg="ink"]:not(.dark) .hero::after{
+  background:radial-gradient(120% 80% at 100% 0%,rgba(255,255,255,.16),transparent 55%);}
 
 /* 暗色模式：不管选了哪种背景，都回到暗色 token（纹理一并撤掉，避免暗底上浮脏纹） */
 body.dark .view,body.dark .player{background-image:none;}
