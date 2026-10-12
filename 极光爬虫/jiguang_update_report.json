@@ -1,74 +1,112 @@
 {
+  "generated_at": "2026-09-20T06:20:52.269Z",
+  "note": "基于 2026-09-20 全站重新探测（网站大更新后命名改变，sid 不变）。VIP 状态以详情接口实探为准。",
+  "token_type": "short-string (非JWT) 仍可被详情接口接受",
+  "site_total_subjects": 58,
   "updated": [
     {
-      "name": "影像",
+      "online_name": "影像",
+      "local_name": "影像",
       "sid": "1632536d-44e2-419e-a6e2-4def52707afb",
-      "file": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\题源数据\\大三\\影像\\1.题库\\极光_影像.json",
       "local": 473,
       "cur": 493,
-      "delta": 20
+      "delta": 20,
+      "vip": true
     },
     {
-      "name": "医学免疫学",
-      "sid": "c799eb33-4ec7-487b-99b3-9cbca206db77",
-      "file": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\题源数据\\大二\\免疫\\1.题库\\极光_免疫.json",
-      "local": 1209,
-      "cur": 1319,
-      "delta": 110
-    },
-    {
-      "name": "病理学",
+      "online_name": "病理学",
+      "local_name": "病理学",
       "sid": "c8c58d59-f1f4-477e-a006-0117ee9b215d",
-      "file": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\题源数据\\大二\\病理\\1.题库\\极光_病理.json",
       "local": 1594,
       "cur": 1595,
-      "delta": 1
+      "delta": 1,
+      "vip": true
     },
     {
-      "name": "传染病（test）",
+      "online_name": "传染病",
+      "local_name": "传染病（test）",
       "sid": "7e00dfaf-7c33-4285-a547-a5386c22e9ab",
-      "file": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\题源数据\\大四\\传染病（test）\\1.题库\\极光_传染病（test）.json",
       "local": 627,
       "cur": 1565,
-      "delta": 938
+      "delta": 938,
+      "vip": true
     },
     {
-      "name": "儿科学",
+      "online_name": "儿科学",
+      "local_name": "儿科学",
       "sid": "47842446-c979-41d0-ae76-a239f05eb773",
-      "file": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\题源数据\\大四\\儿科学\\1.题库\\极光_儿科学.json",
       "local": 48,
       "cur": 2515,
-      "delta": 2467
+      "delta": 2467,
+      "vip": true
     },
     {
-      "name": "内科学（test）",
+      "online_name": "内科学01",
+      "local_name": "内科学（test）",
       "sid": "06d0cd87-0c14-4bde-9ee4-5f1892f18578",
-      "file": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\题源数据\\大四\\内科学（test）\\1.题库\\极光_内科学（test）.json",
       "local": 367,
       "cur": 2593,
-      "delta": 2226
+      "delta": 2226,
+      "vip": true
     },
     {
-      "name": "外科学（test）",
+      "online_name": "外科学01",
+      "local_name": "外科学（test）",
       "sid": "e1e0517c-2371-4d39-84b7-816deda1d049",
-      "file": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\题源数据\\大四\\外科学（test）\\1.题库\\极光_外科学（test）.json",
       "local": 3592,
       "cur": 3594,
-      "delta": 2
+      "delta": 2,
+      "vip": true
     },
     {
-      "name": "耳鼻咽喉头颈外科学",
+      "online_name": "耳鼻咽喉头颈外科学",
+      "local_name": "耳鼻咽喉头颈外科学",
       "sid": "d49ee977-5a70-4408-abb3-bd315a0ac129",
-      "file": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\题源数据\\大四\\耳鼻咽喉头颈外科学\\1.题库\\极光_耳鼻咽喉头颈外科学.json",
       "local": 1023,
       "cur": 1101,
-      "delta": 78
+      "delta": 78,
+      "vip": true
     }
   ],
   "notfound": [
-    "儿童医院社区实习",
-    "内科学",
-    "外科学"
+    {
+      "name": "儿童医院社区实习",
+      "sid": "8808fba0-c481-4ef3-b9f7-e441f4bc55bc"
+    },
+    {
+      "name": "内科学",
+      "sid": "cd427892-f758-4495-a6e1-ed377aff7faf"
+    },
+    {
+      "name": "外科学",
+      "sid": "0699f8e3-6bac-413b-8440-10785adb5938"
+    },
+    {}
   ],
-  "news": []
+  "renamed": [
+    {
+      "local_name": "传染病（test）",
+      "online_name": "传染病",
+      "sid": "7e00dfaf-7c33-4285-a547-a5386c22e9ab"
+    },
+    {
+      "local_name": "内科学（test）",
+      "online_name": "内科学01",
+      "sid": "06d0cd87-0c14-4bde-9ee4-5f1892f18578"
+    },
+    {
+      "local_name": "外科学（test）",
+      "online_name": "外科学01",
+      "sid": "e1e0517c-2371-4d39-84b7-816deda1d049"
+    }
+  ],
+  "vip_locked_updated": [
+    "影像",
+    "病理学",
+    "传染病",
+    "儿科学",
+    "内科学01",
+    "外科学01",
+    "耳鼻咽喉头颈外科学"
+  ]
 }

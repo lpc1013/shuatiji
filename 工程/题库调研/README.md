@@ -16,6 +16,26 @@
 
 增量补同步：`deploy.mjs`（默认增量）或 `_sync_dist.mjs`。
 
+## 题库源更新（题源数据 变动时，跑在 build_packs 之前）
+0. `merge2.mjs` — 扫描全工作区 `极光_*.json` 原始库 → `merged2/`（**会整目录清空 merged2**）
+   - ⚠️ 它不保留 3 个手工文件：`answer_overrides.json` / `conflicts_resolved_manual.json` / `conflicts_single_source_resolved.json`
+     → 跑完必须从真源 `_merged2_manual_backup/` 拷回（否则 build_packs 直接 ENOENT 崩）。
+   - `enrich_index.mjs` — 重建 `index_jiguang_stats.json`（题难度/答题人次/章节 cid），**只读源**；
+     新增题目若缺 `cid`，站点会退化成 `x<章名>` 分组 → verify_site 会报「非 UUID 章节」与「缺 cid」。
+     题源更新后必须重跑（顺序：merge2 → enrich_index → build_packs）。
+
+## 部署到 EdgeOne Pages（快路径，~45s）
+```bash
+node 工程/题库调研/deploy.mjs --full        # 先重建 site_dist
+node 工程/题库调研/deploy_edgeone.mjs       # 再部署（默认项目 architecture，可传项目名覆盖）
+```
+- `deploy_edgeone.mjs` 本地重建 `site_dist/.edgeone/assets`（排除 `.edgeone`/`.env`）+ 写探测结果，再以
+  **目录位置参数** 调 CLI → 跳过 auto build，实测 **45s**。
+- ❌ 别用 `edgeone makers deploy -n <项目>`（不传目录）：CLI 会走 auto build，其中
+  `DescribeFramework` 远程框架探测在本机实测卡 **~240s**（Deploy 总耗时 ~290s）。
+  传目录（`makers deploy ./.edgeone -n <项目>`）即跳过；`.edgeone/assets/.edgeone-assets-config.json`
+  = 探测结果 `{"framework":"other","needsFallback":false}`（纯静态站正确值）。
+
 ## 脚本职责
 - **核心**：`build_packs.mjs` / `build_site_data.mjs` / `deploy.mjs` / `_whitelist.mjs`（发布白名单单一真源）/ `_safeRm.mjs`（安全删除）
 - **校验**：`verify/`（run_all 编排；`verify_*` 为断言；`probe_*` 为诊断）

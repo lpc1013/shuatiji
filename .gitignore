@@ -68,3 +68,43 @@ database_export-*.json
 
 # 归档区（旧备份 / 一次性脚本 / 杂项探针产物，留档不入库）
 归档/
+
+# 第三方前端源码抓包（iyixue 站点 copy，版权禁入）
+工程/题库调研/iyixue_web/
+# 极光站编译产物 dart bundle（第三方代码，禁入）
+极光爬虫/jg_main.js
+# ===== 派生题库数据（可由 merged2 经 enrich_index.mjs 重建，与 merged2 同等对待，不入库）=====
+工程/题库调研/index_jiguang_stats.json
+工程/题库调研/index_iyixue_meta.json
+工程/题库调研/verify/baseline_ids_*.json
+
+# ===== 公开仓库排除（2026-10-12）：题库 / 版权教材 / 答案备份 / 归档爬虫(含token引用) / 探针 / 个人备份 =====
+# 题意warn：本仓库需可公开，以下一律不得入仓
+题源数据/
+# 根目录题库导出副本（做题版/学习版/题目版 docx+pdf = 真实题目，禁入）
+/*题库*.docx
+/*题库*.pdf
+# 版权教材 PDF/DOC（生物化学参考书原件，659MB，版权+体积双禁）
+生物化学/
+# 极光 VIP 激活码台账（凭证，禁入）
+极光爬虫/极光_VIP激活码台账.md
+# 已归档旧爬虫（内含硬编码 token 引用，禁入）
+极光爬虫/_deleted_archive/
+# 一次性可用性探针脚本与结果（运维草稿，非源码，禁入）
+极光爬虫/jiguang_*.json.bak*
+极光爬虫/jiguang_probe*
+极光爬虫/jiguang_rediscover*
+极光爬虫/jiguang_access_probe*
+/jiguang_*.json
+/jiguang_*.mjs
+工程/题库调研/_bak_english_20261012/
+工程/题库调研/_bak_english_20261012b/
+工程/题库调研/fixes/backup_*/
+工程/题库调研/key_wrong_fixed_*.json
+工程/题库调研/_emoji_fix.json
+工程/题库调研/_emoji_fix.mjs
+工程/题库调研/_inspect_exp.mjs
+工程/题库调研/_sync_result.json
+工程/题库调研/audit_*.json
+工程/题库调研/verify/_*.txt
+工程/题库调研/verify/_*.json

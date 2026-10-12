@@ -2,10 +2,13 @@
  * 字段统一 v3 专项校验（不依赖浏览器、不依赖已删除的 site/data/data.js）
  *
  * 证明链（用户进度零丢失）：
- *   merged2 的 id 集合在本次重建前后完全一致
- *     → packs 的极光 id ⊆ merged2 的 id
+ *   merged2 的 id 集合与基线快照完全一致（基线 = verify/baseline_ids_<日期>.json）
+ *     → packs 的极光 id ⊆ merged2 的「代表 id ∪ 来源 id」
  *       → site 的题目 id ⊆ packs 的 id ∪ aliasIds
- * 再叠加：site 三科题数 14,877 → 14,880（只增不减）
+ * 再叠加：site 三科题数只增不减（当前 14,988）
+ *
+ * 基线快照：verify/baseline_ids_20260920.json（免疫 09-18 更新后重锚，merged2 唯一 id 108,661；
+ *   历史快照 baseline_ids_20260912.json 保留备查）。更新题库源后须重跑 merge2 再重锚快照。
  *
  * 另断言：新字段确实进包、9 个预留字段通道在 schema 中存在。
  * 用法: node 工程/题库调研/verify/verify_schema_unified.mjs
@@ -23,7 +26,7 @@ const rd = p => JSON.parse(fs.readFileSync(p, 'utf8'));
 const SEMS = ['大一', '大二', '大三', '大四', '水平测试'];
 
 console.log('== 1) merged2 重建是否为纯增量 ==');
-const snapBefore = rd(path.join(R, 'verify', 'baseline_ids_20260912.json'));
+const snapBefore = rd(path.join(R, 'verify', 'baseline_ids_20260920.json'));
 const curlHash = a => {
   const h = new Map(a.map(x => [x[0], x[1]]));
   return h;
@@ -31,16 +34,21 @@ const curlHash = a => {
 const beforeMap = curlHash(snapBefore.pairs);
 let mCount = 0, mIdChanged = 0, mAnsChanged = 0;
 const mIds = new Set();
+/* 合并题的各来源 id（含「未当选代表」的稳定源 id，如 ykb_…/UUID）——
+ * 极光组某题的来源里同时有 极光 UUID 与 医考帮 ykb_ 时，build_packs 的 id 网可能选 ykb_ 作主 id
+ * （它才是「上一版在用且稳定」的锚），此时该 id 不在 mIds 里但仍是这道题的合法 id。 */
+const mSrcIds = new Set();
 for (const f of fs.readdirSync(path.join(R, 'merged2', 'by_subject'))) {
   if (!f.endsWith('.json')) continue;
   for (const q of rd(path.join(R, 'merged2', 'by_subject', f))) {
     mCount++;
     mIds.add(q.id);
+    for (const sd of (q.sourceDetail || [])) if (sd && sd.id) mSrcIds.add(String(sd.id).replace(/^[a-z]+:/, ''));
     if (!beforeMap.has(q.id)) mIdChanged++;
     else if (beforeMap.get(q.id) !== String(q.answerResolved ?? q.answer ?? '')) mAnsChanged++;
   }
 }
-ok(mCount === 108018, `merged2 题数 108018，实为 ${mCount}`);
+ok(mCount === snapBefore.count, `merged2 题数 = 基线 ${snapBefore.count}，实为 ${mCount}`);
 ok(mIds.size === snapBefore.count, `merged2 唯一 id 数 = 变更前 ${snapBefore.count}，实为 ${mIds.size}`);
 ok(mIdChanged === 0, `相对变更前新增/丢失 id ${mIdChanged} 条（应为 0）`);
 ok(mAnsChanged === 0, `相对变更前答案变化 ${mAnsChanged} 条（应为 0）`);
@@ -77,10 +85,10 @@ for (const sem of SEMS) for (const grp of ['极光', '扩展']) {
 /* packs 总题数 = merged2 唯一题 − 跨组重复题（同稳定源 id 同时出现在极光/扩展，构建期故意跳过以免 id 分裂）
  *                  + 兜底补回（上一版有、本次未命中的题原位补回，保进度不丢）。
  * 权威值取 build_packs 自检通过的 manifest.totals.questions（已验证 == usedPrimary.size == 写盘回读数）。
- * 注：不能用 108018 + 兜底，因为那样会漏掉「跨组重复题被跳过」的 −20，造成误报 FATAL。 */
+ * 注：不能用「merged2 唯一题 + 兜底」，因为那样会漏掉「跨组重复题被跳过」的负项，造成误报 FATAL。 */
 const pManifest = rd(path.join(PACKS, 'manifest.json'));
 const backfilled = (pManifest.totals && pManifest.totals.siteBackfilled) || 0;
-ok(pTotal === pManifest.totals.questions, `packs 题数应 = manifest.totals.questions（构建自检值 ${pManifest.totals.questions}，含跨组去重 −${108018 + backfilled - pManifest.totals.questions} + 兜底补回 ${backfilled}），实为 ${pTotal}`);
+ok(pTotal === pManifest.totals.questions, `packs 题数应 = manifest.totals.questions（构建自检值 ${pManifest.totals.questions}，含跨组去重 −${snapBefore.count + backfilled - pManifest.totals.questions} + 兜底补回 ${backfilled}），实为 ${pTotal}`);
 console.log(`  兜底补回（上一版有、本次未命中，为保进度原位补回）：${backfilled} 条`);
 console.log(`  packs 唯一 id（含别名）${packIds.size}`);
 console.log(`  新字段覆盖：caseInfo ${pCase} / tags ${pTags} / suggestedTags ${pStg} / sourceType ${pSt} / examYear ${pExamYear}`);
@@ -91,16 +99,17 @@ console.log(`  预留字段在 packs 中的出现次数：${JSON.stringify(Objec
 
 // packs 的极光 id 是「裸 UUID」（无 `jiguang:` 前缀），merged2 的 id 带前缀 → 比较前剥前缀
 const mIdsBare = new Set([...mIds].map(x => String(x).replace(/^[a-z]+:/, '')));
+const mAllBare = new Set([...mIdsBare, ...mSrcIds]);   // 代表 id ∪ 来源 id
 let jgNotInMerged = 0;
 for (const sem of SEMS) {
   const d = path.join(PACKS, sem, '极光');
   if (!fs.existsSync(d)) continue;
   for (const f of fs.readdirSync(d)) {
     if (!f.endsWith('.json')) continue;
-    for (const q of rd(path.join(d, f))) if (!mIdsBare.has(q.id)) jgNotInMerged++;
+    for (const q of rd(path.join(d, f))) if (!mAllBare.has(q.id)) jgNotInMerged++;
   }
 }
-ok(jgNotInMerged === 0, `packs 极光组有 ${jgNotInMerged} 题 id 不在 merged2 中（应为 0）`);
+ok(jgNotInMerged === 0, `packs 极光组有 ${jgNotInMerged} 题 id 不在 merged2（代表 id ∪ 来源 id）中（应为 0）`);
 
 console.log('== 3) site/data 用户进度兼容 ==');
 const man = rd(path.join(DATA, 'manifest.json'));
