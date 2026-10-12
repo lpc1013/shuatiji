@@ -69,6 +69,10 @@ database_export-*.json
 # 归档区（旧备份 / 一次性脚本 / 杂项探针产物，留档不入库）
 归档/
 
+# 一次性错题修复脚本（内含题目原文/选项/解析，禁入）
+工程/题库调研/fixes/fix_fadh2_*.mjs
+工程/题库调研/fixes/fix_malt_*.mjs
+
 # 第三方前端源码抓包（iyixue 站点 copy，版权禁入）
 工程/题库调研/iyixue_web/
 # 极光站编译产物 dart bundle（第三方代码，禁入）
