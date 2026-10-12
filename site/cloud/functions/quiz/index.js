@@ -153,37 +153,115 @@ async function englishReset(token) {
   return { ok: true };
 }
 
-// ---------- AI 出题（TokenHub 代理，4 模型轮询，仅 lql 可调用） ----------
-let TOKENHUB_CFG = null;
-function loadTokenHub() {
-  if (TOKENHUB_CFG) return TOKENHUB_CFG;
-  const cfg = {
-    base: process.env.TOKENHUB_BASE || "https://tokenhub.tencentmaas.com/v1",
-    keys: {
-      "hy-mt2-plus": process.env.KEY_HY_MT2_PLUS,
-      "hy-mt2-lite": process.env.KEY_HY_MT2_LITE,
-      "hunyuan-role-latest": process.env.KEY_HUNYUAN_ROLE_LATEST,
-      "hy-role": process.env.KEY_HY_ROLE,
-    },
+// ---------- AI 出题（多渠道 Key 池，OpenAI 兼容，仅 lql 可调用） ----------
+// 每通道自带 base + model + key；环境变量提供混元通道，config.json 提供新增通道（不入库）
+let AI_CFG = null;
+function loadAI() {
+  if (AI_CFG) return AI_CFG;
+  const channels = [];
+  const push = (base, model, key, name) => {
+    if (key) channels.push({ base, model, key, name: name || model });
   };
-  // 允许从同目录 config.json 读取私钥（不入库；优先级低于环境变量）
+
+  // 1) 既有 TokenHub / 混元通道（环境变量）
+  const tbBase = process.env.TOKENHUB_BASE || "https://tokenhub.tencentmaas.com/v1";
+  push(tbBase, "hy-mt2-plus", process.env.KEY_HY_MT2_PLUS);
+  push(tbBase, "hy-mt2-lite", process.env.KEY_HY_MT2_LITE);
+  push(tbBase, "hunyuan-role-latest", process.env.KEY_HUNYUAN_ROLE_LATEST);
+  push(tbBase, "hy-role", process.env.KEY_HY_ROLE);
+
+  // 2) 同目录 config.json（不入库，存放私钥与新增通道；channels 数组优先）
   try {
     const p = path.join(__dirname, "config.json");
     if (fs.existsSync(p)) {
       const c = JSON.parse(fs.readFileSync(p, "utf8"));
-      if (c.base) cfg.base = c.base;
-      if (c.keys) for (const k in c.keys) if (c.keys[k]) cfg.keys[k] = c.keys[k];
+      if (Array.isArray(c.channels)) {
+        for (const ch of c.channels) {
+          if (ch && ch.key) push(ch.base || tbBase, ch.model, ch.key, ch.name);
+        }
+      } else if (c.keys) {
+        const lb = c.base || tbBase;
+        for (const k in c.keys) if (c.keys[k]) push(lb, k, c.keys[k]);
+      }
     }
   } catch (e) {}
-  TOKENHUB_CFG = cfg;
-  return cfg;
+
+  AI_CFG = { channels };
+  return AI_CFG;
 }
 
-function postJSON(url, headers, bodyObj) {
+// 每次调用随机打乱通道顺序：从随机通道开始出题，命中失败（非 2xx 或异常）自动换下一个随机通道重试（多 key 冗余 / 限流兜底）
+function shuffleChan(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+async function callModel(sys, userPrompt, temperature, max_tokens) {
+  const chs = shuffleChan(loadAI().channels.filter((c) => !!c.key));
+  if (!chs.length) return { err: "未配置任何模型 Key" };
+  /* 全局时间预算：函数本身 60s 超时（SCF Timeout=60，超时直接杀进程不返回响应，
+     浏览器端表现为 TypeError: Failed to fetch）。模型调用总预算 45s，
+     剩余时间留给 DB 鉴权与响应传输；单个通道超时取「20s 与剩余预算」较小者。 */
+  const deadline = Date.now() + 45000;
+  let lastErr = "";
+  for (const ch of chs) {
+    const remain = deadline - Date.now();
+    if (remain <= 2000) break;   // 预算耗尽，不再尝试下一通道
+    try {
+      const up = await postJSON(
+        ch.base + "/chat/completions",
+        { Authorization: "Bearer " + ch.key },
+        {
+          model: ch.model,
+          messages: [
+            { role: "system", content: sys },
+            { role: "user", content: userPrompt },
+          ],
+          stream: false,
+          temperature,
+          max_tokens,
+        },
+        Math.min(20000, remain - 1000)
+      );
+      if (up.status < 200 || up.status >= 300) {
+        lastErr = `模型 ${ch.model} 调用失败(${up.status})：${up.body.slice(0, 200)}`;
+        continue;
+      }
+      const j = JSON.parse(up.body);
+      let content =
+        (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
+      content = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      let obj;
+      try {
+        obj = JSON.parse(content);
+      } catch (e) {
+        const a = content.indexOf("{");
+        const b = content.lastIndexOf("}");
+        if (a >= 0 && b > a) obj = JSON.parse(content.slice(a, b + 1));
+        else {
+          lastErr = "模型返回非 JSON：" + content.slice(0, 120);
+          continue;
+        }
+      }
+      obj.model = ch.model;
+      return { ok: true, obj };
+    } catch (e) {
+      lastErr = "调用出错：" + (e.message || e);
+      continue;
+    }
+  }
+  return { err: lastErr || "所有通道均失败" };
+}
+
+function postJSON(url, headers, bodyObj, timeoutMs) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
+    const lib = u.protocol === "http:" ? http : https;
     const data = JSON.stringify(bodyObj);
-    const req = https.request(
+    const req = lib.request(
       u,
       {
         method: "POST",
@@ -191,6 +269,7 @@ function postJSON(url, headers, bodyObj) {
           { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(data) },
           headers || {}
         ),
+        timeout: timeoutMs || 20000,   // 连接/空闲超时：防止单个模型通道挂起拖死整个请求（云托管网关会掐断连接 → 前端表现为 TypeError: Failed to fetch）
       },
       (res) => {
         let buf = "";
@@ -198,22 +277,23 @@ function postJSON(url, headers, bodyObj) {
         res.on("end", () => resolve({ status: res.statusCode, body: buf }));
       }
     );
+    req.on("timeout", () => {
+      req.destroy(new Error("模型通道 " + (timeoutMs || 20000) / 1000 + "s 超时"));
+    });
     req.on("error", reject);
     req.write(data);
     req.end();
   });
 }
 
-let modelCursor = 0;
 async function aiGen(auth, payload) {
   const t = await authUser(auth);
   if (!t) return { ok: false, msg: "未登录或登录已过期" };
   if (t.username !== "lql") return { ok: false, msg: "无权限：仅 lql 账号可调用 AI 出题" };
   const q = payload.question;
   if (!q || !q.content || !q.options) return { ok: false, msg: "缺少题目内容" };
-  const cfg = loadTokenHub();
-  const avail = Object.keys(cfg.keys).filter((k) => !!cfg.keys[k]);
-  if (!avail.length) return { ok: false, msg: "未配置任何模型 Key" };
+  const chs = loadAI().channels.filter((c) => !!c.key);
+  if (!chs.length) return { ok: false, msg: "未配置任何模型 Key" };
 
   const multi = !!q.multi;
   const optText = Object.keys(q.options)
@@ -236,49 +316,15 @@ ${optText}
 
   const questions = [];
   for (let i = 0; i < 3; i++) {
-    const model = avail[modelCursor % avail.length];
-    modelCursor++;
-    let obj;
-    try {
-      const up = await postJSON(
-        cfg.base + "/chat/completions",
-        { Authorization: "Bearer " + cfg.keys[model] },
-        {
-          model,
-          messages: [
-            { role: "system", content: sys },
-            { role: "user", content: userPrompt },
-          ],
-          stream: false,
-          temperature: 0.85,
-          max_tokens: 1200,
-        }
-      );
-      if (up.status < 200 || up.status >= 300) {
-        return { ok: false, msg: `模型 ${model} 调用失败(${up.status})：${up.body.slice(0, 200)}` };
-      }
-      const j = JSON.parse(up.body);
-      let content =
-        (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
-      content = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-      try {
-        obj = JSON.parse(content);
-      } catch (e) {
-        const a = content.indexOf("{");
-        const b = content.lastIndexOf("}");
-        if (a >= 0 && b > a) obj = JSON.parse(content.slice(a, b + 1));
-        else return { ok: false, msg: "模型返回非 JSON：" + content.slice(0, 120) };
-      }
-      if (typeof obj.options !== "object" || !obj.options) {
-        return { ok: false, msg: "模型返回缺少 options" };
-      }
-      obj.model = model;
-      obj.correct = (obj.correct || "").toString().toUpperCase();
-      obj.multi = !!obj.multi;
-      questions.push(obj);
-    } catch (e) {
-      return { ok: false, msg: "生成出错：" + (e.message || e) };
+    const r = await callModel(sys, userPrompt, 0.85, 1200);
+    if (r.err) return { ok: false, msg: "生成出错：" + r.err };
+    const obj = r.obj;
+    if (typeof obj.options !== "object" || !obj.options) {
+      return { ok: false, msg: "模型返回缺少 options" };
     }
+    obj.correct = (obj.correct || "").toString().toUpperCase();
+    obj.multi = !!obj.multi;
+    questions.push(obj);
   }
   return { ok: true, questions };
 }
@@ -289,68 +335,36 @@ async function aiExplain(auth, payload) {
   if (t.username !== "lql") return { ok: false, msg: "无权限：仅 lql 账号可调用 AI 解析" };
   const q = payload.question;
   if (!q || !q.content || !q.options) return { ok: false, msg: "缺少题目内容" };
-  const cfg = loadTokenHub();
-  const avail = Object.keys(cfg.keys).filter((k) => !!cfg.keys[k]);
-  if (!avail.length) return { ok: false, msg: "未配置任何模型 Key" };
+  const chs = loadAI().channels.filter((c) => !!c.key);
+  if (!chs.length) return { ok: false, msg: "未配置任何模型 Key" };
 
   const multi = !!q.multi;
   const optText = Object.keys(q.options).map((k) => k + ". " + q.options[k]).join("\n");
   const sys = "你是一名医学考试辅导老师，只输出严格 JSON 对象，不要任何额外文字或 markdown 代码块。";
-  const userPrompt = `请解析下面这道题（题目可能有争议、原解析可能有误，请基于医学知识独立判断并给出严谨解析）。
+  /* ⚠️ 刻意不把原解析（q.explanation）与原答案（q.correct）发给模型：
+     喂了会被锚定成复述，「AI再解析」就失去独立判断的意义（2026-10-09 用户两次要求）。
+     再解析的典型场景是对答案有异议 → 模型须独立给出自己的新答案 answer，
+     前端把「AI 答案 vs 原答案」并列标注、不一致时高亮。 */
+  const userPrompt = `请解答下面这道题。请完全基于你自己的医学知识独立判断正确答案，不要迎合任何预设结论。
 要求：
-- 一句话考点总结 summary。
-- 核心要点 keyPoint（1-2 句）。
-- 逐项分析 items：每个选项标注 isCorrect（true/false）并给 why（解析）。
-- 常见陷阱 commonTrap（1-2 句，可空串）。
-- 只输出 JSON，格式：{"summary":"...","keyPoint":"...","items":[{"option":"A","isCorrect":true,"why":"..."}],"commonTrap":""}
+- answer：你独立判定的正确答案（单选一个字母；多选按字母序拼接，如 "ABD"）。
+- summary：一句话考点总结。
+- keyPoint：核心要点（1-2 句）。
+- items：逐项分析，每个选项标注 isCorrect（true/false）并给 why（解析）。
+- commonTrap：常见陷阱（1-2 句，可空串）。
+- 只输出 JSON，格式：{"answer":"A","summary":"...","keyPoint":"...","items":[{"option":"A","isCorrect":true,"why":"..."}],"commonTrap":""}
 题目：
 科目：${payload.subject || "医学"}
 题干：${q.content}
 选项：
 ${optText}
-标注正确答案：${q.correct}
-${q.explanation ? "题面自带解析：" + q.explanation : ""}
-${payload.userAnswer ? "用户作答：" + payload.userAnswer : ""}`;
+${multi ? "注意：本题为多选题，answer 为多个字母。" : "注意：本题为单选题，answer 为一个字母。"}`;
 
-  const model = avail[modelCursor % avail.length];
-  modelCursor++;
-  try {
-    const up = await postJSON(
-      cfg.base + "/chat/completions",
-      { Authorization: "Bearer " + cfg.keys[model] },
-      {
-        model,
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: userPrompt },
-        ],
-        stream: false,
-        temperature: 0.4,
-        max_tokens: 1400,
-      }
-    );
-    if (up.status < 200 || up.status >= 300) {
-      return { ok: false, msg: `模型 ${model} 调用失败(${up.status})：${up.body.slice(0, 200)}` };
-    }
-    const j = JSON.parse(up.body);
-    let content =
-      (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || "";
-    content = content.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
-    let obj;
-    try {
-      obj = JSON.parse(content);
-    } catch (e) {
-      const a = content.indexOf("{");
-      const b = content.lastIndexOf("}");
-      if (a >= 0 && b > a) obj = JSON.parse(content.slice(a, b + 1));
-      else return { ok: false, msg: "模型返回非 JSON：" + content.slice(0, 120) };
-    }
-    obj.model = model;
-    if (!Array.isArray(obj.items)) obj.items = [];
-    return { ok: true, result: obj };
-  } catch (e) {
-    return { ok: false, msg: "解析出错：" + (e.message || e) };
-  }
+  const r = await callModel(sys, userPrompt, 0.4, 1400);
+  if (r.err) return { ok: false, msg: "解析出错：" + r.err };
+  const obj = r.obj;
+  if (!Array.isArray(obj.items)) obj.items = [];
+  return { ok: true, result: obj };
 }
 
 const server = http.createServer((req, res) => {

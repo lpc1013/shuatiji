@@ -253,6 +253,19 @@ body.dark .exp-callout{background:#33290f;color:#e0c072;}
 .modal-box{background:var(--surface);border-radius:16px;max-width:560px;width:100%;max-height:86vh;overflow-y:auto;padding:18px;box-shadow:var(--shadow);-webkit-overflow-scrolling:touch;}
 .modal-box h3{margin-top:0;}
 
+/* AI 加载态：旋转环 + 轮换阶段提示 + 计时。AI 解析要 5~15s，静态文案会让人以为卡死了 */
+.ai-load{text-align:center;padding:26px 10px 18px;}
+.ai-spin{width:34px;height:34px;margin:0 auto 14px;border-radius:50%;border:3px solid var(--primary-soft);border-top-color:var(--primary);animation:aiSpin .8s linear infinite;}
+.ai-hint{font-size:.95em;margin-bottom:6px;min-height:1.4em;}
+.ai-elapsed{font-size:.8em;color:var(--muted);}
+@keyframes aiSpin{to{transform:rotate(360deg)}}
+
+/* AI 再解析判决条：AI 独立答案 vs 题库原答案 并列标注 */
+.ai-verdict{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:10px 12px;border-radius:12px;margin:2px 0 12px;background:var(--primary-soft);}
+.ai-verdict.agree{background:rgba(40,167,90,.13);}
+.ai-verdict.diff{background:rgba(240,150,30,.16);}
+.ai-verdict b{font-size:1.1em;}
+
 /* 设置 */
 .set-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);}
 .switch{width:48px;height:28px;border-radius:999px;background:var(--surface2);position:relative;cursor:pointer;transition:.2s;border:1px solid var(--border);}
@@ -882,6 +895,7 @@ body{font-family:var(--font);}
 
 /* ================= 理想国导读全屏浮层 ================= */
 .lxg-card{background:linear-gradient(135deg,var(--surface),var(--surface2));}
+.leisure-acts{display:flex;flex-wrap:wrap;gap:8px;}
 .lxg{position:fixed;inset:0;z-index:45;background:var(--bg);display:flex;flex-direction:column;overscroll-behavior:contain;}
 .lxg-bar{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface);}
 .lxg-title{font-weight:700;color:var(--primary-d);font-size:.95em;}

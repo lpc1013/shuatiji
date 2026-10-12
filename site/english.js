@@ -17,6 +17,7 @@ window.Eng = (function () {
   let hideTr = false;             // 遮例句译文（仅卡片详情块 / 阅读页里渲染）
   let q = '';                     // 搜索词
   let only = '';                  // 过滤：'' | 'new'(未标) | '0' | '1' | '2'
+  let tagSel = '';                // 标签筛选（单元/专科）：'' 全部 | '__none__' 未分组 | 具体标签
   let cardIdx = 0, cardRevealed = false, cardOrder = null;
   /* 全屏阅读页（方案 A）：rWords 是打开那一刻的「当前筛选结果」快照，
      翻词、标记都作用在它上面，与列表里 data-i 的索引一一对应。 */
@@ -233,7 +234,22 @@ window.Eng = (function () {
       String(w.e).toLowerCase().indexOf(k) >= 0 || String(w.c || '').indexOf(k) >= 0);
     if (only === 'new') out = out.filter(w => !pget(w));
     else if (only !== '') out = out.filter(w => { const p = pget(w); return p && String(p.s) === only; });
+    if (tagSel === '__none__') out = out.filter(w => !Array.isArray(w.g) || w.g.length === 0);
+    else if (tagSel !== '') out = out.filter(w => Array.isArray(w.g) && w.g.indexOf(tagSel) >= 0);
     return out;
+  }
+  /* 当前词表内出现过的全部标签（单元/专科），供标签下拉使用 */
+  function distinctTags(words) {
+    const s = new Set();
+    for (const w of (words || [])) if (Array.isArray(w.g)) for (const x of w.g) if (x) s.add(x);
+    return [...s].sort();
+  }
+  function tagOptionsHtml(tags) {
+    if (!tags || !tags.length) return '';
+    const opts = [`<option value="">全部标签</option>`,
+      `<option value="__none__" ${tagSel === '__none__' ? 'selected' : ''}>未分组</option>`]
+      .concat(tags.map(t => `<option value="${esc(t)}" ${tagSel === t ? 'selected' : ''}>${esc(t)}</option>`));
+    return `<select id="engTag" class="subject-select eng-dept-basic" aria-label="按标签筛选">${opts.join('')}</select>`;
   }
   function statOf(words) {
     const p = prog(); let n0 = 0, n1 = 0, n2 = 0, un = 0;
@@ -245,24 +261,101 @@ window.Eng = (function () {
     return { n0, n1, n2, un, total: words.length, done: n0 + n1 + n2 };
   }
 
-  /* ---------- 发音（Web Speech API） ----------
-   * 按钮读的是「词形」本身，不是音标字符串：TTS 念 /ˈkɑːdiæk/ 只会得到一串乱码，
-   * 念单词才是「听发音」。jsdom / 老浏览器没有 speechSynthesis → 静默降级不抛错。 */
-  function speak(text) {
+  /* ---------- 发音（音频优先 → TTS 兜底） ----------
+   * 按钮读的是「词形」本身，不是音标字符串：TTS 念 /ˈkɑːdiæk/ 只会得到一串乱码。
+   *
+   * ⚠️ 为什么不是纯 TTS（2026-09-26 手机端实测定论）：
+   *  ① iOS Safari：speechSynthesis 必须**在用户手势的同步调用栈里**首次 speak，
+   *     否则静默拒绝（无报错、无事件）。异步补读 / 定时器里 speak 一律无效。
+   *  ② iOS：getVoices() 在首次手势前恒为 []，且 onvoiceschanged 常永不触发
+   *     → 「排队等语音库」在 iOS 上等于永远不响。
+   *  ③ 安卓微信/QQ 内置 WebView：常直接阉割 speechSynthesis，或系统残缺无英语 TTS。
+   *  → 对策：主路径改用词典音频 MP3（`<audio>`，全平台一致、不依赖系统语音），
+   *     TTS 仅作为音频加载失败时的兜底，且必须保持「手势内同步调用」。 */
+  const AUDIO_BASE = 'https://dict.youdao.com/dictvoice?type=2&audio=';
+  let audioEl = null;           // 复用单个 <audio>，避免频繁建节点
+  let audioOK = true;           // 音频连续失败 N 次后不再尝试，直接走 TTS
+  let audioFail = 0;
+  function playAudio(word) {
+    if (!audioOK) return false;
     const W = typeof window === 'undefined' ? null : window;
-    const SS = W && W.speechSynthesis, Utt = W && W.SpeechSynthesisUtterance;
+    if (!W || typeof W.Audio !== 'function') return false;
+    try {
+      if (!audioEl) audioEl = new W.Audio();
+      audioEl.src = AUDIO_BASE + encodeURIComponent(String(word));
+      audioEl.play().then(function () { audioFail = 0; }).catch(function () {
+        audioFail++; if (audioFail >= 3) audioOK = false;   // 网络/接口挂了 → 永久降级 TTS
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+
+  let pendingUtter = null;      // 待重读文本（voices 迟到时）
+  let voicesHooked = false;     // onvoiceschanged 只挂一次
+  function getVoices() {
+    try {
+      const SS = typeof window === 'undefined' ? null : window.speechSynthesis;
+      if (!SS || typeof SS.getVoices !== 'function') return null;
+      return { SS, vs: SS.getVoices() || [] };
+    } catch (e) { return null; }
+  }
+  function hookVoices() {
+    if (voicesHooked) return;
+    const r = getVoices();
+    if (!r) return;
+    voicesHooked = true;
+    r.SS.onvoiceschanged = function () {
+      const t = pendingUtter; pendingUtter = null;
+      if (t) speakTts(t);       // 语音库到位 → 补读刚才那次
+    };
+  }
+  function pickEnVoice(vs) {
+    return (vs || []).filter(x => /^en[-_]?US/i.test(x.lang || ''))[0]
+      || (vs || []).filter(x => /^en[-_]?GB/i.test(x.lang || ''))[0]
+      || (vs || []).filter(x => /^en/i.test(x.lang || ''))[0] || null;
+  }
+  /* 当前是否已有可用的「英语」语音。UI 用它区分失败类型。 */
+  function hasEnVoice() {
+    const r = getVoices();
+    if (!r) return false;
+    return !!pickEnVoice(r.vs);
+  }
+  /* TTS 兜底路径。注意：iOS 要求在手势内同步调用；异步补读在 iOS 上会静默失败。 */
+  function speakTts(text) {
+    const r = getVoices();
+    if (!r) return false;
+    const { SS, vs } = r;
+    const W = typeof window === 'undefined' ? null : window;
+    const Utt = W && W.SpeechSynthesisUtterance;
     if (!SS || typeof SS.speak !== 'function' || typeof Utt !== 'function') return false;
+    const s = String(text == null ? '' : text);
+    const v = pickEnVoice(vs);
+    /* 语音库还没到位或没有英语包：先排队（桌面/Linux 靠 onvoiceschanged 能救回来）。
+       iOS 上这个队列不会响，所以 speak() 已优先走音频，不会落到这里。 */
+    if (!v) {
+      pendingUtter = s;
+      hookVoices();
+      return false;
+    }
     try {
       SS.cancel();
-      const u = new Utt(String(text == null ? '' : text));
+      const u = new Utt(s);
       u.lang = 'en-US'; u.rate = .9; u.pitch = 1;
-      const vs = (typeof SS.getVoices === 'function' && SS.getVoices()) || [];
-      const v = vs.filter(x => /^en[-_]US/i.test(x.lang || ''))[0]
-        || vs.filter(x => /^en/i.test(x.lang || ''))[0];
-      if (v) u.voice = v;
+      /* ⚠️ voice 赋值可能抛 TypeError（voice 对象与 synth 实例不匹配）→ 降级为默认语音 */
+      try { u.voice = v; } catch (e) { /* 用默认语音念，总比不响好 */ }
       SS.speak(u);
       return true;
     } catch (e) { return false; }
+  }
+  /* 统一入口：音频优先，失败则 TTS。返回值语义：
+     true = 已发起播放；false = 两条路都不行（UI 据此提示）。 */
+  function speak(text) {
+    const s = String(text == null ? '' : text);
+    if (!s) return false;
+    /* 主路径：词典音频。同步发起（手势内），iOS 无障碍。
+       —— 若音频接口连续失败已降级，则直接走 TTS。 */
+    if (playAudio(s)) return true;
+    return speakTts(s);
   }
   const SPK_SVG = '<svg viewBox="0 0 24 24" width="17" height="17" aria-hidden="true">'
     + '<path d="M4 9.2v5.6h3.6L13 19V5L7.6 9.2H4z" fill="currentColor"/>'
@@ -385,6 +478,8 @@ window.Eng = (function () {
     const parts = [];
     if (q.trim()) parts.push(`搜索「${esc(q.trim())}」`);
     if (only !== '') parts.push(`「${LEVELS[+only].n}」筛选`);
+    if (tagSel === '__none__') parts.push(`「未分组」标签`);
+    else if (tagSel !== '') parts.push(`「${esc(tagSel)}」标签`);
     if (!parts.length) return '<div class="empty">没有词条</div>';
     return `<div class="empty">没有匹配的词条（${parts.join(' + ')}）<br>
       <button class="chip sm" data-act="eng-clear-filter" style="margin-top:10px">清除筛选 · 显示全部</button></div>`;
@@ -528,7 +623,7 @@ window.Eng = (function () {
     return `<option value="all" ${dept === 'all' ? 'selected' : ''}>全部分类 · ${man.total || ''} 词</option>` +
       (man.depts || []).map(x => `<option value="${x.id}" ${x.id === dept ? 'selected' : ''}>${esc(trimDept(x.n))} · ${x.c}</option>`).join('');
   }
-  function modeCardInner(words, shown, sched) {
+  function modeCardInner(words, shown, sched, tags) {
     const st = statOf(words);
     const hint = filterHint(st);
     /* 科室选择 = 基础筛选（常驻主视图，与「⚙ 高级筛选」同行）；
@@ -544,6 +639,7 @@ window.Eng = (function () {
       ${sched && sched.due > 0 ? `<button class="chip eng-review-hl" data-act="eng-review">${ICON('bell')}到期复习 ${sched.due} 个词</button>` : ''}
       <div class="eng-filter-row">
         <select id="engDept" class="subject-select eng-dept-basic" aria-label="选择分类">${deptOptionsHtml()}</select>
+        ${tagOptionsHtml(tags)}
         <button class="chip eng-adv-btn" data-act="eng-adv-open">${ICON('gear')}高级筛选${hint}</button>
       </div>
       <p class="muted small" id="engCount" style="margin:8px 0 0">${countText(words, shown)}</p>`;
@@ -552,6 +648,7 @@ window.Eng = (function () {
   function filterHint(st) {
     const parts = [];
     if (only !== '') parts.push(LEVELS[+only].n + ' ' + (only === 'new' ? st.un : only === '0' ? st.n0 : only === '1' ? st.n1 : st.n2));
+    if (tagSel !== '') parts.push(tagSel === '__none__' ? '未分组' : tagSel);
     if (q.trim()) parts.push('搜索');
     if (hideCn) parts.push('遮中文');
     if (hideEn) parts.push('遮英文');
@@ -568,9 +665,11 @@ window.Eng = (function () {
     /* 搜索时自动切全库（31 科室懒加载一次后走缓存）——查词的人不知道词在哪个科室 */
     /* 词表与 act()/updateList() 共用同一来源（curPool）——搜索时全库、否则当前科室，
      * 否则「搜索后进卡片模式，标记会打在错词上」（act 曾固定用科室词表，索引错位）。 */
-    const words = listOf(await curPool());
+    const base = await curPool();
+    const words = listOf(base);
     /* listOf 幂等（q / only 都是逐条谓词，再过滤一次结果恒等）→ 旧代码多跑一趟 O(n)，去掉 */
     const shown = words;
+    const tags = distinctTags(base);
     const st = statOf(words);
 
     const sched = schedStats();
@@ -591,7 +690,7 @@ window.Eng = (function () {
       </div>
     </div>
 
-    <div class="card" id="engModeCard">${modeCardInner(words, shown, sched)}</div>
+    <div class="card" id="engModeCard">${modeCardInner(words, shown, sched, tags)}</div>
 
 
       <div id="engBody" style="margin-top:12px">${bodyHtml(words, shown)}</div>`;
@@ -623,10 +722,12 @@ window.Eng = (function () {
      切模式/筛选/卡片翻页走这里，头部搜索框焦点与 #view 滚动位置都保住。
      ${ICON('warn')}会改头部统计（标记、复习进出）的动作仍用 refresh()，否则进度条/图例显示旧值。 */
   async function softRefresh() {
-    const words = listOf(await curPool());
+    const base = await curPool();
+    const words = listOf(base);
+    const tags = distinctTags(base);
     const sched = schedStats();
     const mc = document.getElementById('engModeCard');
-    if (mc) mc.innerHTML = modeCardInner(words, words, sched);
+    if (mc) mc.innerHTML = modeCardInner(words, words, sched, tags);
     const body = document.getElementById('engBody');
     if (body) body.innerHTML = bodyHtml(words, words);
     const v = document.getElementById('view');
@@ -723,8 +824,19 @@ window.Eng = (function () {
     sel.value = dept;
     sel.onchange = async () => {
       dept = sel.value; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT;
-      only = ''; q = '';   // 换科室=换上下文：清除残留筛选/搜索词
+      only = ''; q = ''; tagSel = '';   // 换科室=换上下文：清除残留筛选/搜索词/标签
       await refresh();
+    };
+    bindTagSel();   // 科室下拉重建后一并绑定标签下拉
+  }
+  /* 标签下拉（单元/专科）：过滤当前分类内的词条 */
+  function bindTagSel() {
+    const sel = document.getElementById('engTag');
+    if (!sel) return;
+    sel.value = tagSel;
+    sel.onchange = async () => {
+      tagSel = sel.value; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT;
+      await softRefresh();
     };
   }
 
@@ -735,10 +847,12 @@ window.Eng = (function () {
     quizIdx = 0; quizAns = null; quizRight = -1; quizPicked = -1; quizWrong = 0;
     try { quizDistractPool = await ensureAllWords(); } catch (e) { quizDistractPool = null; }
   }
-  /* TTS 能力探测（audio 题型入场闸）：jsdom/老浏览器无 speechSynthesis */
+  /* 发音能力探测。主路径是词典音频（只需 Audio API，全平台都有），
+     TTS 只是兜底 → 不再用 speechSynthesis 存在性当闸门（iOS/微信 WebView 会误判）。
+     CORS 已由 CSS(content-visibility) 无关；音频走 https 绝对地址，不受同源限制。 */
   function ttsOk() {
     const W = typeof window === 'undefined' ? null : window;
-    return !!(W && W.speechSynthesis && W.SpeechSynthesisUtterance);
+    return !!(W && (typeof W.Audio === 'function' || (W.speechSynthesis && W.SpeechSynthesisUtterance)));
   }
 
   async function act(a, t) {
@@ -758,17 +872,14 @@ window.Eng = (function () {
 
       if (mode === 'quiz') {
         initQuiz(words);
-        if (quizType === 'audio') {
-          if (!ttsOk()) { if (typeof toast === 'function') toast('当前浏览器不支持语音朗读'); mode = 'list'; }
-          else speak(quizList[0] && quizList[0].e);
-        }
-      }
-      await softRefresh(); return true;
+        /* 「听音辨词」现在走音频文件，不再依赖系统 TTS → 无需能力闸门。
+           唯一可能失败的是音频接口本身，由 speak() 内部降级处理。 */
+        if (quizType === 'audio') speak(quizList[0] && quizList[0].e);
+      }      await softRefresh(); return true;
     }
     if (a === 'eng-quiz-type') {
 
       const v = t.dataset.v;
-      if (v === 'audio' && !ttsOk()) { if (typeof toast === 'function') toast('当前浏览器不支持语音朗读'); return true; }
       quizType = v; initQuiz(words);
       if (quizType === 'audio' && quizList[0]) speak(quizList[0].e);
       await softRefresh(); return true;
@@ -815,7 +926,7 @@ window.Eng = (function () {
     if (a === 'eng-only') { only = t.dataset.v; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT; await softRefresh(); return true; }
 
     if (a === 'eng-clear-filter') {
-      only = ''; q = ''; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT;
+      only = ''; q = ''; tagSel = ''; cardIdx = 0; cardRevealed = false; listShown = LIST_INIT;
       await refresh(); return true;
 
     }
@@ -829,7 +940,9 @@ window.Eng = (function () {
       if (speak(w.e)) {
         t.classList.add('on');
         setTimeout(function () { t.classList.remove('on'); }, 900);
-      } else if (typeof toast === 'function') toast('当前浏览器不支持语音朗读');
+      } else if (typeof toast === 'function') {
+        toast('发音不可用，请检查网络或换用系统浏览器打开');
+      }
       return true;
     }
 
@@ -945,6 +1058,6 @@ window.Eng = (function () {
     }
     return k ? pool.filter(w => ((w.e || '') + ' ' + (w.c || '')).toLowerCase().includes(k)) : pool;
   }
-  return { view, bind, act, loadMan, openReader, closeReader, goReader, speak, phRow,
+  return { view, bind, act, loadMan, openReader, closeReader, goReader, speak, hasEnVoice, phRow,
     dueCount, dueCountSync, wordsByFamiliar, launchReview, showFamiliar, launchImmersive, ensureAll: ensureAllWords, engMasteredSync, enterCardMode, depts, searchWords };
 })();

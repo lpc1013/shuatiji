@@ -286,6 +286,79 @@ function aiQuizUser() { try { return (localStorage.getItem('quiz_user') || '').t
 /* AI 出题 / 解析：按钮对所有「已登录用户」可见；实际调用仍由后端强制仅 lql 可用。
  * 这样模块在登录后稳定出现在每题 收藏/疑点/纠错 旁，不再因未登录 / 账号名不完全等于 lql 而消失。 */
 function aiEnabled() { return !!quizToken(); }
+
+/* 通用 AI 云函数调用：
+ *  ① token 放进 body，不通过自定义 header 携带 → 避免某些移动端浏览器/微信内置浏览器
+ *    拦截 `X-Quiz-Token` 或触发 CORS 预检失败。
+ *  ② `Content-Type: text/plain` 而非 `application/json` → 不触发 CORS preflight，
+ *    减少一次网络往返，在弱网/移动网下更稳。
+ *  ③ 自带超时 + 一次重试，网络抖动时不至于直接报错。
+ *  ④ 统一把 fetch 异常转成人话提示。
+ */
+async function fetchQuiz(action, payload, opts) {
+  opts = opts || {};   // ⚠️ 调用方常省略第三参，取属性前必须兜底（0926d 实锤：undefined.timeout 抛 TypeError 被吞 → 弹窗永远转圈）
+  const body = JSON.stringify(Object.assign({ token: quizToken() }, payload, { action }));
+  const controller = new AbortController();
+  const timeout = opts.timeout || 25000;
+  const tid = setTimeout(() => controller.abort(), timeout);
+  let lastErr = null;
+  const attempts = opts.noRetry ? 1 : 2;
+  for (let i = 0; i < attempts; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 1200));
+    try {
+      const r = await fetch(QUIZ_API, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+        body,
+        signal: controller.signal,
+      });
+      const j = await r.json().catch(() => ({}));
+      clearTimeout(tid);
+      return { ok: r.ok && !!j.ok, status: r.status, data: j, msg: j.msg || j.error || '未知错误' };
+    } catch (e) {
+      lastErr = e;
+      // 超时/取消不再重试
+      if (e && (e.name === 'AbortError' || /abort|timed out/i.test(String(e)))) break;
+    }
+  }
+  clearTimeout(tid);
+  return { ok: false, network: true, error: lastErr, msg: diagnoseFetchErr(lastErr) };
+}
+function diagnoseFetchErr(e) {
+  const s = String(e);
+  if (/Failed to fetch/i.test(s)) return '网络请求失败：当前网络可能无法连接到 AI 服务，请检查网络或切换 Wi-Fi/移动数据后重试';
+  if (/AbortError|timed out|timeout/i.test(s)) return '请求超时：网络较慢，请检查网络后重试';
+  if (/NetworkError|network/i.test(s)) return '网络错误：请检查网络连接';
+  if (/CORS|cross-origin|blocked/i.test(s)) return '请求被浏览器拦截：可尝试更换浏览器（如 Chrome/Safari/Edge）';
+  return '请求失败：' + s;
+}
+
+/* AI 加载态：旋转环 + 每 4 秒轮换的阶段性提示 + 计时。
+ * AI 解析通常 5~15s（受所选模型通道影响），静态「正在解析…」会让人以为卡死了。
+ * 计时器自清理：弹窗内容被结果替换后 #aiElapsed 消失 → 下一 tick 自动 clearInterval。 */
+let aiLoadTimer = null;
+function aiLoadingModal(title, hints) {
+  if (aiLoadTimer) { clearInterval(aiLoadTimer); aiLoadTimer = null; }
+  const hs = (Array.isArray(hints) && hints.length) ? hints : ['正在处理…'];
+  openModal(`<h3>${title}</h3>
+    <div class="ai-load">
+      <div class="ai-spin" aria-hidden="true"></div>
+      <div class="ai-hint" id="aiHint">${esc(hs[0])}</div>
+      <div class="ai-elapsed" id="aiElapsed">已用 0 秒 · 通常需要 5~15 秒</div>
+    </div>`);
+  const t0 = Date.now();
+  let step = 0;
+  aiLoadTimer = setInterval(() => {
+    const el = $('#aiElapsed'), h = $('#aiHint');
+    if (!el || !h) { clearInterval(aiLoadTimer); aiLoadTimer = null; return; }
+    const sec = Math.round((Date.now() - t0) / 1000);
+    el.textContent = `已用 ${sec} 秒 · 通常需要 5~15 秒`;
+    const want = Math.min(Math.floor(sec / 4) + 1, hs.length - 1);
+    if (want !== step) { step = want; h.textContent = esc(hs[step]); }
+  }, 1000);
+}
+const AI_EXPLAIN_HINTS = ['正在审读题干与选项…', '检索相关医学知识点…', '逐项核对每个选项…', '整理考点与常见陷阱…', '马上就好，正在组织语言…'];
+const AI_GEN_HINTS = ['正在审读原题…', '设计变式出题角度…', '正在编写变式题…', '校验题目与答案…', '马上就好，正在收尾…'];
 function uid() { return 'g' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
 function normAiQ(o) {
   const opts = o.options && typeof o.options === 'object' ? o.options : {};
@@ -306,22 +379,13 @@ function aiCardHtml(q, i) {
 }
 async function doAiGen(q) {
   if (!aiEnabled()) { toast(ICON('lock') + ' AI 功能需先登录后使用'); return; }
-  openModal(`<h3>${ICON('robot')}AI 基于本题出题</h3><div class="empty">正在生成 1/3…</div>`);
-  try {
-    const r = await fetch(QUIZ_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'X-Quiz-Token': quizToken() },
-      body: JSON.stringify({ action: 'ai-gen', subject: curSub().name, question: { content: q.content, options: q.options, correct: q.correct, multi: !!q.multi } }),
-    });
-    const j = await r.json();
-    if (!r.ok || !j.ok) {
-      openModal(`<h3>生成失败</h3><p class="muted">${esc(j.msg || j.error || '未知错误')}</p><button class="btn ghost" data-act="close-modal">关闭</button>`);
-      return;
-    }
-    showAiResult(q, j.questions);
-  } catch (e) {
-    openModal(`<h3>生成失败</h3><p class="muted">${esc(String(e))}</p><button class="btn ghost" data-act="close-modal">关闭</button>`);
+  aiLoadingModal(`${ICON('robot')}AI 基于本题出题`, AI_GEN_HINTS);
+  const j = await fetchQuiz('ai-gen', { subject: curSub().name, question: { content: q.content, options: q.options, correct: q.correct, multi: !!q.multi } });
+  if (!j.ok) {
+    openModal(`<h3>生成失败</h3><p class="muted">${esc(j.msg || '未知错误')}</p><button class="btn ghost" data-act="close-modal">关闭</button>`);
+    return;
   }
+  showAiResult(q, j.data.questions);
 }
 function doAiGenQid(qid) {
   if (!aiEnabled()) { toast(ICON('lock') + ' AI 功能需先登录后使用'); return; }
@@ -384,20 +448,18 @@ function aiTrace(bid) {
     ${b.fromExplanation ? `<div class="exp"><h4>原题解析</h4>${md(b.fromExplanation)}</div>` : '<p class="muted small">原题无附带解析</p>'}
     <button class="btn ghost" data-act="close-modal">关闭</button>`);
 }
-/* AI 再解析（仅 lql）：基于医学知识独立重新解析，覆盖可能错误的原解析 */
+/* AI 再解析（仅 lql）：不给模型原答案/原解析，独立判定新答案，前端把新旧答案并列标注 */
 function doAiExplain(q) {
   if (!aiEnabled()) { toast(ICON('lock') + ' AI 功能需先登录后使用'); return; }
-  const userAnswer = (P && P.answers[q.id] && P.answers[q.id].chosen) ? P.answers[q.id].chosen.join('') : '';
-  openModal(`<h3>${ICON('brain')}</h3><div class="empty">正在重新解析…</div>`);
-  fetch(QUIZ_API, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Quiz-Token': quizToken() },
-    body: JSON.stringify({ action: 'ai-explain', subject: curSub().name, question: { content: q.content, options: q.options, correct: q.correct, multi: !!q.multi, explanation: q.explanation || '' }, userAnswer }),
-  }).then(r => r.json()).then(j => {
+  aiLoadingModal(`${ICON('brain')}AI 再解析`, AI_EXPLAIN_HINTS);
+  fetchQuiz('ai-explain', { subject: curSub().name, question: { content: q.content, options: q.options, multi: !!q.multi } }).then(j => {
     if (!j.ok) { openModal(`<h3>解析失败</h3><p class="muted">${esc(j.msg || '未知错误')}</p><button class="btn ghost" data-act="close-modal">关闭</button>`); return; }
-    const st = curState(); st.aiExplain = st.aiExplain || {}; st.aiExplain[q.id] = { at: Date.now(), model: j.result.model, data: j.result }; save();
-    showAiExplain(j.result, q.id);
-  }).catch(e => openModal(`<h3>解析失败</h3><p class="muted">${esc(String(e))}</p><button class="btn ghost" data-act="close-modal">关闭</button>`));
+    /* fetchQuiz 返回包装结构 {ok,status,data,msg}，服务端负载在 data 里（0926e 实锤：直接读 j.result 会抛 TypeError） */
+    const res = j.data && j.data.result;
+    if (!res) { openModal(`<h3>解析失败</h3><p class="muted">服务端返回格式异常</p><button class="btn ghost" data-act="close-modal">关闭</button>`); return; }
+    const st = curState(); st.aiExplain = st.aiExplain || {}; st.aiExplain[q.id] = { at: Date.now(), model: res.model, data: res }; save();
+    showAiExplain(res, q.id);
+  }).catch(e => openModal(`<h3>解析失败</h3><p class="muted">${esc(diagnoseFetchErr(e))}</p><button class="btn ghost" data-act="close-modal">关闭</button>`));
 }
 function doAiExplainQid(qid) {
   if (!aiEnabled()) { toast(ICON('lock') + ' AI 功能需先登录后使用'); return; }
@@ -407,7 +469,22 @@ function showAiExplain(res, qid) {
   const items = (res.items || []).map(it => `<div class="row between" style="gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
     <span class="pill ${it.isCorrect ? 'pill-correct' : 'pill-wrong'}" style="flex:0 0 auto">${esc(it.option)}</span>
     <span class="small">${esc(it.why)}</span></div>`).join('');
+  /* 新旧答案并列标注：AI 独立判定的 answer vs 题库原答案（不一致正是再解析的价值所在）。
+     老缓存记录无 res.answer → 不显示判决条。 */
+  const b = qById(qid);
+  const orig = b ? (b.q.correct || '').toString().toUpperCase().replace(/[^A-Z]/g, '') : '';
+  const ai = (res.answer || '').toString().toUpperCase().replace(/[^A-Z]/g, '');
+  const norm = s => s.split('').sort().join('');
+  let verdict = '';
+  if (ai && orig && norm(ai) === norm(orig)) {
+    verdict = `<div class="ai-verdict agree"><span class="pill pill-correct">AI 答案 ${esc(ai)}</span><span class="pill pill-correct">原答案 ${esc(orig)}</span><span class="muted small">独立判断与原答案一致</span></div>`;
+  } else if (ai && orig) {
+    verdict = `<div class="ai-verdict diff"><span class="pill pill-correct">AI 答案 <b>${esc(ai)}</b></span><span class="pill pill-wrong">原答案 ${esc(orig)}</span><span class="small">⚠️ AI 独立判断与题库答案不一致，请结合逐项分析自行甄别</span></div>`;
+  } else if (ai) {
+    verdict = `<div class="ai-verdict"><span class="pill pill-correct">AI 答案 <b>${esc(ai)}</b></span></div>`;
+  }
   openModal(`<h3>${ICON('brain')} <span class="tag">${esc(res.model || '')}</span></h3>
+    ${verdict}
     <div class="exp"><h4>考点</h4><p>${esc(res.summary || '')}</p>${res.keyPoint ? `<p class="muted small">${esc(res.keyPoint)}</p>` : ''}</div>
     <div class="exp"><h4>逐项分析</h4>${items}</div>
     ${res.commonTrap ? `<div class="exp"><h4>常见陷阱</h4><p class="muted small">${esc(res.commonTrap)}</p></div>` : ''}
@@ -555,7 +632,7 @@ function ICON(name) {
     art:'🎨', moon:'🌙', type:'🔠', gear:'⚙️', warn:'⚠️', trophy:'🏆', dotr:'🔴', doty:'🟡',
     bolt:'⚡', next:'➡️', swipe:'👆', shuffle:'🔀', puzzle:'🧩', key:'🔑', scale:'⚖️',
     download:'⬇️', upload:'⬆️', clock:'⏱️', doc:'📄', bulb:'💡', cloud:'☁️', flag:'🚩',
-    robot:'🤖', party:'🎉', speaker:'🔊', pencil:'✏️'
+    robot:'🤖', party:'🎉', speaker:'🔊', pencil:'✏️', spring:'♨️'
   };
   return (E[name] || '⭐') + ' ';
 }
@@ -1137,8 +1214,11 @@ function renderHonor() {
       <div class="eng-donut-legend" id="engDonutLegend"></div></div>
   </div>
   <div class="card lxg-card" id="leisureCard"><h3>${ICON('book2')}学累了？放松一下</h3>
-    <p class="muted small" style="margin:0 0 10px">读一段《理想国》导读，给脑子放个假。</p>
-    <button class="btn soft" data-act="open-lixiangguo">${ICON('leaf')}打开《理想国》导读</button></div>
+    <p class="muted small" style="margin:0 0 10px">读一段《理想国》导读，或去雾隐汤屋泡个温泉，给脑子放个假。</p>
+    <div class="leisure-acts">
+      <button class="btn soft" data-act="open-lixiangguo">${ICON('leaf')}打开《理想国》导读</button>
+      <a class="btn soft" href="https://wuyin-onsen.app.workbuddy.host/" target="_blank" rel="noopener">${ICON('spring')}雾隐汤屋 · 像素动物温泉</a>
+    </div></div>
   <div class="card"><h3>历史成绩</h3>${ehHtml}</div>`;
 }
 function buildConstellation(sub, st) {
