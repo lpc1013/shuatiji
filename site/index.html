@@ -8,9 +8,9 @@
 <link rel="apple-touch-icon" href="favicon.svg">
 <link rel="manifest" href="manifest.webmanifest">
 <title>刷题记 · 个人学习站</title>
-<link rel="stylesheet" href="styles.css?v=20261013a">
+<link rel="stylesheet" href="styles.css?v=20261013b">
 <!-- 背景主题层：必须在 styles.css 之后（它靠覆盖 token 生效） -->
-<link rel="stylesheet" href="themes.css?v=20261013a">
+<link rel="stylesheet" href="themes.css?v=20261013b">
 </head>
 <body>
 <div id="app" class="font-m">
@@ -19,15 +19,15 @@
   <header class="topbar">
     <div class="topbar-row">
       <div class="tb-left">
-        <a id="brandIco" class="brand-ico" aria-label="刷题记" title="刷题记">
+        <button id="brandIco" class="brand-ico" type="button" aria-label="刷题记" title="刷题记">
           <svg class="brand-svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3.2" y="6.6" width="12.4" height="12.4" rx="2.6" transform="rotate(-9 9.4 12.8)" fill="var(--primary)"/>
             <rect x="7" y="4" width="12.4" height="12.4" rx="2.6" fill="var(--surface)" stroke="var(--primary)" stroke-width="1.6"/>
             <path d="M10.4 10.6l1.7 1.7 3-3.5" stroke="var(--primary)" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-        </a>
+        </button>
       </div>
-      <div class="grp-toggle" id="grpToggle" role="tablist" aria-label="题库切换">
+      <div class="grp-toggle" id="grpToggle" role="group" aria-label="题库切换">
         <button class="gt-cell" data-act="set-group" data-k="jg"><span>极光</span></button>
         <button class="gt-cell" data-act="set-group" data-k="ext"><span>扩展</span></button>
       </div>
@@ -48,7 +48,7 @@
     <button class="tab" data-tab="english"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="16" rx="2.5"/><path d="M8 15.5 10.8 8.5 13.6 15.5"/><path d="M9.2 13.3h3.4"/><circle cx="17.2" cy="13" r="2"/><path d="M19.2 11v4.4"/></svg></span><span>单词</span></button>
     <button class="tab" data-tab="me"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 17H5"/><path d="M19 7h-9"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/></svg></span><span>设置</span></button>
     <!-- 左栏（桌面端）题库切换：极光 / 扩展。与顶栏切换共用同一套 data-act，updateGroupToggle 同步高亮 -->
-    <div class="grp-toggle grp-toggle-side" id="grpToggleSide" role="tablist" aria-label="题库切换">
+    <div class="grp-toggle grp-toggle-side" id="grpToggleSide" role="group" aria-label="题库切换">
       <button class="gt-cell" data-act="set-group" data-k="jg"><span>极光</span></button>
       <button class="gt-cell" data-act="set-group" data-k="ext"><span>扩展</span></button>
     </div>
@@ -66,16 +66,16 @@
 
 <!-- 题库改为「manifest + 分片懒加载」，首屏不再下载 11.7MB 全量数据 -->
 <!-- features.js 必须在 app.js 之前：app.js 的渲染会调用 Feat.*（高级筛选/四级掌握/纠错/偏好） -->
-<script src="features.js?v=20261013a"></script>
-<script src="english.js?v=20261013a"></script>
-<script src="app.js?v=20261013a"></script>
-<script src="sync.js?v=20261013a"></script>
+<script src="features.js?v=20261013b"></script>
+<script src="english.js?v=20261013b"></script>
+<script src="app.js?v=20261013b"></script>
+<script src="sync.js?v=20261013b"></script>
 <!-- Service Worker：网络优先 + 离线回落。数据分片与页面在线时永远取最新，断网可用缓存；
      顺带取代「改 app.js 必须手改 ?v=」那个老坑（缓存名带版本，activate 时清旧的） -->
 <script>
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js?v=20261013a').catch(function () {});
+    navigator.serviceWorker.register('sw.js?v=20261013b').catch(function () {});
   });
 }
 </script>

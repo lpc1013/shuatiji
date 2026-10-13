@@ -145,6 +145,20 @@ function normalizeSubjectIds(sid) {
       for (const x of st[k]) { const r = one(x); if (!seen.has(r)) { seen.add(r); out.push(r); } }
       st[k] = out;
     }
+    /* A11 tombstone：墓碑 key 同样要归一到主 id（否则旧 id 墓碑与主 id 记录错位，删除语义失效）。
+     * 同题两个形态都有墓碑时取 t 新者。 */
+    if (st.tomb) {
+      for (const f of Object.keys(st.tomb)) {
+        const old = st.tomb[f]; if (!old || typeof old !== 'object') continue;
+        const nb = {};
+        for (const key of Object.keys(old)) {
+          const r = one(key);
+          const a = nb[r], b = old[key];
+          nb[r] = (a && (a.t || 0) >= ((b && b.t) || 0)) ? a : b;
+        }
+        st.tomb[f] = nb;
+      }
+    }
     for (const k of ['qstat', 'review']) {
       if (!st[k] || typeof st[k] !== 'object') continue;
       const old = st[k], nb = {}; let dirty = false;
@@ -592,6 +606,20 @@ function fmtTime(s) { s = Math.max(0, s | 0); return Math.floor(s / 60) + ':' + 
 function inSet(a, id) { return a.indexOf(id) >= 0; }
 function addSet(a, id) { if (!inSet(a, id)) a.push(id); }
 function remSet(a, id) { const i = a.indexOf(id); if (i >= 0) a.splice(i, 1); }
+/* ---------- A11 tombstone（审计 P1-5）：集合删除语义 ----------
+ * wrong/fav/doubt/mastered 是纯数组，跨设备并集合并「只增不减」——A 端取消收藏会被 B 端旧记录复活。
+ * tomb = st.tomb[f][id] = { d: 1|0, t: 时间戳 }：每个 id 的「最后动作」（1=删除 0=加入），
+ * 同步时逐 id LWW（t 大者赢）→ 删除能赢过另一端旧存在，重新加入能赢过旧删除。
+ * 增删一律走 markAdd/markRem（写动作日志），封顶 200/字段防膨胀。清空进度同记删除。 */
+function tombMark(st, f, id, deleted) {
+  const t = st.tomb || (st.tomb = {});
+  const m = t[f] || (t[f] = {});
+  m[id] = { d: deleted, t: Date.now() };
+  const keys = Object.keys(m);
+  if (keys.length > 200) keys.sort((a, b) => m[a].t - m[b].t).slice(0, keys.length - 200).forEach(k => delete m[k]);
+}
+function markAdd(st, f, id) { addSet(st[f], id); tombMark(st, f, id, 0); }
+function markRem(st, f, id) { remSet(st[f], id); tombMark(st, f, id, 1); }
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0;[a[i], a[j]] = [a[j], a[i]]; } return a; }
 function sameSet(chosen, correct) {
   const a = chosen.map(x => String(x).toUpperCase()).sort().join('');
@@ -882,7 +910,7 @@ function recordAnswer(q, chapterId, correct) {
   qs.n++; if (correct) qs.r++; else qs.w++;
   qs.last = Date.now(); qs.lastWrong = !correct;
   const d = today(), dy = st.daily[d] || { answered: 0, correct: 0 }; dy.answered++; if (correct) dy.correct++; st.daily[d] = dy;
-  if (correct) { remSet(st.wrong, q.id); addSet(st.mastered, q.id); } else { addSet(st.wrong, q.id); remSet(st.mastered, q.id); st.hadWrong = true; }
+  if (correct) { markRem(st, 'wrong', q.id); markAdd(st, 'mastered', q.id); } else { markAdd(st, 'wrong', q.id); markRem(st, 'mastered', q.id); st.hadWrong = true; }
   addXp(correct ? 15 : 5);
   checkBadges(); save();
 }
@@ -1357,8 +1385,10 @@ function renderMe() {
 }
 
 /* ---------- 弹层 ---------- */
-function openModal(html) { const m = $('#modal'); m.setAttribute('aria-hidden', 'false'); $('#modalBox').innerHTML = html; m.classList.remove('hidden'); }
-function closeModal() { const m = $('#modal'); m.setAttribute('aria-hidden', 'true'); m.classList.add('hidden'); }
+/* 焦点管理（审计 P2）：打开移焦点到弹窗内首个可聚焦元素，关闭恢复触发元素；Esc 关闭委托见 init。 */
+let _modalLastFocus = null;
+function openModal(html) { const m = $('#modal'); _modalLastFocus = document.activeElement; m.setAttribute('aria-hidden', 'false'); $('#modalBox').innerHTML = html; m.classList.remove('hidden'); const f = m.querySelector('button,[href],input,select,textarea,[tabindex]'); if (f) try { f.focus(); } catch (e) {} }
+function closeModal() { const m = $('#modal'); m.setAttribute('aria-hidden', 'true'); m.classList.add('hidden'); if (_modalLastFocus && _modalLastFocus.focus) try { _modalLastFocus.focus(); } catch (e) {} }
 
 /* 理想国导读全屏浮层：成就页「学累了放松」入口，iframe 同源按需加载（不入首屏缓存） */
 function lxgEl() {
@@ -1853,7 +1883,13 @@ function renderPlayer() {
       let cls = 'opt', actAttr = '';
       if (a.revealed) { if (String(q.correct).indexOf(k) >= 0) cls += ' correct'; else if (a.chosen && a.chosen.includes(k)) cls += ' wrong'; else cls += ' dim'; }
       else { if (a.chosen && a.chosen.includes(k)) cls += ' sel'; actAttr = P.mode === 'exam' ? 'data-act="pick-exam"' : 'data-act="pick"'; }
-      optHtml += `<div class="${cls}" ${actAttr} data-k="${k}" data-disp="${o.disp}"><div class="k">${o.disp}</div><div class="v">${esc(o.text)}</div></div>`;
+      /* 无障碍（审计 P2）：选项用原生语义 role——单选 radio / 多选 checkbox，Tab 可达、Enter/Space 触发（委托见 init）。
+       * 揭晓后转 aria-disabled 静态展示，不再可交互。 */
+      const chosenK = !!(a.chosen && a.chosen.includes(k));
+      const roleAttr = a.revealed
+        ? `role="radio" aria-checked="${chosenK}" aria-disabled="true"`
+        : `role="${q.multi ? 'checkbox' : 'radio'}" aria-checked="${chosenK}" tabindex="0"`;
+      optHtml += `<div class="${cls}" ${actAttr} ${roleAttr} data-k="${k}" data-disp="${o.disp}"><div class="k">${o.disp}</div><div class="v">${esc(o.text)}</div></div>`;
     }
     body += optHtml;
   }
@@ -2179,8 +2215,12 @@ function progCounts(st, groups, ch, qm) {
 function clearSubjectProgress(st, groups, ch, qm) {
   const ai = aiIdSet(st), hit = id => groups.has(idGroupOf(id, ai)) && (!ch || ch.has(qm[id]));
   const drop = a => (a || []).filter(id => !hit(id));
-  st.wrong = drop(st.wrong); st.fav = drop(st.fav);
-  st.doubt = drop(st.doubt); st.mastered = drop(st.mastered);
+  /* A11 tombstone：清空 = 显式删除动作，同样记墓碑 → 跨设备清空进度能传播（另一端同名记录也移除） */
+  for (const f of ['wrong', 'fav', 'doubt', 'mastered']) {
+    const before = st[f] || [];
+    st[f] = drop(before);
+    for (const id of before) if (st[f].indexOf(id) < 0) tombMark(st, f, id, 1);
+  }
   for (const k of ['qstat', 'review']) {
     if (!st[k]) continue;
     for (const id of Object.keys(st[k])) if (hit(id)) delete st[k][id];
@@ -2382,9 +2422,9 @@ function onAct(e) {
   if (act === 'ai-practice') { startAiPractice(t.dataset.bid); closeModal(); return; }
   if (act === 'ai-gen-list') { openAiGenList(); return; }
   if (act === 'ai-gen-open') { openAiGenBatch(t.dataset.bid); return; }
-  if (act === 'toggle-fav') { const st = curState(), id = t.dataset.id; inSet(st.fav, id) ? remSet(st.fav, id) : addSet(st.fav, id); save(); closeModal(); toast(inSet(st.fav, id) ? '已收藏 ' + ICON('star') : '已取消收藏'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
-  if (act === 'toggle-doubt') { const st = curState(), id = t.dataset.id; inSet(st.doubt, id) ? remSet(st.doubt, id) : addSet(st.doubt, id); save(); closeModal(); toast(inSet(st.doubt, id) ? '已标记疑点 ❓' : '已取消疑点'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
-  if (act === 'remove-wrong') { const st = curState(), id = t.dataset.id; remSet(st.wrong, id); save(); closeModal(); toast('已移出错题'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
+  if (act === 'toggle-fav') { const st = curState(), id = t.dataset.id; inSet(st.fav, id) ? markRem(st, 'fav', id) : markAdd(st, 'fav', id); save(); closeModal(); toast(inSet(st.fav, id) ? '已收藏 ' + ICON('star') : '已取消收藏'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
+  if (act === 'toggle-doubt') { const st = curState(), id = t.dataset.id; inSet(st.doubt, id) ? markRem(st, 'doubt', id) : markAdd(st, 'doubt', id); save(); closeModal(); toast(inSet(st.doubt, id) ? '已标记疑点 ❓' : '已取消疑点'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
+  if (act === 'remove-wrong') { const st = curState(), id = t.dataset.id; markRem(st, 'wrong', id); save(); closeModal(); toast('已移出错题'); if ($('#player').classList.contains('hidden')) show(activeTab); else renderPlayer(); return; }
   if (act === 'wtab') { wrongTab = t.dataset.k; show('wrong'); return; }
   if (act === 'ew-clear') { const s = document.getElementById('ewSearch'); if (s) s.value = ''; show('wrong'); return; }
   if (act === 'pick' || act === 'pick-exam') { pick(t.dataset.k); return; }
@@ -2395,7 +2435,7 @@ function onAct(e) {
   if (act === 'submit-exam') { submitExam(); return; }
   if (act === 'pfav' || act === 'pdoubt') {
     const st = curState(), id = t.dataset.id, set = act === 'pfav' ? 'fav' : 'doubt';
-    inSet(st[set], id) ? remSet(st[set], id) : addSet(st[set], id);
+    inSet(st[set], id) ? markRem(st, set, id) : markAdd(st, set, id);
     save(); renderPlayer();
     const on = inSet(st[set], id);
     toast(act === 'pfav' ? (on ? '已收藏 ' + ICON('star') : '已取消收藏') : (on ? '已标记疑点 ' + ICON('question') : '已取消疑点'));
@@ -2572,7 +2612,9 @@ function updateGroupToggle() {
   const ag = (sub && sub.activeGroup) || 'jg';
   document.querySelectorAll('.grp-toggle').forEach(el => {
     el.querySelectorAll('.gt-cell').forEach(c => {
-      c.classList.toggle('on', c.dataset.k === ag);
+      const on = c.dataset.k === ag;
+      c.classList.toggle('on', on);
+      c.setAttribute('aria-pressed', on ? 'true' : 'false');   // 无障碍（审计 P2）：激活态同步 ARIA
     });
   });
 }
@@ -2607,6 +2649,17 @@ async function init() {
 
   $$('.tab').forEach(t => t.addEventListener('click', () => show(t.dataset.tab)));
   document.addEventListener('click', onAct);
+  /* 无障碍键盘（审计 P2）：① 选项 role=radio/checkbox 上 Enter/Space 触发点击；② 弹窗开着时 Esc 关闭
+   * （与理想国独立 Esc 共存：modal 未开则不动作）。 */
+  document.addEventListener('keydown', (e) => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('opt') && e.target.dataset.act) {
+      e.preventDefault(); e.target.click(); return;
+    }
+    if (e.key === 'Escape') {
+      const m = $('#modal');
+      if (m && !m.classList.contains('hidden')) closeModal();
+    }
+  });
   $('#modal').addEventListener('click', e => { if (e.target.id === 'modal') { if (_badgeBackToWall) openBadgeListModal(); else closeModal(); } });
   bindSwipe();
   applySettings();

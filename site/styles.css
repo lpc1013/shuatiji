@@ -38,7 +38,8 @@ input,select,textarea{font-size:16px;}
 .topbar-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
 /* A09：顶栏重做 —— 左簇（登录/账号 + 品牌图标），右簇（极光/扩展切换框） */
 .tb-left{display:flex;align-items:center;gap:8px;min-width:0;}
-.brand-ico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:0 0 auto;border-radius:9px;cursor:pointer;transition:transform .12s,background .12s;-webkit-tap-highlight-color:transparent;}
+/* 1013：brandIco 由 <a> 改 <button>（无障碍）——重置 button 默认外观 */
+.brand-ico{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:0 0 auto;border-radius:9px;cursor:pointer;transition:transform .12s,background .12s;-webkit-tap-highlight-color:transparent;border:none;background:none;font-family:inherit;padding:0;}
 .brand-ico:active{transform:scale(.92);background:var(--surface2);}
 .brand-svg{width:26px;height:26px;display:block;}
 /* 极光/扩展 切换：长方形框内两个正方形格 */

@@ -224,6 +224,24 @@
   function mergeSubject(l, c) {
     const o = Object.assign({}, l);
     for (const f of MARK_FIELDS) o[f] = mergeArr(l[f], c[f]);
+    /* A11 tombstone（审计 P1-5）：集合删除跨端传播。每 id 记「最后动作」{d:1|0, t}，
+     * 逐 id 取 t 大者 → d=1 的从并集中移除：A 端的取消收藏/移出错题/清空进度能赢过
+     * B 端仍留着的旧记录；重新加入写 d=0 也能赢过旧删除（不会误杀 re-fav）。 */
+    const lt = (l && l.tomb) || {}, ct = (c && c.tomb) || {};
+    const tomb = {}; let hasTomb = false;
+    for (const f of MARK_FIELDS) {
+      const la = lt[f] || {}, ca = ct[f] || {};
+      if (!Object.keys(la).length && !Object.keys(ca).length) continue;
+      const merged = {};
+      for (const k of Object.keys(la)) merged[k] = la[k];
+      for (const k of Object.keys(ca)) {
+        const a = merged[k], b = ca[k];
+        if (!a || ((b && b.t) || 0) > ((a && a.t) || 0)) merged[k] = b;
+      }
+      tomb[f] = merged; hasTomb = true;
+      o[f] = o[f].filter(id => { const m = merged[id]; return !(m && m.d); });
+    }
+    if (hasTomb) o.tomb = tomb;
     o.review = mergeReview(l.review, c.review);
     o.aiExplain = mergeMapLocalFirst(l.aiExplain, c.aiExplain);
     for (const f in COUNT_FIELDS) o[f] = mergeCountMap(l[f], c[f], COUNT_FIELDS[f]);
@@ -389,12 +407,16 @@
     return { ok: true };
   }
   function doLogout() {
+    const tk = getToken();
     clearAuth();
     stopSync();
     accountBtnLabel();
     refreshMeCard();
     setStatus("未登录");
     const m = $("#accountModal"); if (m) m.classList.add("hidden");
+    /* 服务端撤销 token（fire-and-forget）：logout 后服务端 tokens 集合同步删除，
+     * 防 60 天 TTL 内泄露的旧 token 仍可调用。失败不影响本地退出。 */
+    if (tk) api("logout", {}, tk).catch(() => {});
     // 不再弹门禁：退出登录 / 登录过期只切断云同步，不该把人锁在学习之外
   }
 

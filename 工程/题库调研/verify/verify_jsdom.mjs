@@ -861,6 +861,18 @@ try {
   ok('daily 取累计量更大（云端30 vs 本地10 → 云端）', !!mb.daily['2026-08-31']);
   ok('review 逐题合并：stage 取更大 + wrongAns 并集 + 补缺', mb.review.q1.stage === 5 && mb.review.q1.wrongAns.length === 2 && !!mb.review.q2);
   ok('examHistory 合并去重', mb.examHistory.length === 2);
+  /* A11 tombstone（1013）：集合删除跨端传播——删除赢旧存在、重新加入赢旧删除 */
+  const T = window.QuizSync._mergeState(
+    { global: {}, subjects: { bio: { wrong: ['w1'], tomb: { fav: { f1: { d: 1, t: 200 } } } } } },
+    { global: {}, subjects: { bio: { wrong: [], fav: ['f1', 'f2'], tomb: {} } } }
+  );
+  const tb = T.subjects.bio;
+  ok('tombstone 删除跨端传播（A 删 f1 → B 端 f1 移除，f2 保留）', tb.fav.indexOf('f1') < 0 && tb.fav.indexOf('f2') >= 0, JSON.stringify(tb.fav));
+  const T2 = window.QuizSync._mergeState(
+    { global: {}, subjects: { bio: { fav: ['f1'], tomb: { fav: { f1: { d: 0, t: 300 } } } } } },
+    { global: {}, subjects: { bio: { fav: [], tomb: { fav: { f1: { d: 1, t: 200 } } } } } }
+  );
+  ok('tombstone 重新加入赢过旧删除（d=0 t300 > d=1 t200 → f1 保留）', T2.subjects.bio.fav.indexOf('f1') >= 0, JSON.stringify(T2.subjects.bio.fav));
   ok('global.xp 取大（不回退）', M.global.xp === 250);
   ok('global.badges / checkin 取并集', M.global.badges.length === 2 && M.global.checkin.length === 2);
   ok('settings 跟随本机（设备偏好不被另一端覆盖）', M.global.settings.dailyGoal === 50 && M.global.settings.dark === false);

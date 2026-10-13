@@ -11,6 +11,27 @@ const db = app.database();
 
 const COL = { users: "users", progress: "progress", tokens: "tokens", eng_progress: "eng_progress" };
 const TOKEN_TTL = 1000 * 60 * 60 * 24 * 60; // 60 天
+const MAX_BODY = 2 * 1024 * 1024; // 请求体上限 2MB（整包 state ~94KB 量级，余量充足）
+/* CORS 白名单（审计 P1）：不再按请求 Origin 回显——任何页面都能带凭证调 API 的边界收紧。
+ * 站点域名 + 本地开发（serve_site.mjs 8790）；如新增自定义域名，用环境变量 ALLOWED_ORIGINS 逗号分隔覆盖。 */
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS ||
+  "https://architecture-addcvssy.edgeone.cool,http://localhost:8790,http://127.0.0.1:8790").split(",");
+
+/* 登录/注册限流（单实例内存版，尽力而为）：key -> {count, resetAt}。多实例部署时各实例独立计数。 */
+const rateBuckets = new Map();
+function rateLimit(key, max, windowMs) {
+  const now = Date.now();
+  if (rateBuckets.size > 5000) for (const [k, b] of rateBuckets) if (now > b.resetAt) rateBuckets.delete(k); // 防无限增长
+  let b = rateBuckets.get(key);
+  if (!b || now > b.resetAt) { b = { count: 0, resetAt: now + windowMs }; rateBuckets.set(key, b); }
+  b.count++;
+  return b.count <= max;
+}
+/* 常量时间比较（审计 P1）：verifier 等定长 hex 串防时序侧信道 */
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a || "")), bb = Buffer.from(String(b || ""));
+  return ba.length === bb.length && crypto.timingSafeEqual(ba, bb);
+}
 
 let colsReady = false;
 async function ensureCols() {
@@ -32,32 +53,43 @@ function hashPassword(password, salt) {
   return crypto.scryptSync(password, salt, 64).toString("hex");
 }
 
-async function register(username, password) {
+async function register(username, password, ip) {
   username = (username || "").trim();
   if (!username || !password) return { ok: false, msg: "用户名和密码必填" };
   if (username.length < 2) return { ok: false, msg: "用户名至少 2 个字符" };
   if (password.length < 6) return { ok: false, msg: "密码至少 6 位" };
+  if (!rateLimit("reg:" + ip + ":" + username, 5, 10 * 60 * 1000))
+    return { ok: false, msg: "尝试过于频繁，请稍后再试" };
   const exist = await db.collection(COL.users).where({ username }).get();
   if (exist.data && exist.data.length) return { ok: false, msg: "用户名已存在" };
-  const salt = newSalt();
-  const verifier = hashPassword(password, salt);
-  const r = await db.collection(COL.users).add({
-    username,
-    salt,
-    verifier,
-    createdAt: Date.now(),
-  });
-  return { ok: true, uid: r.id };
+  /* _id=username 原子注册（审计 P1）：并发同名时 add 的 _id 冲突直接抛错，
+   * 堵住「先查后插」的竞态窗口（两个请求同时通过查重、双双插入）。 */
+  try {
+    const salt = newSalt();
+    const verifier = hashPassword(password, salt);
+    const r = await db.collection(COL.users).add({
+      _id: "u:" + username,
+      username,
+      salt,
+      verifier,
+      createdAt: Date.now(),
+    });
+    return { ok: true, uid: r.id };
+  } catch (e) {
+    return { ok: false, msg: "用户名已存在" };
+  }
 }
 
-async function login(username, password) {
+async function login(username, password, ip) {
   username = (username || "").trim();
+  if (!rateLimit("login:" + ip + ":" + username, 10, 5 * 60 * 1000))
+    return { ok: false, msg: "尝试过于频繁，请稍后再试" };
   const res = await db.collection(COL.users).where({ username }).get();
   const u = res.data && res.data[0];
-  if (!u) return { ok: false, msg: "用户不存在" };
-  if (hashPassword(password, u.salt) !== u.verifier) {
-    return { ok: false, msg: "密码错误" };
-  }
+  /* 统一失败文案（审计 P1）：不区分「用户不存在 / 密码错误」，防账号枚举 */
+  if (!u) return { ok: false, msg: "用户名或密码错误" };
+  if (!safeEqual(hashPassword(password, u.salt), u.verifier))
+    return { ok: false, msg: "用户名或密码错误" };
   const token = crypto.randomBytes(32).toString("hex");
   const now = Date.now();
   await db.collection(COL.tokens).add({
@@ -68,6 +100,14 @@ async function login(username, password) {
     expires: now + TOKEN_TTL,
   });
   return { ok: true, token, username: u.username, uid: u._id };
+}
+
+async function logout(token) {
+  if (!token) return { ok: true };
+  /* 服务端撤销 token：客户端清 localStorage 之外，服务端 token 也立即失效
+   * （防泄露的 token 在 60 天 TTL 内继续可用）。 */
+  await db.collection(COL.tokens).where({ token }).remove().catch(() => {});
+  return { ok: true };
 }
 
 async function authUser(token) {
@@ -323,6 +363,13 @@ ${optText}
       return { ok: false, msg: "模型返回缺少 options" };
     }
     obj.correct = (obj.correct || "").toString().toUpperCase();
+    /* AI 结果结构校验（审计）：正确答案必须是选项集合内的字母组合，
+     * 防止模型幻觉出选项之外的答案被前端当作权威。 */
+    const optKeys = Object.keys(obj.options);
+    const letters = obj.correct.split("").filter((c) => optKeys.includes(c));
+    if (!letters.length || letters.join("") !== obj.correct) {
+      return { ok: false, msg: "模型返回的答案与选项不匹配，请重试" };
+    }
     obj.multi = !!obj.multi;
     questions.push(obj);
   }
@@ -364,29 +411,43 @@ ${multi ? "注意：本题为多选题，answer 为多个字母。" : "注意：
   if (r.err) return { ok: false, msg: "解析出错：" + r.err };
   const obj = r.obj;
   if (!Array.isArray(obj.items)) obj.items = [];
+  /* answer 规整（审计）：仅保留实际选项内的字母（模型偶尔输出「答案是 A」这类句式） */
+  const qOptKeys = Object.keys((payload.question && payload.question.options) || {});
+  obj.answer = String(obj.answer || "").toUpperCase().split("").filter((c) => qOptKeys.includes(c)).join("");
   return { ok: true, result: obj };
 }
 
 const server = http.createServer((req, res) => {
-  const origin = req.headers.origin || "*";
-  const headers = {
-    "Content-Type": "application/json; charset=utf-8",
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Credentials": "true",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Quiz-Token",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+  /* CORS：仅白名单 Origin 回显跨域头（审计 P1）；非白名单来源不带 ACAO，浏览器侧直接拦截。 */
+  const reqOrigin = req.headers.origin || "";
+  const origin = ALLOWED_ORIGINS.indexOf(reqOrigin) >= 0 ? reqOrigin : "";
+  const headers = { "Content-Type": "application/json; charset=utf-8" };
+  if (origin) {
+    headers["Access-Control-Allow-Origin"] = origin;
+    headers["Access-Control-Allow-Credentials"] = "true";
+    headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-Quiz-Token";
+    headers["Access-Control-Allow-Methods"] = "POST, OPTIONS";
+  }
+  const ip =
+    String(req.headers["x-forwarded-for"] || "").split(",")[0].trim() ||
+    (req.socket && req.socket.remoteAddress) || "unknown";
+  let replied = false;
+  const reply = (code, obj) => {
+    if (replied) return;
+    replied = true;
+    res.writeHead(code, headers);
+    if (code === 204) res.end(); else res.end(JSON.stringify(obj));
   };
-  if (req.method === "OPTIONS") {
-    res.writeHead(204, headers);
-    return res.end();
-  }
-  if (req.method === "GET") {
-    res.writeHead(200, headers);
-    return res.end(JSON.stringify({ ok: true, svc: "quiz" }));
-  }
+  if (req.method === "OPTIONS") return reply(204);
+  if (req.method === "GET") return reply(200, { ok: true, svc: "quiz" });
   let body = "";
-  req.on("data", (c) => (body += c));
+  req.on("data", (c) => {
+    body += c;
+    /* 请求体上限（审计 P1）：超限直接 413，不再无限拼接消耗内存 */
+    if (body.length > MAX_BODY) { reply(413, { ok: false, msg: "请求体过大" }); req.destroy(); }
+  });
   req.on("end", async () => {
+    if (replied) return;
     try {
       await ensureCols();
       let payload = {};
@@ -404,9 +465,10 @@ const server = http.createServer((req, res) => {
       const { action } = payload;
       let result;
       if (action === "register")
-        result = await register(payload.username, payload.password);
+        result = await register(payload.username, payload.password, ip);
       else if (action === "login")
-        result = await login(payload.username, payload.password);
+        result = await login(payload.username, payload.password, ip);
+      else if (action === "logout") result = await logout(auth);
       else if (action === "pull") result = await pull(auth);
       else if (action === "push") result = await push(auth, payload.state, payload.updatedAt);
       else if (action === "ai-gen") result = await aiGen(auth, payload);
@@ -415,11 +477,11 @@ const server = http.createServer((req, res) => {
       else if (action === "english-pull") result = await englishPull(auth);
       else if (action === "english-reset") result = await englishReset(auth);
       else result = { ok: false, msg: "未知操作" };
-      res.writeHead(200, headers);
-      res.end(JSON.stringify(result));
+      reply(200, result);
     } catch (e) {
-      res.writeHead(500, headers);
-      res.end(JSON.stringify({ ok: false, msg: "服务器错误: " + e.message }));
+      /* 错误脱敏（审计）：内部异常细节只进日志，不回显给调用方 */
+      console.error("[quiz] handler error:", e && e.message);
+      reply(500, { ok: false, msg: "服务器错误，请稍后再试" });
     }
   });
 });
