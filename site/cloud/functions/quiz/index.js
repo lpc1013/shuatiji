@@ -136,6 +136,16 @@ async function push(token, state, updatedAt) {
   const t = await authUser(token);
   if (!t) return { ok: false, msg: "未登录或登录已过期" };
   if (state === undefined || state === null) return { ok: false, msg: "无数据" };
+  /* A13（二轮审计 P0-1）：updatedAt 单调闸。旧请求后到不得覆盖新数据——先查云端当前
+   * updatedAt，客户端提交的更旧就拒收（stale），客户端收到后拉云端合并再重推。
+   * 注意这不是完整 CAS（两请求同时通过检查的窄窗口仍在），但已消灭最常见的
+   * 「乱序到达旧覆盖新」；同写窗口毫秒级，单用户多设备场景可忽略。 */
+  if (updatedAt) {
+    const cur = await db.collection(COL.progress).where({ _id: t.uid }).get();
+    const prev = cur.data && cur.data[0];
+    if (prev && prev.updatedAt && updatedAt < prev.updatedAt)
+      return { ok: false, stale: true, msg: "本地进度较旧，已跳过（下次同步自动合并）" };
+  }
   await db.collection(COL.progress).doc(t.uid).set({
     uid: t.uid,
     username: t.username,

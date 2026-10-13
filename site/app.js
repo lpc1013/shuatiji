@@ -103,30 +103,42 @@ function buildGroups(sub, jg, ext) {
 
 async function ensureSubject(id) {
   const sub = SB[id];
-  if (!sub || LOADED.has(id)) return sub;
-  LOADED.add(id);
+  if (!sub) return sub;
+  /* A13（审计 P1-4）：分片级加载状态。_jgDone/_extDone=对应分片已成功载入，成功片数据
+   * 缓存在 _jgData/_extData 不重复下载；失败片下次进科/预载自动重拉——旧版单片失败会被
+   * 当空题库静默吞掉、且 LOADED 整科挡住重试。 */
   const m = sub.meta;
-  // 版本闸口：分片 URL 带 manifest.version，数据更新后自动失效旧缓存（manifest 本身不缓存）
-  const v = MANIFEST.version || '0';
-  const get = f => f ? fetch(QF + f + '?v=' + v).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null);
-  const [jg, ext] = await Promise.all([
-    get(m.jiguang && m.jiguang.file), get(m.extension && m.extension.file)
-  ]);
-  // A11 修复：两片全失败（断网/404）不能留在 LOADED 里——否则该学科被永久视为已加载，
-  // 用户只看到空题库、再进也不重试。回滚占位标记，明确提示，下次进科重新走加载。
-  if (!Array.isArray(jg) && !Array.isArray(ext)) {
-    LOADED.delete(id);
-    toast('题库加载失败，请检查网络后重试');
+  const jgFile = m.jiguang && m.jiguang.file, extFile = m.extension && m.extension.file;
+  const needJg = !!jgFile && !sub._jgDone, needExt = !!extFile && !sub._extDone;
+  if (!needJg && !needExt) { LOADED.add(id); return sub; }   // 全部就绪（或本就无分片配置）
+  if (sub._loading) return sub._loading;   // 在途去重：并发调用共用同一次加载
+  sub._loading = (async () => {
+    // 版本闸口：分片 URL 带 manifest.version，数据更新后自动失效旧缓存（manifest 本身不缓存）
+    const v = MANIFEST.version || '0';
+    const get = f => f ? fetch(QF + f + '?v=' + v).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null);
+    const [jg, ext] = await Promise.all([needJg ? get(jgFile) : null, needExt ? get(extFile) : null]);
+    if (Array.isArray(jg)) { sub._jgData = jg; sub._jgDone = true; }
+    if (Array.isArray(ext)) { sub._extData = ext; sub._extDone = true; }
+    // A11 修复保留：两片全失败（断网/404）不能留在 LOADED 里——否则该学科被永久视为已加载，
+    // 用户只看到空题库、再进也不重试。回滚占位标记，明确提示，下次进科重新走加载。
+    if (!sub._jgDone && !sub._extDone) {
+      LOADED.delete(id);
+      toast('题库加载失败，请检查网络后重试');
+      return sub;
+    }
+    LOADED.add(id);
+    // 富解析分片改为惰性加载：进学科只拉 jg/ext 两片，富解析（单科 6MB）首次打开某题才拉（见 loadExplain）。
+    // 否则刷新即整块下载 6MB+，首屏/进科明显变慢。
+    sub.explain = {};
+    sub.explainChapters = (m.explain && m.explain.chapters) || null;   // 按章节拆分的解析分片清单
+    if (sub.explainChapters) loadExplain(sub);   // 进科即并发预加载该科所有章节解析（小文件并发 + 缓存友好）
+    buildGroups(sub, sub._jgData || [], sub._extData || []);
+    normalizeSubjectIds(id);   // ALIAS 刚建好 → 立刻把本机存的旧题 id 归一到主 id（见函数注释）
+    if ((needJg && !sub._jgDone) || (needExt && !sub._extDone))
+      toast('部分题库分片加载失败，重新进入本学科将自动重试');
     return sub;
-  }
-  // 富解析分片改为惰性加载：进学科只拉 jg/ext 两片，富解析（单科 6MB）首次打开某题才拉（见 loadExplain）。
-  // 否则刷新即整块下载 6MB+，首屏/进科明显变慢。
-  sub.explain = {};
-  sub.explainChapters = (m.explain && m.explain.chapters) || null;   // 按章节拆分的解析分片清单
-  if (sub.explainChapters) loadExplain(sub);   // 进科即并发预加载该科所有章节解析（小文件并发 + 缓存友好）
-  buildGroups(sub, Array.isArray(jg) ? jg : [], Array.isArray(ext) ? ext : []);
-  normalizeSubjectIds(id);   // ALIAS 刚建好 → 立刻把本机存的旧题 id 归一到主 id（见函数注释）
-  return sub;
+  })();
+  try { return await sub._loading; } finally { sub._loading = null; }
 }
 
 /* ---------- 统一 id 网：本机旧进度 id 归一化 ----------
@@ -256,19 +268,26 @@ function groupCount(sub, key) {
  * AI 上下文、复制、旧逻辑判断都还在读纯文本，不能只留结构。 */
 let curDetailQid = null;    // 当前打开的详情题 id，供富解析到达后定向回填
                             // （去重改由 sub._expPromise 承担，见 loadExplain；旧 _expLoad 已删）
-function loadExplain(sub) {
+function loadExplain(sub, only) {
   if (!sub.explainChapters || !sub.explainChapters.length) { sub.explainLoaded = true; return Promise.resolve(); }
   sub.explainLoaded = true;
   // A11 修复：预加载进行中用户打开某题会再进到这里（ensureExplain）——没有去重就会把整科章节
   // 再并发拉一遍。_expPromise 挂在 sub 实例上做单飞（in-flight dedup），学科切换互不干扰。
   if (sub._expPromise) return sub._expPromise;
   const v = MANIFEST.version || '0';
+  const list = (only && only.length) ? only : sub.explainChapters;   // A13：重试时只拉失败章
   // 按章节并发拉取小分片，逐片合并进 sub.explain（单章失败不影响其他章）；比旧「单文件 6MB」更稳、可缓存
-  const ps = sub.explainChapters.map(c =>
+  const ps = list.map(c =>
     fetch(QF + c.file + '?v=' + v).then(r => r.ok ? r.json() : null).catch(() => null)
-      .then(ex => { if (ex) Object.assign(sub.explain, ex); })
+      .then(ex => { if (ex) Object.assign(sub.explain, ex); return !!ex; })
   );
-  sub._expPromise = Promise.all(ps).then(() => refreshExpDom()).catch(() => {});
+  sub._expPromise = Promise.all(ps).then(oks => {
+    /* A13（审计·解析失败恢复）：失败章登记 _expFailed，ensureExplain 按 15s 退避重试；
+     * 旧版 explainLoaded 请求前置位 + 失败静默吞掉，失败章整场会话再也回不来。 */
+    sub._expFailed = list.filter((c, i) => !oks[i]);
+    sub._expPromise = null;   // 已落定，允许下一轮重试进入单飞
+    refreshExpDom();
+  }).catch(() => { sub._expPromise = null; });
   return sub._expPromise;
 }
 function ensureExplain(sub, q) {
@@ -278,13 +297,18 @@ function ensureExplain(sub, q) {
     q.exp = e; q.explanation = richToText(e); return;
   }
   // 富解析可能尚未拉到（进科预加载进行中/失败）→ 触发该科加载，拉到后回填当前题解析区
-  if (!sub.explainLoaded && sub.explainChapters) loadExplain(sub);
+  if (sub.explainChapters && (!sub.explainLoaded || (sub._expFailed && sub._expFailed.length))) {
+    if (sub._expFailed && sub._expFailed.length) {
+      // A13：失败章重试按 15s 退避（与 english.js 失败重试节奏一致），防离线时每题渲染都打一轮
+      if (Date.now() - (sub._expRetryAt || 0) > 15000) { sub._expRetryAt = Date.now(); loadExplain(sub, sub._expFailed); }
+    } else loadExplain(sub);
+  }
 }
 /* 富解析分片到达后，定向刷新当前正在查看的题目解析区（尽量不整页重绘） */
 function refreshExpDom() {
   let q = null, inPlayer = false, inDetail = false;
   const modalOpen = $('#modal') && !$('#modal').classList.contains('hidden');
-  if (P && $('#player') && !$('#player').hidden) { q = P.pool[P.idx] && P.pool[P.idx].q; inPlayer = true; }
+  if (P && $('#player') && !$('#player').classList.contains('hidden')) { q = P.pool[P.idx] && P.pool[P.idx].q; inPlayer = true; }   // A13（审计）：显隐判据与 setPlaying 对齐——.hidden 是 class 不是 DOM 属性
   else if (curDetailQid && modalOpen) { const x = qById(curDetailQid); q = x && x.q; inDetail = true; }
   if (!q) return;
   ensureExplain(SB[cur], q);
@@ -1781,11 +1805,11 @@ async function resumeSession(saved) {
   };
   if (saved.mode === 'exam' && !P.submitted) {
     // A11：按绝对截止时间恢复（防退出/刷新续时刷分）。新会话直接用 deadlineAt；
-    // 旧会话没有 deadlineAt，用存的 timeLeft 推一个；timeLeft 为 0/缺省不再回退成整场时长——
-    // 0 视为已到期（下个 tick 立即交卷），只有真没有记录才按整场配置重开。
+    // A13（审计 P1-6）：旧会话没有 deadlineAt 时按 timeLeft 值恢复——0=已到期（下个 tick
+    // 立即交卷），只有 timeLeft 字段也缺失的更老会话才按整场配置重开（旧码 0 也回退整场，与注释相反）。
     P.deadlineAt = saved.deadlineAt
-      || (typeof saved.timeLeft === 'number' && saved.timeLeft > 0
-            ? Date.now() + saved.timeLeft * 1000
+      || (typeof saved.timeLeft === 'number'
+            ? Date.now() + Math.max(0, saved.timeLeft) * 1000
             : Date.now() + ((saved.modeOpt && saved.modeOpt.minutes) || 30) * 60000);
     P.timeLeft = Math.max(0, Math.round((P.deadlineAt - Date.now()) / 1000));
     P.timer = examTimer();
@@ -1952,7 +1976,7 @@ function pick(k) {
     // A11 修复：p 是 renderPlayer() 的局部变量，pick() 里不可见（多选首次点击 ReferenceError、
     // 选中态卡死）；现查 #player，并补 saveSession——原提前 return 把未提交的勾选漏在断点外
     const pbox = document.querySelector('#player');
-    if (pbox) pbox.querySelectorAll('.opt').forEach(b => { if (b.dataset.k === k) b.classList.toggle('sel', a.chosen.includes(k)); });
+    if (pbox) pbox.querySelectorAll('.opt').forEach(b => { if (b.dataset.k === k) { const on = a.chosen.includes(k); b.classList.toggle('sel', on); b.setAttribute('aria-checked', String(on)); } });   // A13（审计 P2-10）：选中态与 aria-checked 同步
     saveSession();
     return;
   }
@@ -2629,8 +2653,11 @@ async function init() {
   }
   cur = (S.cur && SB[S.cur]) ? S.cur : (SB[cur] ? cur : defaultSubject());
   await ensureSubject(cur);
-  /* A11：预载英语全词表，使首页「待回顾」计数含英语到期词（异步、缓存，不阻塞首屏） */
-  if (window.Eng) { try { await Eng.loadMan(); await Eng.ensureAll(); } catch (e) {} }
+  /* A13（审计 P1-5）：英语全库预载移出首屏关键路径——旧版 await 卡在 show('home') 之前，
+   * 慢网时 31 个分片任一拖慢就拖死首页（旧注释自称"不阻塞首屏"与代码相反）。
+   * 现先渲染首页，全库后台到位后若用户仍停留在首页则重画一次，
+   * reviewDueTotal 的英语到期计数这才计入（dueCountSync 依赖 allCache）。 */
+  if (window.Eng) { try { Eng.loadMan().then(() => Eng.ensureAll()).then(() => { if (activeTab === 'home') show('home'); }).catch(() => {}); } catch (e) {} }
 
   /* 学科下拉已移入首页 hero（每次 show('home') 重建），改用事件委托，
      元素重建也不丢 change 绑定；切换后软刷新当前 tab。 */

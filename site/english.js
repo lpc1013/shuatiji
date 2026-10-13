@@ -180,7 +180,7 @@ window.Eng = (function () {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
       cache[id] = j.w || [];
-    } catch (e) { cache[id] = []; }
+    } catch (e) { return []; }   // A13（审计 P1-7）：失败不缓存成 []——空数组是真值，会让该分类本会话内永不重试；本次先返回空，下次调用自动重试
     return cache[id];
   }
   /* 全库词条（3,414 词 ≈ 3MB）：首次调用拉齐 31 个分片并缓存。
@@ -190,13 +190,18 @@ window.Eng = (function () {
     if (allCache) return allCache;
     if (!MAN) await loadMan();
     if (!MAN) return [];
+    let fail = 0;
     const parts = await Promise.all((MAN.depts || []).map(async d => {
       const ws = await loadDept(d.id);
+      if (!ws.length && !cache[d.id]) fail++;   // A13：loadDept 失败返回 [] 且未写缓存；成功空库也写 cache（[] 真值）不算失败
       for (const w of ws) w._d = trimDept(d.n);
       return ws;
     }));
-    allCache = [].concat.apply([], parts);
-    return allCache;
+    const all = [].concat.apply([], parts);
+    /* A13（审计 P1-7）：有失败分片时先返回已到手词条，但不落 allCache——
+     * 下次调用把缺的分片补齐，避免残缺全库被缓存成「成功结果」。 */
+    if (!fail) allCache = all;
+    return all;
   }
   /* 全库到期词快照：已标记且 due ≤ now。复习完标记会立刻刷新 due，
      所以队列要在进入那一刻定格（快照），否则边复习边缩小。 */

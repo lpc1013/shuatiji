@@ -288,6 +288,11 @@
         if (m2.local === sentAt) { dirty = false; m2.cloud = sentAt; setMeta(m2); }
         setStatus("已同步 " + new Date().toLocaleTimeString());
         refreshMeCard();
+      } else if (res.stale) {
+        /* A13（二轮审计 P0-1）：服务端拒收旧版本（updatedAt 单调闸）→ dirty 本就未清，
+         * 主动拉云端合并；合并后 m.local 取 max，下轮推送必过闸。不算失败、不计退避。 */
+        setStatus("云端已有更新，正在合并…");
+        reconcile();
       } else if (res.msg) {
         setStatus("同步失败：" + res.msg);
         if (/登录|过期/.test(res.msg)) doLogout();
@@ -302,6 +307,11 @@
   // ---------- 拉：与本地逐题合并（不再整包 last-write-wins） ----------
   async function reconcile() {
     if (!token) return;
+    /* A13（二轮审计 P0-2 兜底）：合并后刷新若 beacon 推送静默失败，内存 dirty 随页面消失，
+     * 但持久化的 meta 仍记录 local>cloud——在此重打 dirty，由本轮 reconcile 合并补推。
+     * （m.cloud 只在推送确认成功时更新，故 local>cloud 即「有未确认上传的本地变更」。） */
+    const m0 = meta();
+    if (m0.local > (m0.cloud || 0) + 1000) dirty = true;
     const pr = await api("pull", {}, token);
     if (!pr.ok) {
       if (/登录|过期/.test(pr.msg || "")) doLogout();
