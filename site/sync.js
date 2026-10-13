@@ -152,6 +152,21 @@
     return s;
   }
   function pickRicher(a, b, pick) { return sumMap(a, pick) >= sumMap(b, pick) ? (a || {}) : (b || {}); }
+  /* A11 修复：计数类 map（qstat/byChapter/daily）逐 key 合并。旧 pickRicher 整表二选一——
+   * 两端各学不同题/不同章/不同天时累计量相等，会整块丢掉一侧（A 学 Q1、B 学 Q2，合并后 Q2 消失）。
+   * 按 key 取「计数大者」：单调不回退、不重复计数；同 key 计数相等时保留 a 方整条，
+   * 不做字段级混合（避免拼出 n/r/w 内部矛盾的记录）。 */
+  function mergeCountMap(a, b, pick) {
+    if (!a) return b || {};
+    if (!b) return a;
+    const out = Object.assign({}, a);
+    for (const k of Object.keys(b)) {
+      const av = out[k], bv = b[k];
+      if (!av) { out[k] = bv; continue; }
+      if (pick(bv || {}) > pick(av || {})) out[k] = bv;
+    }
+    return out;
+  }
   function mergeArr(a, b) { return Array.from(new Set((a || []).concat(b || []))); }
   function mergeMapLocalFirst(local, cloud) { return Object.assign({}, cloud || {}, local || {}); }
   function mergeReview(local, cloud) {
@@ -211,7 +226,7 @@
     for (const f of MARK_FIELDS) o[f] = mergeArr(l[f], c[f]);
     o.review = mergeReview(l.review, c.review);
     o.aiExplain = mergeMapLocalFirst(l.aiExplain, c.aiExplain);
-    for (const f in COUNT_FIELDS) o[f] = pickRicher(l[f], c[f], COUNT_FIELDS[f]);
+    for (const f in COUNT_FIELDS) o[f] = mergeCountMap(l[f], c[f], COUNT_FIELDS[f]);
     o.examHistory = mergeExamHistory(l.examHistory, c.examHistory);
     o.aiGen = (l.aiGen && l.aiGen.length) ? l.aiGen : (c.aiGen || []);
     o.feedback = (l.feedback && l.feedback.length) ? l.feedback : (c.feedback || []);
@@ -243,13 +258,16 @@
     let state;
     try { state = JSON.parse(stateStr); } catch (e) { return; }
     const m = meta();
+    const sentAt = m.local;   // A11：上传期间若有新作答，setItem 包装器会更新 meta.local 并重打 dirty
     try {
-      const res = await api("push", { state: stripForSync(state), updatedAt: m.local }, token);
+      const res = await api("push", { state: stripForSync(state), updatedAt: sentAt }, token);
       if (res.ok) {
-        dirty = false;
         failCount = 0;
-        m.cloud = m.local;
-        setMeta(m);
+        // A11：只有「上传期间没有新改动」才清 dirty——否则 await 期间的新作答会被误标已同步，
+        // 丢掉重试依据（下轮定时器不再推，直到下一次写入才补救）。有新改动则保持 dirty，
+        // 下轮把更新的 meta.local 作为 updatedAt 再推（服务端按 updatedAt 新者赢，顺序安全）。
+        const m2 = meta();
+        if (m2.local === sentAt) { dirty = false; m2.cloud = sentAt; setMeta(m2); }
         setStatus("已同步 " + new Date().toLocaleTimeString());
         refreshMeCard();
       } else if (res.msg) {
@@ -336,12 +354,13 @@
     try { state = JSON.parse(stateStr); } catch (e) { return; }
     const m = meta();
     const body = JSON.stringify({ action: "push", token, state: stripForSync(state), updatedAt: m.local });
+    /* A11 修复：sendBeacon / keepalive 的返回只代表「浏览器接了单」，不代表服务端落库成功。
+     * 原来无条件 dirty=false + m.cloud=local，把「没发成功」伪装成「已同步」，该次更新失去重试依据。
+     * 现在纯 fire-and-forget：真关页由下次打开 reconcile 双向合并补推（本地数据仍在 LS）；
+     * 锁屏/切后台回来，节流定时器看到 dirty 仍为 true 会自动重发；交卷场景最多 10s 后再推一次（幂等）。 */
     if (navigator.sendBeacon) {
-      try {
-        navigator.sendBeacon(API, new Blob([body], { type: "application/json" }));
-        dirty = false; m.cloud = m.local; setMeta(m);
-        return;
-      } catch (e) { /* fallthrough */ }
+      try { navigator.sendBeacon(API, new Blob([body], { type: "application/json" })); return; }
+      catch (e) { /* fallthrough */ }
     }
     try {
       fetch(API, {
@@ -350,7 +369,6 @@
         body,
         keepalive: true,
       });
-      dirty = false; m.cloud = m.local; setMeta(m);
     } catch (e) { /* 尽力而为，下次定时器兜底 */ }
   }
 
@@ -367,7 +385,7 @@
     startSync();
     refreshMeCard();
     reconcile();
-    if (window.QuizEnglish) window.QuizEnglish.pull();   // 登录即拉取云端单词进度（换设备接着背）
+    if (window.QuizEnglish) { window.QuizEnglish.pull(); window.QuizEnglish.flush(); }   // 登录即拉云端单词进度，并把登录前积压的脏词补推（A11）
     return { ok: true };
   }
   function doLogout() {

@@ -97,7 +97,13 @@ window.Eng = (function () {
         if (!r || !r.ok) for (const k of keys) engDirty.add(k);
       }
     } catch (e) { for (const k of keys) engDirty.add(k); }
-    finally { engUploading = false; }
+    finally {
+      engUploading = false;
+      // A11：失败退避重试——短暂离线后用户不再操作也能自动补报（原来只等下次标记/切后台）。
+      // 未登录不排（englishPush 会永远返回失败，避免无谓轮询）；登录后由 doLogin 里的 flush() 补推。
+      if (engDirty.size && !engTimer && window.QuizSync && window.QuizSync.isLoggedIn())
+        engTimer = setTimeout(flushEnglish, 15000);
+    }
   }
   function mergeEnglishInto(remote) {
     if (!remote || !Object.keys(remote).length) return false;
@@ -153,13 +159,21 @@ window.Eng = (function () {
       const r = await fetch(BASE + 'manifest.json', { cache: 'no-store' });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       MAN = await r.json();
+      /* A11 修复：dept 悬空校正。默认 '00'（通用医学英语）已并入 d32 从 manifest 消失，
+       * 任何历史/默认 dept id 因分类合并失效时，回退第一个可用分类——
+       * 否则 loadDept 落空返回 []，英语页整页空白（列表/卡片/沉浸全空）。
+       * 用户进度按词形 key 存储不受影响（跨分类共享）。 */
+      if (MAN && Array.isArray(MAN.depts) && MAN.depts.length && !MAN.depts.some(x => x.id === dept))
+        dept = MAN.depts[0].id;
     } catch (e) { MAN = null; }
     return MAN;
   }
   async function loadDept(id) {
     if (id === 'all') return ensureAllWords();   // 「全部分类」：全库 31 分片懒加载（缓存复用）
     if (cache[id]) return cache[id];
-    const d = (MAN && MAN.depts || []).find(x => x.id === id);
+    const d = (MAN && MAN.depts || []).find(x => x.id === id)
+      /* A11 兜底：id 悬空（分类合并/删除后仍被引用）回退第一个可用分类，不静默返回空表 */
+      || ((MAN && Array.isArray(MAN.depts) && MAN.depts.length) ? MAN.depts[0] : null);
     if (!d) return [];
     try {
       const r = await fetch(BASE + d.f, { cache: 'no-store' });

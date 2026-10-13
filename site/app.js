@@ -112,12 +112,18 @@ async function ensureSubject(id) {
   const [jg, ext] = await Promise.all([
     get(m.jiguang && m.jiguang.file), get(m.extension && m.extension.file)
   ]);
+  // A11 修复：两片全失败（断网/404）不能留在 LOADED 里——否则该学科被永久视为已加载，
+  // 用户只看到空题库、再进也不重试。回滚占位标记，明确提示，下次进科重新走加载。
+  if (!Array.isArray(jg) && !Array.isArray(ext)) {
+    LOADED.delete(id);
+    toast('题库加载失败，请检查网络后重试');
+    return sub;
+  }
   // 富解析分片改为惰性加载：进学科只拉 jg/ext 两片，富解析（单科 6MB）首次打开某题才拉（见 loadExplain）。
   // 否则刷新即整块下载 6MB+，首屏/进科明显变慢。
   sub.explain = {};
   sub.explainChapters = (m.explain && m.explain.chapters) || null;   // 按章节拆分的解析分片清单
   if (sub.explainChapters) loadExplain(sub);   // 进科即并发预加载该科所有章节解析（小文件并发 + 缓存友好）
-  sub.explainLoaded = false;
   buildGroups(sub, Array.isArray(jg) ? jg : [], Array.isArray(ext) ? ext : []);
   normalizeSubjectIds(id);   // ALIAS 刚建好 → 立刻把本机存的旧题 id 归一到主 id（见函数注释）
   return sub;
@@ -234,18 +240,22 @@ function groupCount(sub, key) {
 /* 解析惰性填充：explain 是独立分片，用到才填。
  * 分片现在是「富解析」对象（blocks），同时派生一份纯文本进 q.explanation —— 
  * AI 上下文、复制、旧逻辑判断都还在读纯文本，不能只留结构。 */
-let _expLoad = {};          // 每学科只拉一次富解析分片（去重）
 let curDetailQid = null;    // 当前打开的详情题 id，供富解析到达后定向回填
+                            // （去重改由 sub._expPromise 承担，见 loadExplain；旧 _expLoad 已删）
 function loadExplain(sub) {
   if (!sub.explainChapters || !sub.explainChapters.length) { sub.explainLoaded = true; return Promise.resolve(); }
-  const v = MANIFEST.version || '0';
   sub.explainLoaded = true;
+  // A11 修复：预加载进行中用户打开某题会再进到这里（ensureExplain）——没有去重就会把整科章节
+  // 再并发拉一遍。_expPromise 挂在 sub 实例上做单飞（in-flight dedup），学科切换互不干扰。
+  if (sub._expPromise) return sub._expPromise;
+  const v = MANIFEST.version || '0';
   // 按章节并发拉取小分片，逐片合并进 sub.explain（单章失败不影响其他章）；比旧「单文件 6MB」更稳、可缓存
   const ps = sub.explainChapters.map(c =>
     fetch(QF + c.file + '?v=' + v).then(r => r.ok ? r.json() : null).catch(() => null)
       .then(ex => { if (ex) Object.assign(sub.explain, ex); })
   );
-  return Promise.all(ps).then(() => refreshExpDom());
+  sub._expPromise = Promise.all(ps).then(() => refreshExpDom()).catch(() => {});
+  return sub._expPromise;
 }
 function ensureExplain(sub, q) {
   if (!q || q.exp) return;
@@ -1706,7 +1716,7 @@ function saveSession() {
     subject: cur, key, mode: P.mode, idx,
     reviewMode: !!P.reviewMode,
     qids: P.pool.map(it => ({ id: it.q.id, chapterId: it.chapterId, chapterName: it.chapterName })),
-    modeOpt: P.modeOpt, start: P.start, answers: P.answers, timeLeft: P.timeLeft,
+    modeOpt: P.modeOpt, start: P.start, answers: P.answers, timeLeft: P.timeLeft, deadlineAt: P.deadlineAt || null,
     updatedAt: Date.now()
   };
   save();
@@ -1740,8 +1750,15 @@ async function resumeSession(saved) {
     submitted: saved.mode === 'review', start: Date.now(), timer: null, timeLeft: 0, sessionKey: saved.key
   };
   if (saved.mode === 'exam' && !P.submitted) {
-    P.timeLeft = saved.timeLeft || (P.modeOpt.minutes || 30) * 60;  // 恢复考试剩余时间，防退出后续时刷分
-    P.timer = setInterval(() => { P.timeLeft--; const el = $('#examTimer'); if (el) el.textContent = ICON('clock') + ' ' + fmtTime(P.timeLeft); if (P.timeLeft <= 0) { clearInterval(P.timer); submitExam(); } }, 1000);
+    // A11：按绝对截止时间恢复（防退出/刷新续时刷分）。新会话直接用 deadlineAt；
+    // 旧会话没有 deadlineAt，用存的 timeLeft 推一个；timeLeft 为 0/缺省不再回退成整场时长——
+    // 0 视为已到期（下个 tick 立即交卷），只有真没有记录才按整场配置重开。
+    P.deadlineAt = saved.deadlineAt
+      || (typeof saved.timeLeft === 'number' && saved.timeLeft > 0
+            ? Date.now() + saved.timeLeft * 1000
+            : Date.now() + ((saved.modeOpt && saved.modeOpt.minutes) || 30) * 60000);
+    P.timeLeft = Math.max(0, Math.round((P.deadlineAt - Date.now()) / 1000));
+    P.timer = examTimer();
   }
   saveSession();
   openPlayer();
@@ -1762,12 +1779,24 @@ function requestStart(pool, mode, opt, chapterId) {
   else startPractice(pool, mode, opt, key);
 }
 
+/* A11 修复：考试计时改用绝对截止时间。setInterval 在后台/锁屏会被浏览器节流（最长每分钟才 tick），
+ * 按 tick 次数递减会让考试时间虚多（防刷分失效）；tick 里按 deadlineAt - Date.now() 重算剩余，
+ * 节流期间时间照走。断点恢复（resumeSession）同样按 deadline 重算。 */
+function examTimer() {
+  return setInterval(() => {
+    P.timeLeft = Math.max(0, Math.round((P.deadlineAt - Date.now()) / 1000));
+    const el = $('#examTimer'); if (el) el.textContent = ICON('clock') + ' ' + fmtTime(P.timeLeft);
+    if (P.timeLeft <= 0) { clearInterval(P.timer); P.timer = null; submitExam(); }
+  }, 1000);
+}
+
 function startPractice(pool, mode, opt, sessionKey) {
   if (!pool.length) { toast('没有可练习的题目'); return; }
   P = { pool, mode, idx: 0, answers: {}, modeOpt: opt || {}, submitted: false, start: Date.now(), timer: null, timeLeft: 0, sessionKey: sessionKey || 'adhoc' };
   if (mode === 'exam') {
-    P.timeLeft = (opt.minutes || 30) * 60;
-    P.timer = setInterval(() => { P.timeLeft--; const el = $('#examTimer'); if (el) el.textContent = ICON('clock') + ' ' + fmtTime(P.timeLeft); if (P.timeLeft <= 0) { clearInterval(P.timer); submitExam(); } }, 1000);
+    P.deadlineAt = Date.now() + (opt.minutes || 30) * 60000;   // 绝对截止时间（A11）
+    P.timeLeft = Math.round((P.deadlineAt - Date.now()) / 1000);
+    P.timer = examTimer();
   }
   saveSession();
   openPlayer();
@@ -1884,7 +1913,11 @@ function pick(k) {
     const i = a.chosen.indexOf(k);
     if (i >= 0) a.chosen.splice(i, 1); else a.chosen.push(k);
     // 多选未揭晓：仅切换该选项选中态，避免整块 rebuild（含图题重下载 / 微闪）
-    p.querySelectorAll('.opt').forEach(b => { if (b.dataset.k === k) b.classList.toggle('sel', a.chosen.includes(k)); });
+    // A11 修复：p 是 renderPlayer() 的局部变量，pick() 里不可见（多选首次点击 ReferenceError、
+    // 选中态卡死）；现查 #player，并补 saveSession——原提前 return 把未提交的勾选漏在断点外
+    const pbox = document.querySelector('#player');
+    if (pbox) pbox.querySelectorAll('.opt').forEach(b => { if (b.dataset.k === k) b.classList.toggle('sel', a.chosen.includes(k)); });
+    saveSession();
     return;
   }
   if (q.multi) { const i = a.chosen.indexOf(k); if (i >= 0) a.chosen.splice(i, 1); else a.chosen.push(k); }

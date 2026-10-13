@@ -26,7 +26,7 @@ const rd = p => JSON.parse(fs.readFileSync(p, 'utf8'));
 const SEMS = ['大一', '大二', '大三', '大四', '水平测试'];
 
 console.log('== 1) merged2 重建是否为纯增量 ==');
-const snapBefore = rd(path.join(R, 'verify', 'baseline_ids_20260920.json'));
+const snapBefore = rd(path.join(R, 'verify', 'baseline_ids_20261013.json'));
 const curlHash = a => {
   const h = new Map(a.map(x => [x[0], x[1]]));
   return h;

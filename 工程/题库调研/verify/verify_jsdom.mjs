@@ -26,7 +26,8 @@ const runtimeErrs = [];
 const vc = new VirtualConsole();
 vc.on('jsdomError', e => {
   const msg = (e.detail && (e.detail.stack || e.detail.message)) || e.message || String(e);
-  if (!/getContext/.test(msg)) runtimeErrs.push(msg);   // canvas 未装包属环境限制，忽略
+  // canvas / HTMLMediaElement.play() 未实现均属 jsdom 环境限制，忽略（1013：词典音频上线后 play() 会触发，别把它当站点失败）
+  if (!/getContext|Not implemented: HTMLMediaElement/.test(msg)) runtimeErrs.push(msg);
 });
 const dom = new JSDOM(html, { url: 'http://127.0.0.1:8788/', runScripts: 'outside-only', pretendToBeVisual: true, virtualConsole: vc });
 const { window } = dom;
@@ -580,7 +581,7 @@ section('J. 医学英语词库');
   ok('已生成词库分片目录', fs.existsSync(path.join(FEN, 'manifest.json')));
   if (fs.existsSync(path.join(FEN, 'manifest.json'))) {
     const man = JSON.parse(fs.readFileSync(path.join(FEN, 'manifest.json'), 'utf8'));
-    ok('manifest 含 30+ 科室、总量 >3000', (man.depts || []).length >= 30 && man.total > 3000,
+    ok('manifest 分类齐备（≥3）且总量 >3000', (man.depts || []).length >= 3 && man.total > 3000,
       `depts=${(man.depts || []).length} total=${man.total}`);
     const s0 = (man.depts || [])[0];
     const shard = JSON.parse(fs.readFileSync(path.join(FEN, s0.f), 'utf8'));
@@ -643,12 +644,16 @@ section('J. 医学英语词库');
       if (imm) {
         imm.click(); await sleep(500);
         const rd = document.getElementById('engReader');
+        /* 1013：ok() 第三参数（诊断详情）是无条件求值的——rd 为 null 时这里自己先崩，
+         * 把「沉浸页没打开」这个真实断言失败伪装成了 TypeError。改为安全求值，
+         * 让断言正常报 ✗、套件继续跑完，才能看到沉浸链路的真实结果。 */
+        const rdHtml = rd ? rd.innerHTML : '(rd 不存在——沉浸页未打开)';
         ok('沉浸页打开（全屏 + 词头 + 空白 + 标记）', !!rd && !rd.classList.contains('hidden')
           && /engr-word/.test(rd.innerHTML) && /engr-blank/.test(rd.innerHTML)
           && !/engr-sec/.test(rd.innerHTML) && !/engr-nav/.test(rd.innerHTML) && !/ph-spk/.test(rd.innerHTML),
-          rd.innerHTML.slice(0, 160));
+          rdHtml.slice(0, 160));
         ok('沉浸页锁住背景滚动（body.reading）', document.body.classList.contains('reading'));
-        const mkR = rd.querySelector('.eng-mk');
+        const mkR = rd ? rd.querySelector('.eng-mk') : null;
         if (mkR) {
           mkR.click(); await sleep(400);
           ok('沉浸标记后全信息弹出（释义/分区块/音标/上一下一）', /engr-cn/.test(rd.innerHTML) && /engr-sec/.test(rd.innerHTML)
@@ -709,19 +714,20 @@ section('J. 医学英语词库');
         mk.click(); await sleep(350);
         const sel = document.getElementById('engDept');
         if (sel) {
-          sel.value = '06';
+          /* 1013：分类已合并为 31/01/32（d00 并入 d32、旧 30 科室并入 01）——用真实存在的 01 验证 */
+          sel.value = '01';
           sel.dispatchEvent(new window.Event('change', { bubbles: true }));
           await sleep(550);
           const n = document.querySelectorAll('#engBody .eng-item').length;
-          /* B21 起列表默认只渲染前 30 行（下方「展示全部」再放全）→ 不能按行数断言 99；
-             改校验「计数文本恢复为 99 词」（证明残留筛选已重置）+ 首屏确有渲染行 */
+          /* B21 起列表默认只渲染前 30 行（下方「展示全部」再放全）→ 不能按行数断言；
+             改校验「计数文本恢复为 3254 词」（证明残留筛选已重置）+ 首屏确有渲染行 */
           const cntTxt = (document.getElementById('engCount') || {}).textContent || '';
-          ok('换科室重置筛选（切 d06 后应恢复全部 99 词，而非被残留筛选清空）', /99/.test(cntTxt) && n > 0, 'items=' + n + ' count=' + cntTxt.trim());
+          ok('换科室重置筛选（切 01 临床科室后应恢复全部 3254 词，而非被残留筛选清空）', /3254/.test(cntTxt) && n > 0, 'items=' + n + ' count=' + cntTxt.trim());
           const back = [...document.querySelectorAll('[data-act="eng-only"]')].find(c => c.dataset.v === '');
           ok('换科室后「全部」chip 处于选中态', !!(back && back.classList.contains('on')));
-          /* 恢复 d00，避免污染后续用例 */
+          /* 恢复默认分类（31 六级单词），避免污染后续用例 */
           const sel2 = document.getElementById('engDept');
-          sel2.value = '00';
+          sel2.value = '31';
           sel2.dispatchEvent(new window.Event('change', { bubbles: true }));
           await sleep(450);
         }
@@ -846,8 +852,12 @@ try {
   const mb = M.subjects.bio;
   ok('标记类取并集（wrong w1+w2+w3）', JSON.stringify(mb.wrong) === JSON.stringify(['w1', 'w2', 'w3']), JSON.stringify(mb.wrong));
   ok('标记类取并集（fav / mastered）', mb.fav.length === 2 && mb.mastered.length === 2);
-  ok('qstat 取累计量更大一方（本地7 vs 云端10 → 云端）', !!mb.qstat.q3 && !mb.qstat.q2, JSON.stringify(Object.keys(mb.qstat)));
-  ok('byChapter 取累计量更大（本地10 vs 云端7 → 本地）', !mb.byChapter.c2 && mb.byChapter.c1.total === 10);
+  /* 1013 合并语义升级（mergeCountMap 逐 key 合并，取代旧 pickRicher 整表二选一）：
+   * 两端各自独有的记录全部保留（旧语义「本地7 vs 云端10」会把本地 q2 静默丢掉），
+   * 同 key 取计数大者。 */
+  ok('qstat 逐 key 合并：两端独有都保留（q1/q2/q3 齐全）', !!mb.qstat.q1 && !!mb.qstat.q2 && !!mb.qstat.q3, JSON.stringify(Object.keys(mb.qstat)));
+  ok('qstat 同 key 取计数大者（q1 本地5>云端1 保本地；q3 补入 n=9）', mb.qstat.q1.n === 5 && mb.qstat.q3.n === 9, JSON.stringify(mb.qstat));
+  ok('byChapter 逐 key 合并：c1 保本地 total10 + 云端独有 c2 补入', mb.byChapter.c1.total === 10 && !!mb.byChapter.c2 && mb.byChapter.c2.total === 4, JSON.stringify(mb.byChapter));
   ok('daily 取累计量更大（云端30 vs 本地10 → 云端）', !!mb.daily['2026-08-31']);
   ok('review 逐题合并：stage 取更大 + wrongAns 并集 + 补缺', mb.review.q1.stage === 5 && mb.review.q1.wrongAns.length === 2 && !!mb.review.q2);
   ok('examHistory 合并去重', mb.examHistory.length === 2);
