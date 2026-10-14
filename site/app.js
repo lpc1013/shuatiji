@@ -1032,7 +1032,12 @@ function renderHome() {
   const cont = saved ? `<div class="card cont-card" data-act="resume-home" style="cursor:pointer">
     <div class="row between"><div><b>${ICON('pin')}继续刷题</b><div class="muted small">${esc(subjName)} · ${sessionLabel(saved)} · 第 ${saved.idx + 1}/${saved.qids.length} 题</div></div>
     <button class="btn sm">继续 →</button></div></div>` : '';
-  const totalQ = sub.meta ? sub.meta.count : 0;
+  /* 题库分组可见性（用户反馈"极光/扩展分不开"）：总题数随当前分组走，
+   * 显示 activeGroup 的题数并标注组名——旧版固定显示 manifest 合计数（两组合计），
+   * 切换分组后数字纹丝不动，用户以为切换失效。下拉框里的数字仍是全科合计（选科概览语义）。 */
+  const agKey = sub.activeGroup || 'jg';
+  const totalQ = sub.meta ? groupCount(sub, agKey) : 0;
+  const agName = agKey === 'jg' ? '极光' : '扩展';
   const lv = level(), xpIn = S.global.xp % 200, todayA = (st.daily[today()] || {}).answered || 0, sk = streak();
   const checked = S.global.checkin.includes(today());
   return `
@@ -1045,7 +1050,7 @@ function renderHome() {
     <div class="xpbar"><i style="width:${xpIn / 200 * 100}%"></i></div>
   </div>
   <div class="stat-grid">
-    <div class="stat"><b>${totalQ}</b><span>总题数</span></div>
+    <div class="stat"><b>${totalQ}</b><span>${agName}题库 · 总题数</span></div>
     <div class="stat"><b>${todayA}</b><span>今日已练</span></div>
     <div class="stat">${renderCheckinSlot(sk, checked)}</div>
   </div>
