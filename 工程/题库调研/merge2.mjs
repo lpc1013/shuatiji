@@ -18,8 +18,26 @@ async function ensureDir(d) { for (let i = 0; i < 5; i++) { try { await mkdir(d,
 async function rmrf(d) { for (let i = 0; i < 5; i++) { try { await rm(d, { recursive: true, force: true }); } catch {} if (!existsSync(d)) return true; await new Promise(r => setTimeout(r, 300)); } return !existsSync(d); }
 const log = m => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`);
 
+/* 人工去重规则（_dedup_rules.json，持久层，位于题库调研根——本脚本 rmrf merged2/ 不影响它）。
+ * 语义：仅当 dropId 记录自己当了「代表」（单独成组 → 输出 id == dropId）时剔除；
+ * 若它已被并入更大的组（代表是别的 id），重复已天然吸收，不动。keeper 由规则显式指定。
+ * build_packs 循环顶部应用同一规则文件（防线纵深：本文件未重跑时由 build_packs 兜底）。 */
+let dedupDropped = 0;
+const dropSet = new Set();
+try {
+  const dj = JSON.parse(await readFile(`${WS}/工程/题库调研/_dedup_rules.json`, "utf8"));
+  for (const r of (dj.rules || [])) if (r.dropId) dropSet.add(r.dropId);
+} catch { /* 规则文件不存在 → 无去重，静默 */ }
+
+/* ⚠️ answer_overrides.json 是 build_packs 的教材裁决护栏（防 merge2 重跑复活旧答案），
+ * 但它住在 merged2/ 里，会被下方 rmrf 连带销毁 —— 必须先抢救、重建目录后写回，否则护栏自毁。 */
+const OV_PATH = `${OUT}/answer_overrides.json`;
+let ovPreserved = null;
+if (existsSync(OV_PATH)) { try { ovPreserved = await readFile(OV_PATH, "utf8"); } catch { ovPreserved = null; } }
+
 if (!await rmrf(OUT)) { console.error("FATAL: cannot clean " + OUT); process.exit(1); }
 if (!await ensureDir(`${OUT}/by_subject`) || !await ensureDir(`${OUT}/by_origin`)) { console.error("FATAL: cannot create out dirs"); process.exit(1); }
+if (ovPreserved !== null) { await writeFile(OV_PATH, ovPreserved); log(`answer_overrides.json 已从上一版抢救回写（护栏不因重跑销毁）`); }
 
 const SUBJECT_ALIAS = {
   "生化": "生物化学", "生理": "生理学", "免疫": "医学免疫学", "微生物": "医学微生物学",
@@ -379,6 +397,14 @@ for (const [, g] of groups) {
   merged.push(out);
 }
 
+// ---------- 人工去重规则应用（仅剔「自己当代表」的 dropId；并入大组的已被天然吸收） ----------
+if (dropSet.size) {
+  for (let i = merged.length - 1; i >= 0; i--) {
+    if (dropSet.has(merged[i].id)) { merged.splice(i, 1); dedupDropped++; }
+  }
+  if (dedupDropped) log(`人工去重规则剔除 ${dedupDropped} 条（_dedup_rules.json）`);
+}
+
 // ---------- 输出 ----------
 const bySubject = new Map();
 for (const q of merged) { if (!bySubject.has(q.subject)) bySubject.set(q.subject, []); bySubject.get(q.subject).push(q); }
@@ -409,7 +435,7 @@ const report = {
   generatedAt: new Date().toISOString(),
   mergeVersion: "v2 (stem + option-fingerprint + fuzzy union)",
   input: { jiguangUnique: seenJg.size, totalRecords: recs.length },
-  merged: { uniqueQuestions: merged.length, dedupRemoved: recs.length - merged.length },
+  merged: { uniqueQuestions: merged.length, dedupRemoved: recs.length - merged.length, manualDedupDropped: dedupDropped },
   degenerateImageQuestions: degenerate,
   pass2FuzzyMerges: pass2Merges,
   bySourceCount: merged.reduce((a, q) => { const k = q.sources.join("+"); a[k] = (a[k] || 0) + 1; return a; }, {}),

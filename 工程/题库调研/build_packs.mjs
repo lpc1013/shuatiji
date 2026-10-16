@@ -10,7 +10,7 @@
  *  4. 极光题在打包时套用 lib_fix 修复（选项跳号/题干残留选项/冗余前缀/HTML）
  */
 import { readFile, readdir, writeFile, mkdir } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { createHash } from "crypto";
 import { fixQuestion } from "./lib_fix.mjs";
 
@@ -37,6 +37,24 @@ const YX = JSON.parse(await readFile(WS + "/工程/题库调研/index_iyixue_met
 /* 极光题补标签 sidecar（tagging/tag_jiguang.mjs 产出）：merged2题id -> tags[]。
  * 只在 q.tags 为空时注入，扩展题原生 tags 一律不动。 */
 const JGTAGS = JSON.parse(await readFile(WS + "/工程/题库调研/tagging/jiguang_tags.json", "utf8"));
+/* 人工去重规则（_dedup_rules.json，持久层，位于题库调研根——merge2 重跑 rmrf merged2/ 不影响它）。
+ * 场景：跨题源重复题因「事故期选项指纹污染」令 merge2 并查集不可及（如 kaoyan_2023_165 ↔ ykb_201013_15070_1084998）。
+ * 应用：循环顶部按完整 id / 剥前缀裸 id 双口径剔除 dropId 记录（题目与 explain 一并在同一循环内天然联动）。
+ * keeper 由规则显式指定（不靠排序裁决），保证 id 稳定铁律。merge2 输出前也应用同一规则文件（防线纵深）。 */
+const DEDUP = (() => {
+  try {
+    const j = JSON.parse(readFileSync(WS + "/工程/题库调研/_dedup_rules.json", "utf8"));
+    const rules = Array.isArray(j.rules) ? j.rules : [];
+    const drop = new Set(), keep = new Map();
+    for (const r of rules) {
+      if (!r.dropId) continue;
+      drop.add(r.dropId);
+      drop.add(String(r.dropId).replace(/^[a-z]+:/, ""));   // 裸 id 口径（packs 主 id 无前缀）
+      if (r.keepId) keep.set(r.dropId, r.keepId);
+    }
+    return { drop, keep, count: rules.length };
+  } catch (e) { console.error("⚠️ _dedup_rules.json 读取失败（不致命，按无规则处理）: " + e.message); return { drop: new Set(), keep: new Map(), count: 0 }; }
+})();
 
 const log = m => console.log(`[${new Date().toISOString().slice(11, 19)}] ${m}`);
 async function ensureDir(d) { for (let i = 0; i < 6; i++) { try { await mkdir(d, { recursive: true }); if (existsSync(d)) return true; } catch { } await new Promise(r => setTimeout(r, 200)); } return false; }
@@ -280,6 +298,11 @@ for (const f of subs) {
 
   for (const q of arr) {
     stat.total++;
+    // 人工去重规则（_dedup_rules.json）：dropId 记录整体跳过（题目 + 富解析同循环天然联动）
+    if (DEDUP.drop.has(q.id) || DEDUP.drop.has(String(q.id).replace(/^[a-z]+:/, ""))) {
+      stat.dedupDropped = (stat.dedupDropped || 0) + 1;
+      continue;
+    }
     stat.bySource[q.originGroup] = (stat.bySource[q.originGroup] || 0) + 1;
     const sids = stableOf(q);
     const dupAnchor = sids.find(s => stableAnchor.has(s));
@@ -478,7 +501,7 @@ for (const f of subs) {
   }
 }
 
-log(`总题 ${stat.total} | 极光组 ${stat.jg}（修复 ${stat.fixed}） | 扩展组 ${stat.ext} | 极光补标签 ${stat.jgTags || 0} | 教材改判 ${stat.overridden} | 不可裁决标记 ${stat.ambiguous} | 病例缺正文 ${stat.stemIncomplete}`);
+log(`总题 ${stat.total} | 极光组 ${stat.jg}（修复 ${stat.fixed}） | 扩展组 ${stat.ext} | 极光补标签 ${stat.jgTags || 0} | 教材改判 ${stat.overridden} | 不可裁决标记 ${stat.ambiguous} | 病例缺正文 ${stat.stemIncomplete} | 人工去重剔除 ${stat.dedupDropped || 0}/${DEDUP.count} 规则`);
 log(`统一 id 网：扩展组主 id 为稳定锚 ${stat.extStable || 0}/${stat.ext} | 上一版反查命中 ${stat.extFpHit || 0}（未命中 ${stat.extFpMiss || 0}：靠源 id 或 ext-hash 兜底）| A03b 身份兜底继承 ${stat.inhFallback || 0} 题`);
 log(`元数据覆盖：难度 ${stat.metaD} / 答题人次 ${stat.metaN} / 正确率 ${stat.metaAc} / 年份 ${stat.metaY}`);
 
@@ -487,6 +510,11 @@ log(`元数据覆盖：难度 ${stat.metaD} / 答题人次 ${stat.metaN} / 正�
 if (prevPacks.size) {
   for (const [pid, p] of prevPacks) {
     if (packedIds.has(pid)) continue;
+    // 去重规则优先于进度兜底：dropId 是有意剔除的重复题，不得借兜底复活（keeper 承接其内容）
+    if (DEDUP.drop.has(pid) || DEDUP.drop.has(String(pid).replace(/^[a-z]+:/, ""))) {
+      stat.dedupSkippedBackfill = (stat.dedupSkippedBackfill || 0) + 1;
+      continue;
+    }
     const subject = stdSubject(p._subject);
     const sem = SEMESTER[subject] || p._sem;
     if (!sem || !SEM_ORDER.includes(sem)) { stat.unknownSem[subject] = (stat.unknownSem[subject] || 0) + 1; continue; }
@@ -511,7 +539,7 @@ if (prevPacks.size) {
     if (p.flags && p.flags.aliasIds) for (const a of p.flags.aliasIds) packedIds.add(a);
     stat.siteFilled++;
   }
-  log(`兜底补齐上一版遗漏题 ${stat.siteFilled} 条`);
+  log(`兜底补齐上一版遗漏题 ${stat.siteFilled} 条（去重规则拦截复活 ${stat.dedupSkippedBackfill || 0} 条）`);
 }
 
 // ---------------- 别名最终化（必须在全部主 id 定下之后）----------------
