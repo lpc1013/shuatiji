@@ -19,6 +19,18 @@ export const DIRS = ['data', '原文'];
 
 // 防御性黑名单：就算哪天有东西被放回 site/，也绝不进发布目录
 export const DENY_TOP = /^(tavern|cloud|_preview|deploy_galaxy)$|^\.bak|^database_export|^刷题记|\.zip$|\.pdf$|\.py$|^serve\.js$|^build_data\.js$|^星系分析\.html$/;
-export const DENY_ANY = /database_export|备份|\.zip$|\.bak/i;
+/* F04 加固（20261015）：DENY_ANY 原先只挡 备份/zip/bak，挡不住被误放进白名单目录的
+ * 凭证类文件（.env / credentials.json / private.key / *.pem / token* 等）。
+ * 现补齐敏感文件名模式；正常资源（data/*.json、原文/*.jpeg|.html）不受影响（已盘点 87+777 文件）。 */
+export const DENY_ANY = new RegExp(
+  [
+    'database_export', '备份', '\\.zip$', '\\.bak$',          // 原有
+    '\\.(env|pem|key|p12|pfx|keystore|jks|htpasswd)$',        // 凭证/私钥扩展名（含 .env）
+    'credential', 'password', 'secret',                       // 凭证关键词
+    'api[_-]?key', 'private[_-]?key', 'id_rsa', 'access[_-]?token', 'token',
+    '\\.env[.-]', '^\\.env',                                  // .env / .env.local / xx.env
+  ].join('|'),
+  'i'
+);
 
 export default { FILES, DIRS, DENY_TOP, DENY_ANY };

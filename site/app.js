@@ -10,6 +10,19 @@ let SB = {};
 let MANIFEST = null;
 const LOADED = new Set();
 const QF = 'data/';
+
+/* F07（20261015 审计）：启动期 fetch 统一带超时。
+ * 旧版题包请求无超时——请求一旦悬挂（弱网/代理吞请求），Promise.all 永不落定，
+ * 首屏空白且所有交互绑定不发生（jsdom 注入已复现）。超时按失败处理，走既有的
+ * 「toast + 下次进科重试」路径；manifest 超时则走 init 的报错 UI。 */
+function fetchTO(url, opt, ms) {
+  return new Promise((resolve, reject) => {
+    const ac = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+    const t = setTimeout(() => { if (ac) { try { ac.abort(); } catch (e) {} } reject(new Error('请求超时 ' + (ms || 25000) + 'ms')); }, ms || 25000);
+    fetch(url, Object.assign({}, opt || {}, ac ? { signal: ac.signal } : {}))
+      .then(r => { clearTimeout(t); resolve(r); }, e => { clearTimeout(t); reject(e); });
+  });
+}
 /* 极光内部同题存在多套 id（早期副本 / 站点早期另建）。分片以「网站当前在用的那个」为主 id，
  * 其余存进 flags.aliasIds。用户旧进度里可能存的是别名 → 必须建别名→主 id 映射，否则「查无此题」。 */
 const ALIAS = Object.create(null);
@@ -24,12 +37,12 @@ const CGROUP = Object.create(null);
 const ORPHANS = Object.create(null);
 
 async function bootData() {
-  const r = await fetch(QF + 'manifest.json', { cache: 'no-cache' });
+  const r = await fetchTO(QF + 'manifest.json', { cache: 'no-cache' }, 20000);   // F07：manifest 超时 20s → init 报错 UI
   if (!r.ok) throw new Error('manifest HTTP ' + r.status);
   MANIFEST = await r.json();
   // 孤儿题包：未上线科（如外基）被用户进度引用但站点未整科打包的少数题，启动期载入即可解析
   try {
-    const or = await fetch(QF + 'orphans.json', { cache: 'no-cache' });
+    const or = await fetchTO(QF + 'orphans.json', { cache: 'no-cache' }, 20000);   // F07：孤儿包同样不悬挂
     if (or.ok) for (const it of (await or.json())) {
       const q = toQ(it); q.group = 'orphan'; q.chapterId = it.c || '未分类';
       ORPHANS[q.id] = q; ALIAS[q.id] = q.id; QGROUP[q.id] = 'orphan';
@@ -115,7 +128,7 @@ async function ensureSubject(id) {
   sub._loading = (async () => {
     // 版本闸口：分片 URL 带 manifest.version，数据更新后自动失效旧缓存（manifest 本身不缓存）
     const v = MANIFEST.version || '0';
-    const get = f => f ? fetch(QF + f + '?v=' + v).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null);
+    const get = f => f ? fetchTO(QF + f + '?v=' + v, null, 25000).then(r => r.ok ? r.json() : null).catch(() => null) : Promise.resolve(null);   // F07：题包 25s 超时，悬挂→失败→可重试
     const [jg, ext] = await Promise.all([needJg ? get(jgFile) : null, needExt ? get(extFile) : null]);
     if (Array.isArray(jg)) { sub._jgData = jg; sub._jgDone = true; }
     if (Array.isArray(ext)) { sub._extData = ext; sub._extDone = true; }
@@ -862,6 +875,13 @@ function qChipsHtml(q) {
   if (q.frequencyLevel) bits.push(`<span class="meta-pill f">考频 ${esc(FREQ_CN[q.frequencyLevel] || q.frequencyLevel)}</span>`);
   const tg = [...new Set([].concat(q.tags || []))];
   for (const t of tg) bits.push(`<span class="kchip">${esc(t)}</span>`);
+  /* 争议角标（模式 Z）：数据通道已由 flags.needManualReview / sourceAmbiguity 就绪，
+   * 此前做题页从未读取。这里读 q.flags 渲染一枚告警 chip，不动 baseline。 */
+  if (q.flags && (q.flags.needManualReview || q.flags.sourceAmbiguity)) {
+    const tip = q.flags.sourceAmbiguity
+      || '本题答案存在版本 / 教材口径争议，以现行教材最新表述为准；解析已附说明';
+    bits.unshift(`<span class="meta-pill warn" title="${esc(tip)}">争议角标</span>`);
+  }
   return bits.length ? `<div class="qchips">${bits.join('')}</div>` : '';
 }
 
@@ -1038,8 +1058,20 @@ function renderHome() {
   const agKey = sub.activeGroup || 'jg';
   const totalQ = sub.meta ? groupCount(sub, agKey) : 0;
   const agName = agKey === 'jg' ? '极光' : '扩展';
+  /* V06（20261015 视觉审计）：学习行动前置。
+   * 旧顺序：hero → 统计三卡 → 倒计时/目标卡 → 继续刷题 → 模式入口 —— 首屏被数字看板占满，
+   * 可执行的学习入口排到最后。新顺序：hero（上下文）→ 继续刷题/开始刷题（主行动）→
+   * 轻量统计 → 目标卡 → 模式入口 → 扩展卡片。 */
+  const cta = saved ? cont : `<div class="card cont-card start-cta" data-act="start-order" style="cursor:pointer">
+    <div class="row between"><div><b>开始刷题</b><div class="muted small">${esc(sub.name)} · 顺序模式 · 按章节逐项过</div></div>
+    <button class="btn sm">开始 →</button></div></div>`;
   const lv = level(), xpIn = S.global.xp % 200, todayA = (st.daily[today()] || {}).answered || 0, sk = streak();
   const checked = S.global.checkin.includes(today());
+  /* V06：未设考试日期 → 一行提示替代半张空卡 */
+  const examSet = !!S.global.settings.examDate;
+  const goalCol1 = examSet
+    ? `<div class="card">${examCountdownHtml()}</div>`
+    : `<div class="card exam-hint"><div class="row between"><h3 style="margin:0">${ICON('cal')}考试倒计时</h3></div><p class="muted small" style="margin:10px 0 0">未设置 · 去「设置」开启倒计时。</p></div>`;
   return `
   <div class="hero">
     <div class="hero-top">
@@ -1049,16 +1081,16 @@ function renderHome() {
     <div class="row between" style="margin-top:4px"><span class="lv hero-xp">${S.global.xp} XP</span><span class="muted small xp-rem">距下一级还差 ${200 - xpIn} XP</span></div>
     <div class="xpbar"><i style="width:${xpIn / 200 * 100}%"></i></div>
   </div>
+  ${cta}
   <div class="stat-grid">
     <div class="stat"><b>${totalQ}</b><span>${agName}题库 · 总题数</span></div>
     <div class="stat"><b>${todayA}</b><span>今日已练</span></div>
     <div class="stat">${renderCheckinSlot(sk, checked)}</div>
   </div>
   <div class="cols2">
-    <div class="card">${examCountdownHtml()}</div>
+    ${goalCol1}
     <div class="card">${dailyRingHtml()}</div>
   </div>
-  ${cont}
   <div class="mode-grid">
     <div class="mode" data-act="start-order"><div class="tile-wrap"><div class="em tile-blue"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M8 6h13M8 12h13M8 18h13"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/></svg></div></div><div class="t">顺序刷题</div><div class="d">按章节逐项过</div></div>
     <div class="mode" data-act="filter-setup"><div class="tile-wrap"><div class="em tile-teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z"/></svg></div></div><div class="t">组卷中心</div><div class="d">筛选 · 练习/限时考试</div></div>
@@ -1085,7 +1117,12 @@ function renderBankList() {
   const total = _bkArr.length;
   if (!total) { list.innerHTML = '<div class="empty">没有匹配的题目</div>'; return; }
   const slice = _bkArr.slice(0, _bkPage * BK_PS);
-  let html = `<p class="muted small" style="margin:0 0 8px">命中 ${total} 题${total > BK_PS ? `（已显示 ${slice.length}）` : ''} · 点题目看详情</p>`;
+  /* V09（20261015 视觉审计）：结果上方给当前筛选上下文摘要，别让用户猜列表口径 */
+  const sub = curSub();
+  const cid = ($('#bkChapter') && $('#bkChapter').value) || '';
+  const ctxBits = [esc(sub.name), cid && slice.length ? esc(slice[0].chapterName) : '全部章节'];
+  if (kw) ctxBits.push('关键词「' + esc(kw) + '」');
+  let html = `<p class="muted small" style="margin:0 0 8px">命中 ${total} 题 · ${ctxBits.join(' · ')}${total > BK_PS ? `（已显示 ${slice.length}）` : ''} · 点题目看详情</p>`;
   html += slice.map(x => {
     const tags = `<span class="tag">${esc(x.chapterName)}</span><span class="tag">${esc(x.q.typeLabel || (x.q.multi ? '多选' : '单选'))}</span>`;
     const meta = []; if (x.q.year) meta.push(x.q.year); if (x.q.source) meta.push(esc(x.q.source));
@@ -1122,7 +1159,8 @@ function bindBankSearch() {
     if (cid) arr = arr.filter(x => x.chapterId === cid);
     if (kw) arr = arr.filter(x => (x.q.content + ' ' + Object.values(x.q.options).join(' ')).toLowerCase().includes(kw));
     _bkArr = arr; _bkPage = 1;
-    if (!arr.length) { list.innerHTML = '<div class="empty">没有匹配的题目</div>'; return; }
+    /* V09：搜索零结果 ≠ 泛化空态 —— 给出下一步（清除筛选），不再共用一句「没有匹配的题目」 */
+    if (!arr.length) { list.innerHTML = `<div class="empty">没有匹配的题目<div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost sm" data-act="clear-search">清除搜索与章节筛选</button></div></div>`; return; }
     renderBankList();
   };
   $('#bkSearch').addEventListener('input', run);
@@ -1188,9 +1226,20 @@ function bindWrong() {
   const list = $('#wList');
   const st = curState();
   if (list) {   // 词库模式下页面无 #wList（仅英语生词列表），跳过避免 null.innerHTML 崩溃
-    let ids = (wrongTab === 'wrong' ? st.wrong : wrongTab === 'fav' ? st.fav : st.doubt) || [];
+    const baseIds = (wrongTab === 'wrong' ? st.wrong : wrongTab === 'fav' ? st.fav : st.doubt) || [];
+    let ids = baseIds;
     if (wrongMasteryFilter !== null) ids = ids.filter(id => String(Feat.masteryOf(st, id)) === wrongMasteryFilter);
-    if (!ids.length) { list.innerHTML = '<div class="empty">这里还空空如也</div>'; }
+    /* V09：空态分化 —— 「从未收集过」给引导入口；「有记录但被筛选掉」给清除筛选，不再共用同一句泛化空态 */
+    if (!ids.length) {
+      if (!baseIds.length) {
+        const msg = wrongTab === 'wrong' ? '还没有错题 · 完成练习后答错的题会自动收集到这里'
+          : wrongTab === 'fav' ? '还没有收藏 · 做题时点「收藏」可稍后回看'
+          : '还没有疑点 · 做题时点「疑点」标记不确定的题';
+        list.innerHTML = `<div class="empty">${msg}<div class="row" style="justify-content:center;margin-top:10px"><button class="btn sm" data-act="start-order">开始练习</button></div></div>`;
+      } else {
+        list.innerHTML = `<div class="empty">当前掌握状态筛选下没有题目<div class="row" style="justify-content:center;margin-top:10px"><button class="btn ghost sm" data-act="wmastery" data-k="">清除状态筛选</button></div></div>`;
+      }
+    }
     else {
       list.innerHTML = ids.map(id => {
         const x = qById(id); if (!x) return '';
@@ -1363,8 +1412,14 @@ function drawEnglishDonut() {
 
 function renderMe() {
   const g = S.global, st = curState();
+  /* V11（20261015 视觉审计）：常用设置前置 —— 旧版进设置页要先划过云同步 + 统计三卡
+   * 才能调字号/换主题；新顺序：偏好 → 主题 → [云同步卡插入点] → 学习数据 → 统计 →
+   * AI / 纠错 → 备份 → 数据管理（清空）→ 关于。统计保留但不挡在常用操作前面。 */
   return `
   <div class="section-title">设置</div>
+  ${Feat.prefCardHtml()}
+  ${Feat.themeCardHtml()}
+  <div class="me-data-start"></div>
   <div class="card">
     <h3>学习数据</h3>
     <div class="row between"><span class="muted small">当前学科错题</span><b>${st.wrong.length}</b></div>
@@ -1374,8 +1429,12 @@ function renderMe() {
     <div class="row between"><span class="muted small">累计作答</span><b>${totalAnswered()}</b></div>
   </div>
   ${Feat.statsCardHtml()}
-  ${Feat.prefCardHtml()}
-  ${Feat.themeCardHtml()}
+  <div class="card">
+    <h3>${ICON('robot')}AI 题库</h3>
+    <p class="muted small" style="margin:0 0 10px">基于本题让 AI 生成的变式题，已存档并云端同步。仅 lql 账号可生成。</p>
+    <div class="row between"><span class="muted small">共 ${(curState().aiGen || []).length} 批</span>
+      <button class="btn soft sm" data-act="ai-gen-list">查看</button></div>
+  </div>
   <div class="card">
     <h3>${ICON('flag')}答案纠错</h3>
     <p class="muted small" style="margin:0 0 8px">遇到答案 / 解析 / 题干有问题的题，在题目页点「纠错」记录，这里统一导出。</p>
@@ -1386,14 +1445,9 @@ function renderMe() {
     </div>
   </div>
   <div class="card">
-    <h3>${ICON('robot')}AI 题库</h3>
-    <p class="muted small" style="margin:0 0 10px">基于本题让 AI 生成的变式题，已存档并云端同步。仅 lql 账号可生成。</p>
-    <div class="row between"><span class="muted small">共 ${(curState().aiGen || []).length} 批</span>
-      <button class="btn soft sm" data-act="ai-gen-list">查看</button></div>
-  </div>
-  <div class="card">
     <h3>数据备份</h3>
-    <p class="muted small" style="margin:0 0 10px">所有数据只存在这台设备的浏览器里。换设备 / 清缓存 / 用 QQ、微信等 App 内置浏览器打开都可能丢失，建议定期导出 JSON 备份。</p>
+    <p class="muted small" style="margin:0 0 10px">进度默认存本机浏览器；登录云同步后错题 / 进度云端同步（见上方账号卡）。
+      换设备 / 清缓存 / 用 QQ、微信等 App 内置浏览器打开仍可能丢失本机数据，建议定期导出 JSON 备份。</p>
     <div class="wrap" style="margin-bottom:10px"><span class="muted small">上次备份：</span><b class="small">${g.lastBackup ? new Date(g.lastBackup).toLocaleString('zh-CN') : '尚未导出'}</b></div>
     <div class="wrap">
       <button class="btn sm" data-act="export-data">${ICON('download')}导出 JSON 备份</button>
@@ -1409,7 +1463,8 @@ function renderMe() {
   </div>
   <div class="card">
     <h3>关于</h3>
-    <p class="muted small" style="margin:0">刷题记 · 纯本地个人学习站。数据来自本地题库快照（生化 / 生理 / 免疫三科 + 医学英语），进度仅存于本机浏览器，可随时导出 JSON 备份或开启云端同步。无后端、无账号体系，离线可用。</p>
+    <p class="muted small" style="margin:0">刷题记 · 个人学习站。数据来自本地题库快照（生化 / 生理 / 免疫三科 + 医学英语）。
+      账号与云同步为可选项：不登录则进度仅存本机浏览器；登录后云端同步，可随时导出 JSON 备份。离线也可用。</p>
   </div>`;
 }
 
@@ -1947,8 +2002,11 @@ function renderPlayer() {
     foot = `<button class="btn ghost" data-act="prev">上一题</button><button class="btn" data-act="next">下一题</button>`;
   } else {
     if (!a.revealed) {
-      if (P.reviewMode) foot = `<button class="btn" data-act="confirm">确认</button>`;
-      else foot = `<button class="btn ghost" data-act="reveal">看答案</button><button class="btn" data-act="confirm">确认</button>`;
+      /* V08（20261015 视觉审计）：未选任何选项时「确认」给禁用态（选择后重渲染即恢复）；
+       * 非选择题（noChoice 自评）不适用。考试模式保持原样（允许跳题后交卷）。 */
+      const noPick = !q.noChoice && !(a.chosen && a.chosen.length);
+      if (P.reviewMode) foot = `<button class="btn" data-act="confirm"${noPick ? ' disabled' : ''}>确认</button>`;
+      else foot = `<button class="btn ghost" data-act="reveal">看答案</button><button class="btn" data-act="confirm"${noPick ? ' disabled' : ''}>确认</button>`;
     }
     else foot = `<button class="btn" data-act="next">${P.idx >= P.pool.length - 1 ? '完成' : '下一题'}</button>`;
   }
@@ -2651,6 +2709,7 @@ function updateGroupToggle() {
 /* ---------- 初始化 ---------- */
 async function init() {
   try {
+    $('#view').innerHTML = '<div class="empty">正在加载题库…</div>';   // F07：尽早给加载状态，悬挂/慢网不再白屏
     await bootData();
   } catch (e) {
     $('#view').innerHTML = `<div class="empty">题库清单加载失败：${esc(String(e))}<br><span class="small">请确认 data/manifest.json 已随站点一起部署</span></div>`;

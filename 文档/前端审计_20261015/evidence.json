@@ -1,0 +1,136 @@
+{
+  "generatedAt": "2026-10-15T06:56:15.482Z",
+  "results": [
+    {
+      "name": "pack-copy-failure-full",
+      "evidence": {
+        "copied": [
+          "site_dist\\index.html",
+          "site_dist\\styles.css",
+          "site_dist\\themes.css",
+          "site_dist\\features.js",
+          "site_dist\\english.js",
+          "site_dist\\sync.js",
+          "site_dist\\sw.js",
+          "site_dist\\favicon.svg",
+          "site_dist\\manifest.webmanifest",
+          "site_dist\\lixiangguo.html",
+          "site_dist\\data\\sample.json"
+        ],
+        "errors": [
+          "COPY FAIL D:\\audit\\site\\app.js -> D:\\audit\\site_dist\\app.js : injected EACCES"
+        ],
+        "exits": [],
+        "lastLog": "OK  site_dist 就绪（整目录重建）→ 部署请指向 D:\\audit\\site_dist"
+      }
+    },
+    {
+      "name": "pack-copy-failure-incremental",
+      "evidence": {
+        "copied": [
+          "site_dist\\index.html",
+          "site_dist\\styles.css",
+          "site_dist\\themes.css",
+          "site_dist\\features.js",
+          "site_dist\\english.js",
+          "site_dist\\sync.js",
+          "site_dist\\sw.js",
+          "site_dist\\favicon.svg",
+          "site_dist\\manifest.webmanifest",
+          "site_dist\\lixiangguo.html",
+          "site_dist\\data\\sample.json"
+        ],
+        "errors": [
+          "COPY FAIL D:\\audit\\site\\app.js -> D:\\audit\\site_dist\\app.js : injected EACCES"
+        ],
+        "exits": [],
+        "lastLog": "{\"mode\":\"inc\",\"copied\":11,\"failed\":1,\"removedStale\":0,\"dist\":\"D:\\\\audit\\\\site_dist\"}"
+      }
+    },
+    {
+      "name": "pack-directory-read-failure",
+      "evidence": {
+        "copied": [
+          "site_dist\\index.html",
+          "site_dist\\styles.css",
+          "site_dist\\themes.css",
+          "site_dist\\app.js",
+          "site_dist\\features.js",
+          "site_dist\\english.js",
+          "site_dist\\sync.js",
+          "site_dist\\sw.js",
+          "site_dist\\favicon.svg",
+          "site_dist\\manifest.webmanifest",
+          "site_dist\\lixiangguo.html"
+        ],
+        "errors": [
+          "READDIR FAIL D:\\audit\\site\\data : injected EACCES"
+        ],
+        "exits": [],
+        "lastLog": "OK  site_dist 就绪（整目录重建）→ 部署请指向 D:\\audit\\site_dist"
+      }
+    },
+    {
+      "name": "nested-secret-file-accepted",
+      "evidence": {
+        "copied": [
+          "site_dist\\index.html",
+          "site_dist\\styles.css",
+          "site_dist\\themes.css",
+          "site_dist\\app.js",
+          "site_dist\\features.js",
+          "site_dist\\english.js",
+          "site_dist\\sync.js",
+          "site_dist\\sw.js",
+          "site_dist\\favicon.svg",
+          "site_dist\\manifest.webmanifest",
+          "site_dist\\lixiangguo.html",
+          "site_dist\\data\\.env"
+        ],
+        "errors": [],
+        "exits": [],
+        "lastLog": "OK  site_dist 就绪（整目录重建）→ 部署请指向 D:\\audit\\site_dist"
+      }
+    },
+    {
+      "name": "current-bio-explain-divergence",
+      "evidence": {
+        "packCount": 5682,
+        "siteRawCount": 5071,
+        "siteUniqueCount": 5071,
+        "duplicateIds": 0,
+        "siteOnly": 0,
+        "packOnly": 611,
+        "missingForActiveQuestions": 543,
+        "sampleMissingActiveIds": [
+          "ext-7c7fb70dc5a10892",
+          "ext-0af2355189c0d574",
+          "ext-d119bb1c61fce76d"
+        ],
+        "changedCommon": 0
+      }
+    },
+    {
+      "name": "minute-version-collision",
+      "evidence": {
+        "first": "202610150102",
+        "second": "202610150102"
+      }
+    },
+    {
+      "name": "service-worker-version-does-not-bind-content",
+      "evidence": {
+        "requestedVersion": "release-A",
+        "returnedBody": "release-B bytes"
+      }
+    },
+    {
+      "name": "pending-question-shard-blocks-first-render",
+      "evidence": {
+        "pendingShards": 2,
+        "viewEmpty": true,
+        "documentClickHandlers": 0
+      }
+    }
+  ]
+}

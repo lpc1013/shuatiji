@@ -49,7 +49,7 @@ function copyTreeSafe(src, dst) {
     const [rel, cur] = stack.pop();
     let ents;
     try { ents = fs.readdirSync(cur, { withFileTypes: true }); }
-    catch (e) { console.error('READDIR FAIL ' + cur + ' : ' + e.message); continue; }
+    catch (e) { console.error('READDIR FAIL ' + cur + ' : ' + e.message); fail++; continue; }   // F02：读目录失败计入 fail，不再静默
     for (const e of ents) {
       if (e.isDirectory()) stack.push([path.join(rel, e.name), path.join(cur, e.name)]);
       else if (e.isFile()) {
@@ -62,23 +62,26 @@ function copyTreeSafe(src, dst) {
   return { n, fail };
 }
 
-/* 删除 dist 中「白名单外/敏感」残留（用 safeRmSync，非裸 rmSync）。 */
+/* 删除 dist 中「白名单外/敏感」残留（用 safeRmSync，非裸 rmSync）。F02：删除失败计入 fail 上抛。 */
 function removeStale() {
-  let removed = 0;
+  let removed = 0, fail = 0;
   for (const name of fs.readdirSync(DIST)) {
     const fp = path.join(DIST, name);
     const isWhite = FILES.includes(name) || DIRS.includes(name);
-    if (!isWhite || DENY_TOP.test(name)) { if (safeRmSync(fp)) removed++; else console.error('RMTOP FAIL ' + fp); }
+    if (!isWhite || DENY_TOP.test(name)) { if (safeRmSync(fp)) removed++; else { console.error('RMTOP FAIL ' + fp); fail++; } }
   }
   (function scan(p) {
-    for (const e of fs.readdirSync(p, { withFileTypes: true })) {
+    let ents;
+    try { ents = fs.readdirSync(p, { withFileTypes: true }); }
+    catch (e) { console.error('READDIR FAIL ' + p + ' : ' + e.message); fail++; return; }
+    for (const e of ents) {
       const fp = path.join(p, e.name);
       const rel = path.relative(DIST, fp);
-      if (DENY_ANY.test(e.name) || DENY_ANY.test(nfkc(rel))) { if (safeRmSync(fp)) removed++; else console.error('RM FAIL ' + fp); continue; }
+      if (DENY_ANY.test(e.name) || DENY_ANY.test(nfkc(rel))) { if (safeRmSync(fp)) removed++; else { console.error('RM FAIL ' + fp); fail++; } continue; }
       if (e.isDirectory()) scan(fp);
     }
   })(DIST);
-  return removed;
+  return { removed, fail };
 }
 
 function main(mode) {
@@ -91,12 +94,19 @@ function main(mode) {
 
   if (full) {
     console.log('[deploy --full] 清场 + 整目录重建 site_dist');
-    safeRmSync(DIST);
+    if (!safeRmSync(DIST)) {   // F02：清场失败即中止，保留旧产物
+      console.error('FAIL: safeRmSync(DIST) 失败，中止整目录重建（旧产物保留）');
+      process.exit(1);
+    }
     fs.mkdirSync(DIST, { recursive: true });
     let n = 0, fail = 0;
     for (const f of FILES) { if (copyFileSafe(path.join(SRC, f), path.join(DIST, f))) n++; else fail++; }
     for (const d of DIRS) { const r = copyTreeSafe(path.join(SRC, d), path.join(DIST, d)); n += r.n; fail += r.fail; }
     console.log(`[deploy --full] 白名单复制 ${n} 文件（失败 ${fail}）`);
+    if (fail > 0) {   // F02：复制失败必须非零退出，防止上层自动化把缺文件当成功
+      console.error(`FAIL: ${fail} 个文件复制失败，site_dist 不完整（见上方 COPY FAIL 行）`);
+      process.exit(1);
+    }
 
     // 泄漏扫描（整目录重建后，确认没有非白名单/敏感文件混入）
     const top = fs.readdirSync(DIST);
@@ -138,9 +148,13 @@ function main(mode) {
       n += r.n; fail += r.fail;
     }
     const removed = removeStale();
-    const out = { mode: 'inc', copied: n, failed: fail, removedStale: removed, dist: DIST };
+    const out = { mode: 'inc', copied: n, failed: fail, removedStale: removed.removed, rmFail: removed.fail, dist: DIST };
     console.log(JSON.stringify(out));
     fs.writeFileSync(path.join(ROOT, '工程', '题库调研', '_sync_result.json'), JSON.stringify(out, null, 2), 'utf8');
+    if (fail > 0 || removed.fail > 0) {   // F02：任何复制/删除失败 → 非零退出
+      console.error(`FAIL: 复制失败 ${fail} / 残留清理失败 ${removed.fail}，同步未完成`);
+      process.exit(1);
+    }
   }
 }
 

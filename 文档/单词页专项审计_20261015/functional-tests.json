@@ -1,0 +1,322 @@
+{
+  "capturedAt": "2026-10-16T12:24:18.578Z",
+  "scope": "Current local english.js executed in isolated jsdom; probe exposes private state in test copy only. Production files and real user progress are untouched.",
+  "counts": {
+    "total": 30,
+    "pass": 21,
+    "issue": 9,
+    "harnessError": 0
+  },
+  "cases": [
+    {
+      "name": "01 initial list renders real words",
+      "status": "PASS",
+      "evidence": {
+        "hasWords": true
+      }
+    },
+    {
+      "name": "02 new-only filter should render without exception",
+      "status": "PASS",
+      "evidence": {
+        "error": ""
+      }
+    },
+    {
+      "name": "03 empty new-only result should render recovery",
+      "status": "PASS",
+      "evidence": {
+        "error": ""
+      }
+    },
+    {
+      "name": "04 ungraded card should offer reveal without recording",
+      "status": "ISSUE",
+      "evidence": {
+        "buttons": [
+          "认识",
+          "模糊",
+          "忘记"
+        ],
+        "blankInteractive": false,
+        "recordCount": 0
+      }
+    },
+    {
+      "name": "05 masked list answer should be independently revealable",
+      "status": "PASS",
+      "evidence": {
+        "remainsMasked": false,
+        "tag": "BUTTON",
+        "action": "eng-mask",
+        "role": null
+      }
+    },
+    {
+      "name": "06 immersive entry should dismiss advanced filter",
+      "status": "PASS",
+      "evidence": {
+        "readerOpen": true,
+        "filterStillOpen": false
+      }
+    },
+    {
+      "name": "07 changing familiar status should not silently replace and reveal next card",
+      "status": "ISSUE",
+      "evidence": {
+        "before": "alpha",
+        "after": "beta",
+        "revealed": true,
+        "firstStatus": 2
+      }
+    },
+    {
+      "name": "08 repeated same grade should not count as independent reviews",
+      "status": "ISSUE",
+      "evidence": {
+        "record": {
+          "s": 2,
+          "n": 2,
+          "t": 1792153457919,
+          "due": 1799929457919,
+          "log": [
+            [
+              2,
+              1792153457919
+            ],
+            [
+              2,
+              1792153457919
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 forgotten known word should be rescheduled soon",
+      "status": "ISSUE",
+      "evidence": {
+        "grade": 0,
+        "n": 13,
+        "nextDueDays": 30
+      }
+    },
+    {
+      "name": "10 quiz session stays frozen when search text changes",
+      "status": "PASS",
+      "evidence": {
+        "searchDisabledInQuiz": true,
+        "quizQueueLength": 5,
+        "before": 5
+      }
+    },
+    {
+      "name": "11 zero-result list filter cannot corrupt active quiz",
+      "status": "PASS",
+      "evidence": {
+        "stillShowsFrozenQuiz": true,
+        "quizQueueLength": 5,
+        "before": 5
+      }
+    },
+    {
+      "name": "12 quiz options must not leak into next round on answer rerender",
+      "status": "PASS",
+      "evidence": {
+        "answeredCorrectly": true,
+        "picked": 2,
+        "progressEntriesBefore": 0,
+        "progressEntriesAfter": 0
+      }
+    },
+    {
+      "name": "13 four-word quiz should offer four answers",
+      "status": "PASS",
+      "evidence": {
+        "optionCount": 4
+      }
+    },
+    {
+      "name": "14 failed audio request must report or fallback on same attempt",
+      "status": "ISSUE",
+      "evidence": {
+        "accepted": true,
+        "audioAttempts": 1,
+        "ttsFallbacks": 0
+      }
+    },
+    {
+      "name": "15 all-category pool should match manifest unique total",
+      "status": "ISSUE",
+      "evidence": {
+        "manifestTotal": 6572,
+        "rawEntries": 6791,
+        "uniqueWordKeys": 6572,
+        "duplicateRows": 219,
+        "duplicateForms": [
+          [
+            "abortion",
+            2
+          ],
+          [
+            "accommodation",
+            2
+          ],
+          [
+            "afflict",
+            2
+          ],
+          [
+            "amend",
+            2
+          ],
+          [
+            "appendix",
+            2
+          ],
+          [
+            "apt",
+            2
+          ],
+          [
+            "array",
+            2
+          ],
+          [
+            "artery",
+            2
+          ]
+        ]
+      }
+    },
+    {
+      "name": "16 single due word should count once across categories",
+      "status": "ISSUE",
+      "evidence": {
+        "word": "abortion",
+        "categoryOccurrences": 2,
+        "summaryDue": 1,
+        "homeDue": 2
+      }
+    },
+    {
+      "name": "17 list batch should stop at 30 initially",
+      "status": "PASS",
+      "evidence": {
+        "initialRows": 30,
+        "moreButton": true
+      }
+    },
+    {
+      "name": "18 show-all expands thousands of rows at once",
+      "status": "ISSUE",
+      "evidence": {
+        "before": 30,
+        "after": 2345,
+        "addedRows": 2315,
+        "jsdomElapsedMs": 264.8,
+        "note": "DOM count evidence; jsdom time is not phone performance"
+      }
+    },
+    {
+      "name": "19 familiar empty filter gives clear recovery button",
+      "status": "PASS",
+      "evidence": {
+        "recoveryPresent": true
+      }
+    },
+    {
+      "name": "20 search across categories works",
+      "status": "PASS",
+      "evidence": {
+        "results": 5,
+        "sample": [
+          "myocardial infarction",
+          "myocarditis"
+        ]
+      }
+    },
+    {
+      "name": "21 marking review queue uses snapshot identity",
+      "status": "PASS",
+      "evidence": {
+        "keys": [
+          "beta"
+        ]
+      }
+    },
+    {
+      "name": "22 quiz distractors unique with ordinary full pool",
+      "status": "PASS",
+      "evidence": {
+        "options": [
+          "delta",
+          "beta",
+          "alpha",
+          "gamma"
+        ],
+        "rightIndex": 2
+      }
+    },
+    {
+      "name": "23 closeReader returns to underlying view",
+      "status": "PASS",
+      "evidence": {
+        "readerOpen": false
+      }
+    },
+    {
+      "name": "24 completed review shows finish screen",
+      "status": "PASS",
+      "evidence": {
+        "finishScreen": true
+      }
+    },
+    {
+      "name": "25 card saved position respects empty result",
+      "status": "PASS",
+      "evidence": {
+        "resetIndex": 0
+      }
+    },
+    {
+      "name": "26 quiz completion has no invalid extra question",
+      "status": "PASS",
+      "evidence": {
+        "index": 5
+      }
+    },
+    {
+      "name": "27 typing a digit in quiz search must not answer question",
+      "status": "PASS",
+      "evidence": {
+        "quizPicked": -1,
+        "progressKeys": []
+      }
+    },
+    {
+      "name": "28 zero-result search in card mode has recovery",
+      "status": "PASS",
+      "evidence": {
+        "cardPresent": false,
+        "recoveryPresent": true
+      }
+    },
+    {
+      "name": "29 failed shard must not masquerade as empty vocabulary",
+      "status": "ISSUE",
+      "evidence": {
+        "showsEmptyVocabulary": true,
+        "showsNetworkError": false
+      }
+    },
+    {
+      "name": "30 failed shard is retried rather than cached permanently",
+      "status": "PASS",
+      "evidence": {
+        "firstLength": 0,
+        "retryLength": 5
+      }
+    }
+  ]
+}

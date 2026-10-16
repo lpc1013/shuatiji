@@ -130,6 +130,15 @@ window.Eng = (function () {
   const LEVELS = [
     { n: '忘记', cls: 'el0' }, { n: '模糊', cls: 'el1' }, { n: '认识', cls: 'el2' },
   ];
+  /* F01（20261015 审计 P1）：筛选状态标签集中取。'new'（未标记）不是数字档，
+     旧代码 LEVELS[+only].n 在 only='new' 时 +only=NaN → LEVELS[NaN]=undefined →
+     读 .n 抛 TypeError，filterHint（非空态）与 emptyHtml（空态）两条渲染路径都炸。
+     新增筛选枚举时只改这里，禁止在渲染函数里各自隐式转数字。 */
+  function onlyLabel() {
+    if (only === 'new') return '未标记';
+    if (only === '0' || only === '1' || only === '2') return LEVELS[+only].n;
+    return '';
+  }
   /* 标记按钮行：展示顺序 认识/模糊/忘记（data-v 仍按 p.s 的 2/1/0）。
      三种形态（卡片/详情/沉浸）共用，改一处即可。 */
   const MK_ORDER = [2, 1, 0];
@@ -496,7 +505,7 @@ window.Eng = (function () {
   function emptyHtml() {
     const parts = [];
     if (q.trim()) parts.push(`搜索「${esc(q.trim())}」`);
-    if (only !== '') parts.push(`「${LEVELS[+only].n}」筛选`);
+    if (only !== '') parts.push(`「${onlyLabel()}」筛选`);
     if (tagSel === '__none__') parts.push(`「未分组」标签`);
     else if (tagSel !== '') parts.push(`「${esc(tagSel)}」标签`);
     if (!parts.length) return '<div class="empty">没有词条</div>';
@@ -509,12 +518,21 @@ window.Eng = (function () {
    * 遮罩 chips（遮中文/遮英文）只在本模式显示。 */
   function listRowHtml(w) {
     const p = pget(w);
+    /* V10（20261015 视觉审计）：分类标签只在「全部分类」混合结果里显示 ——
+       已选定科室时每行重复同一个分类名是噪音。 */
+    const showDept = dept === 'all' && w._d;
+    /* F03（20261015 审计 P1）：遮罩字段改成真 <button>——旧版是 span 且没有 data-act，
+       点击落在 SPAN 上无任何动作，页面却写着「点击显示」。button 有原生键盘激活
+       （Enter/Space），点击/按键冒泡到 document 委托即揭示本字段，不进详情、不写评分。
+       未遮罩时保持原 div/span，行整体仍然只读。 */
+    const enTag = hideEn ? 'button' : 'div';
+    const cnTag = hideCn ? 'button' : 'span';
     return `<div class="eng-item ${p ? 'lv' + p.s : 'lvx'}">
         <div class="eng-item-h">
-          <div class="eng-w ${hideEn ? 'mask' : ''}">${esc(w.e)}</div>
+          <${enTag} class="eng-w ${hideEn ? 'mask' : ''}" ${hideEn ? 'data-act="eng-mask" aria-label="显示词形" title="点击显示"' : ''}>${esc(w.e)}</${enTag}>
           ${w.ph ? `<span class="eng-item-ph">${esc(w.ph)}</span>` : ''}
-          <span class="eng-cn ${hideCn ? 'mask' : ''}">${esc(w.c || '—')}</span>
-          ${w._d ? `<span class="eng-dept">${esc(w._d)}</span>` : ''}
+          <${cnTag} class="eng-cn ${hideCn ? 'mask' : ''}" ${hideCn ? 'data-act="eng-mask" aria-label="显示释义" title="点击显示"' : ''}>${esc(w.c || '—')}</${cnTag}>
+          ${showDept ? `<span class="eng-dept">${esc(w._d)}</span>` : ''}
         </div>
       </div>`;
   }
@@ -645,28 +663,39 @@ window.Eng = (function () {
   function modeCardInner(words, shown, sched, tags) {
     const st = statOf(words);
     const hint = filterHint(st);
+    /* 1016 反馈：modeCard 底部的「六级单词 · 共 N 词」计数行与上方科室下拉重复，已去掉。
+       活动筛选状态仍由高级筛选 chip 上的 filterHint 摘要表达。 */
     /* 科室选择 = 基础筛选（常驻主视图，与「⚙ 高级筛选」同行）；
        遮罩 / 题型 / 熟悉度仍收进独立弹窗。 */
     return `<div class="eng-modes" role="tablist" aria-label="学习模式">
         <button class="${mode === 'list' ? 'on' : ''}" data-act="eng-mode" data-v="list" role="tab" aria-selected="${mode === 'list'}">
           <b>列表浏览</b><span>中英对照 · 查词</span></button>
         <button class="${mode === 'card' ? 'on' : ''}" data-act="eng-mode" data-v="card" role="tab" aria-selected="${mode === 'card'}">
-          <b>卡片背诵</b><span>先想后选 · 快速过卡</span></button>
+          <b>卡片背诵</b><span>先想后选</span></button>
         <button class="${mode === 'quiz' ? 'on' : ''}" data-act="eng-mode" data-v="quiz" role="tab" aria-selected="${mode === 'quiz'}">
           <b>测验</b><span>4 选 1 自测</span></button>
       </div>
       ${sched && sched.due > 0 ? `<button class="chip eng-review-hl" data-act="eng-review">${ICON('bell')}到期复习 ${sched.due} 个词</button>` : ''}
       <div class="eng-filter-row">
-        <select id="engDept" class="subject-select eng-dept-basic" aria-label="选择分类">${deptOptionsHtml()}</select>
-        ${tagOptionsHtml(tags)}
+        <select id="engDept" class="subject-select eng-dept-basic" aria-label="选择分类" ${mode === 'quiz' ? 'disabled title="测验进行中 · 题源已冻结"' : ''}>${deptOptionsHtml()}</select>
+        ${mode === 'quiz' ? '' : tagOptionsHtml(tags)}
         <button class="chip eng-adv-btn" data-act="eng-adv-open">${ICON('gear')}高级筛选${hint}</button>
-      </div>
-      <p class="muted small" id="engCount" style="margin:8px 0 0">${countText(words, shown)}</p>`;
+      </div>`;
+  }
+  /* 掌握分布条 + 图例：view() 与 softRefresh() 共用（1016 起答题改走 softRefresh，
+     头部统计用 engSched/engStatsDetail 定向更新，不再为刷新统计而整视图重建）。 */
+  function statsDetailHtml(st) {
+    return `<div class="eng-bar">${[st.done - st.n1 - st.n2, st.n1, st.n2].map((n, i) =>
+      `<i class="${LEVELS[[0, 1, 2][i]].cls}" style="width:${st.total ? n / st.total * 100 : 0}%" title="${LEVELS[[0, 1, 2][i]].n} ${n}"></i>`).join('')}</div>
+      <div class="eng-legend">
+        ${LEVELS.map((L, i) => `<span class="mstag ${L.cls}">${L.n} <b>${[st.n0, st.n1, st.n2][i]}</b></span>`).join('')}
+        <span class="muted small">未标记 ${st.un}</span>
+      </div>`;
   }
   /* 高级筛选摘要右侧小计数：折叠时也能看到当前过滤状态 */
   function filterHint(st) {
     const parts = [];
-    if (only !== '') parts.push(LEVELS[+only].n + ' ' + (only === 'new' ? st.un : only === '0' ? st.n0 : only === '1' ? st.n1 : st.n2));
+    if (only !== '') parts.push(onlyLabel() + ' ' + (only === 'new' ? st.un : only === '0' ? st.n0 : only === '1' ? st.n1 : st.n2));
     if (tagSel !== '') parts.push(tagSel === '__none__' ? '未分组' : tagSel);
     if (q.trim()) parts.push('搜索');
     if (hideCn) parts.push('遮中文');
@@ -693,20 +722,15 @@ window.Eng = (function () {
 
     const sched = schedStats();
 
-    return `    <div class="search"><input id="engQ" placeholder="搜索英文 / 中文（全库）" autocomplete="off" value="${esc(q)}"><button class="btn ghost sm" data-act="eng-clear-q">清空</button></div>
+    /* F08（20261015 审计 P1）：测验中搜索框禁用——旧版 updateList 只换渲染词表，
+       quizList 不重建，出现「共 0 词却继续答旧题」的题源分裂。查词请退出测验。 */
+    return `    <div class="search"><input id="engQ" ${mode === 'quiz' ? 'disabled placeholder="测验进行中 · 题源已冻结"' : 'placeholder="搜索英文 / 中文（全库）" autocomplete="off" value="' + esc(q) + '"'}>${mode === 'quiz' ? '' : '<button class="btn ghost sm" data-act="eng-clear-q">清空</button>'}</div>
 
     <div class="card">
-      <div class="row between"><h3 style="margin:0">${ICON('abc')}医学英语词库</h3>
-        <span class="muted small">${man.total} 词 · ${(man.depts || []).length} 分类</span></div>
-      <div class="eng-bar">${[st.done - st.n1 - st.n2, st.n1, st.n2].map((n, i) =>
-      `<i class="${LEVELS[[0, 1, 2][i]].cls}" style="width:${st.total ? n / st.total * 100 : 0}%" title="${LEVELS[[0, 1, 2][i]].n} ${n}"></i>`).join('')}</div>
-      <div class="eng-legend">
-        ${LEVELS.map((L, i) => `<span class="mstag ${L.cls}">${L.n} <b>${[st.n0, st.n1, st.n2][i]}</b></span>`).join('')}
-        <span class="muted small">未标记 ${st.un}</span>
-      </div>
-      <div class="row between" style="margin-top:10px;gap:8px;flex-wrap:wrap">
-        <span class="muted small">今日已学 <b>${sched.today}</b> · 待复习 <b>${sched.due}</b></span>
-      </div>
+      <details class="eng-stats-fold">
+        <summary><b>${ICON('abc')}医学英语词库</b><span class="muted small" id="engSched">今日已学 <b>${sched.today}</b> · 待复习 <b>${sched.due}</b> · ${man.total} 词</span></summary>
+        <div id="engStatsDetail">${statsDetailHtml(st)}</div>
+      </details>
     </div>
 
     <div class="card" id="engModeCard">${modeCardInner(words, shown, sched, tags)}</div>
@@ -722,20 +746,14 @@ window.Eng = (function () {
        让卡片在可用视口内垂直居中，无需下滑（A06） */
     return mode === 'card' ? `<div class="eng-card-stage">${inner}</div>` : inner;
   }
-  function countText(words, shown) {
-    const d = dept === 'all' ? { n: '全部分类' } : ((MAN && MAN.depts || []).find(x => x.id === dept) || (MAN && MAN.depts || [])[0]);
-    const dn = d ? trimDept(d.n) : '';
-    let s = `${esc(dn)} · 共 ${words.length} 词`;
-    if (shown.length !== words.length) s += ` · 筛出 ${shown.length}`;
-    return s;
-  }
   async function updateList() {
+    /* F08（20261015 审计 P1）：测验题源已冻结，列表级刷新不得触碰当前题。
+       （搜索框/下拉在测验中已禁用，这里是兜底守卫，防止未来新增入口绕过。） */
+    if (mode === 'quiz') return;
     const words = listOf(await curPool());
     const shown = listOf(words);
     const body = document.getElementById('engBody');
     if (body) body.innerHTML = bodyHtml(words, shown);
-    const cnt = document.getElementById('engCount');
-    if (cnt) cnt.innerHTML = countText(words, shown);
   }
   /* ① 局部刷新：只重建「模式卡 + 词条区」，不整视图 innerHTML ——
      切模式/筛选/卡片翻页走这里，头部搜索框焦点与 #view 滚动位置都保住。
@@ -745,10 +763,17 @@ window.Eng = (function () {
     const words = listOf(base);
     const tags = distinctTags(base);
     const sched = schedStats();
+    const st = statOf(words);
     const mc = document.getElementById('engModeCard');
     if (mc) mc.innerHTML = modeCardInner(words, words, sched, tags);
     const body = document.getElementById('engBody');
     if (body) body.innerHTML = bodyHtml(words, words);
+    /* 1016：答题（eng-quiz-pick）改走 softRefresh 后，头部统计不能留在旧值——
+       定向更新「今日已学/待复习」摘要与掌握分布条，不再为此整视图 refresh()（会清滚动位置）。 */
+    const sc = document.getElementById('engSched');
+    if (sc) sc.innerHTML = `今日已学 <b>${sched.today}</b> · 待复习 <b>${sched.due}</b> · ${(MAN || {}).total || ''} 词`;
+    const sd = document.getElementById('engStatsDetail');
+    if (sd) sd.innerHTML = statsDetailHtml(st);
     const v = document.getElementById('view');
     if (v) v.classList.toggle('eng-card-mode', mode === 'card');   // A06：卡片模式 → 居中布局
     bindBasicDept();   // 重新绑定基础科室下拉（softRefresh 重建了 engModeCard 内的 select）
@@ -792,13 +817,15 @@ window.Eng = (function () {
         <button class="chip sm ${quizType === 'en2cn' ? 'on' : ''}" data-act="eng-quiz-type" data-v="en2cn">英 → 中</button>
         <button class="chip sm ${quizType === 'audio' ? 'on' : ''}" data-act="eng-quiz-type" data-v="audio">听音辨词</button>
       </div>` : '',
-      `<div class="wrap eng-chips">
+      /* F08：熟悉度筛选在测验中隐藏——quizList 是开局冻结的快照，
+         测验中途改筛选只会改计数文本、不改题源（控件看似生效实则无效）。 */
+      mode !== 'quiz' ? `<div class="wrap eng-chips">
         <button class="chip sm ${only === '' ? 'on' : ''}" data-act="eng-only" data-v="">全部 ${words.length}</button>
         <button class="chip sm ${only === 'new' ? 'on' : ''}" data-act="eng-only" data-v="new">未标记 ${st.un}</button>
         <button class="chip sm ${only === '0' ? 'on' : ''}" data-act="eng-only" data-v="0">忘记 ${st.n0}</button>
         <button class="chip sm ${only === '1' ? 'on' : ''}" data-act="eng-only" data-v="1">模糊 ${st.n1}</button>
         <button class="chip sm ${only === '2' ? 'on' : ''}" data-act="eng-only" data-v="2">认识 ${st.n2}</button>
-      </div>`
+      </div>` : ''
     ].filter(Boolean).join('');
     return `<div class="eng-adv-sec"><div class="eng-adv-label">筛选</div>${advBody}</div>`;
   }
@@ -909,12 +936,23 @@ window.Eng = (function () {
       if (quizPicked >= 0 || !quizList || !quizAns) return true;
       quizPicked = i;
       if (i !== quizRight) { quizWrong++; pset(quizList[quizIdx], 0); }   // 答错降回忘记并排重考
-      await refresh(); return true;
+      /* 1016 反馈：旧版这里走 refresh() 全视图重建，scrollTop 清零 → 每答一题
+         页面跳回顶部，「下一题」落到首屏之外。改 softRefresh（滚动/头部焦点都保住，
+         头部统计由 softRefresh 定向更新），并把「下一题」滚入视野（nearest=已在视野则不动）。 */
+      await softRefresh();
+      const nx = document.querySelector('#engBody .eng-q-next-row');
+      if (nx && nx.scrollIntoView) nx.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      return true;
     }
     if (a === 'eng-quiz-next') {
       quizIdx++; quizAns = null; quizRight = -1; quizPicked = -1;
       if (quizType === 'audio' && quizList && quizList[quizIdx]) speak(quizList[quizIdx].e);
-      await softRefresh(); return true;
+      await softRefresh();
+      /* 新题渲染后如果题干已被卷出视口上方（用户翻到很下面），拉回题目顶部；
+         正常位置则不动，避免每题都强行滚动。 */
+      const qz = document.querySelector('#engBody .eng-quiz');
+      if (qz && qz.scrollIntoView && qz.getBoundingClientRect().top < 0) qz.scrollIntoView({ block: 'start' });
+      return true;
 
     }
     if (a === 'eng-quiz-replay') {
@@ -950,7 +988,9 @@ window.Eng = (function () {
 
     }
 
-    if (a === 'eng-cn') { t.classList.toggle('mask'); return true; }
+    /* F03：eng-mask = 列表遮罩字段的逐项揭示（eng-cn 兼容沉浸页释义遮罩）。
+       只 toggle 本字段 mask 类，不进详情、不写评分。 */
+    if (a === 'eng-cn' || a === 'eng-mask') { t.classList.toggle('mask'); return true; }
     if (a === 'eng-tr') { t.classList.toggle('mask'); return true; }
     /* 发音：始终读当前词条（阅读页 / 卡片 / 列表行由 wordOf 统一解析） */
     if (a === 'eng-spk') {
@@ -966,6 +1006,10 @@ window.Eng = (function () {
     }
 
     if (a === 'eng-immersive') {
+      /* F04（20261015 审计 P1）：沉浸页 z-index(40) 低于高级筛选抽屉(60)，从筛选里
+         进沉浸会留下浮层挡在上方、必须再点一次完成。导航类动作先关面板再转场，
+         而不是靠抬高 z-index 掩盖状态错误。 */
+      if (advOpen) await closeAdv();
       /* 沉浸式：卡片 / 测验均可进入全屏阅读页；词表 = 当前队列快照 */
       let cw, idx;
       if (mode === 'quiz' && quizList) {
@@ -1024,19 +1068,27 @@ window.Eng = (function () {
      两把键盘互斥（rOpen / mode==='quiz'），避免与刷题区按键冲突。 */
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && advOpen) { closeAdv(); return; }   // A08：Esc 关高级筛选抽屉
+    /* F12（20261015 审计 P1）：输入/编辑焦点优先。旧版不排除 input，
+       测验中搜索框敲数字 1-4 会直接作答（错选还会写「忘记」记录）；
+       isComposing 挡中文输入法组合阶段。 */
+    if (e.isComposing) return;
+    const tg = e.target;
+    if (tg && (tg.tagName === 'INPUT' || tg.tagName === 'TEXTAREA' || tg.tagName === 'SELECT' || tg.isContentEditable)) return;
     if (rOpen) {
       if (e.key === 'Escape') { closeReader(); }
       else if (e.key === 'ArrowLeft') { goReader(-1); }
       else if (e.key === 'ArrowRight') { goReader(1); }
       /* 空格 = 朗读当前词。焦点在按钮上时放行，交给按钮自身的 click（避免读两遍）。 */
       else if (e.key === ' ' || e.key === 'Spacebar') {
-        if (e.target && e.target.tagName === 'BUTTON') return;
+        if (tg && tg.tagName === 'BUTTON') return;
         e.preventDefault();
         if (rWords && rWords[rIdx]) speak(rWords[rIdx].e);
       }
       return;
     }
     if (mode === 'quiz' && quizList && !rOpen) {
+      /* 焦点在按钮上时 Enter/Space 是原生激活，这里再 click 会双触发（连跳两题） */
+      if (tg && tg.tagName === 'BUTTON' && (e.key === 'Enter' || e.key === ' ')) return;
       if (quizPicked < 0 && /^[1-4]$/.test(e.key)) {
         const btn = document.querySelector('#engBody .eng-qopt[data-i="' + (parseInt(e.key, 10) - 1) + '"]');
         if (btn) { e.preventDefault(); btn.click(); }

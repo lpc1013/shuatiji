@@ -720,9 +720,9 @@ section('J. 医学英语词库');
           await sleep(550);
           const n = document.querySelectorAll('#engBody .eng-item').length;
           /* B21 起列表默认只渲染前 30 行（下方「展示全部」再放全）→ 不能按行数断言；
-             改校验「计数文本恢复为 3254 词」（证明残留筛选已重置）+ 首屏确有渲染行 */
-          const cntTxt = (document.getElementById('engCount') || {}).textContent || '';
-          ok('换科室重置筛选（切 01 临床科室后应恢复全部 3254 词，而非被残留筛选清空）', /3254/.test(cntTxt) && n > 0, 'items=' + n + ' count=' + cntTxt.trim());
+             1016 起计数行已删（与科室下拉重复）→ 改校验「确有渲染行 + 残留筛选已重置」，
+             重置证据由下一条「全部 chip 选中」断言承担 */
+          ok('换科室重置筛选（切 01 临床科室后列表确有渲染行）', n > 0, 'items=' + n);
           const back = [...document.querySelectorAll('[data-act="eng-only"]')].find(c => c.dataset.v === '');
           ok('换科室后「全部」chip 处于选中态', !!(back && back.classList.contains('on')));
           /* 恢复默认分类（31 六级单词），避免污染后续用例 */

@@ -496,7 +496,11 @@
     // 卡片已存在时直接返回：避免 MutationObserver 因我们自己的 DOM 变更再次触发 -> 死循环卡死
     if (v.querySelector("[data-account-card]")) return;
     const html = cardHtml();
-    v.insertAdjacentHTML("afterbegin", html);
+    /* V11（20261015）：设置页已把偏好/主题卡前置 —— 云同步卡插到「数据区起点」标记处，
+     * 不再强插页首把常用设置挤到第二屏。标记缺失时回退 afterbegin（兼容旧渲染）。 */
+    const marker = v.querySelector(".me-data-start");
+    if (marker) marker.insertAdjacentHTML("beforebegin", html);
+    else v.insertAdjacentHTML("afterbegin", html);
     bindCard();
   }
   function bindCard() {

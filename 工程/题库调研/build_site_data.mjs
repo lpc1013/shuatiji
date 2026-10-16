@@ -14,7 +14,15 @@
  */
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { safeRmSync } from './_safeRm.mjs';
+
+/* F05+F06（20261015）：内容寻址分片。
+ *  - 分片文件名带内容哈希（<名>-<sha1前8位>.json）：内容变 → 文件名变 → URL 变。
+ *    旧页面持旧 manifest 只会请求旧哈希文件 —— 服务器已无此文件 → 显式 404（走既有重试/报错），
+ *    而不是像旧版「固定路径 + ?v=」那样静默拿到新内容（新旧混排）。
+ *  - manifest.version 由全部分片内容哈希派生（替代分钟级时间戳，修复同分钟碰撞）。 */
+const h8 = s => crypto.createHash('sha1').update(s).digest('hex').slice(0, 8);
 
 const WS = 'D:/朝花夕拾 闲暇随笔/李沁玲/大二上/生物化学与分子生物学';
 const PACKS = path.join(WS, '工程', '题库调研', 'packs');
@@ -199,7 +207,9 @@ cleanDir(path.join(OUT, 'explain'));
 
 const manifest = {
   // 版本闸口：分片路径带 ?v=<version>，数据一变 version 就变，浏览器不会吃旧缓存
-  version: new Date().toISOString().replace(/[-:T]/g, '').slice(0, 12),
+  // F06（20261015）：version 不再用分钟级时间戳（同分钟重建会碰撞），改为在写出前
+  // 由全部分片（packs/ + explain/）内容哈希派生 —— 同一分钟改任一分片再构建，version 必不同。
+  version: null,   // 见文件末尾 deriveManifestVersion()
   generatedAt: new Date().toISOString(),
   semesters: [],
   totals: { subjects: 0, questions: 0, jiguang: 0, extension: 0, withMeta: { difficulty: 0, answerCount: 0, year: 0 } },
@@ -284,7 +294,6 @@ for (const sem of SEM_ORDER) {
       }
       const dir = path.join(OUT, 'packs', sem);
       ensureDir(dir);
-      const dst = path.join(dir, `${id}-${grp === '极光' ? 'jg' : 'ext'}.json`);
       // 逐题只保留需要的键，去掉空值，压体积
       const slim = arr.map(q => {
         const o = { id: q.id, t: q.type, c: q.chapter, q: q.stem, o: sanitizeOptions({ ...q.options }, q.id, SANITIZE_LOG), a: q.answer, s: q.source };
@@ -309,7 +318,9 @@ for (const sem of SEM_ORDER) {
         }
         return o;
       });
-      fs.writeFileSync(dst, JSON.stringify(slim), 'utf8');
+      const slimJson = JSON.stringify(slim);
+      const dst = path.join(dir, `${id}-${grp === '极光' ? 'jg' : 'ext'}-${h8(slimJson)}.json`);
+      fs.writeFileSync(dst, slimJson, 'utf8');
       const bytes = fs.statSync(dst).size;
       entry[key] = { file: `packs/${sem}/${path.basename(dst)}`, count: slim.length, bytes };
       total += slim.length;
@@ -333,8 +344,9 @@ for (const sem of SEM_ORDER) {
         ensureDir(dir);
         const chapters = [];
         for (const [ch, obj] of byChap) {
-          const fn = safeChapName(ch) + '.json';
-          fs.writeFileSync(path.join(dir, fn), JSON.stringify(obj), 'utf8');
+          const objJson = JSON.stringify(obj);
+          const fn = `${safeChapName(ch)}-${h8(objJson)}.json`;   // F05：内容哈希文件名
+          fs.writeFileSync(path.join(dir, fn), objJson, 'utf8');
           chapters.push({ name: ch, file: `explain/${sem}/${id}/${fn}`, count: Object.keys(obj).length });
         }
         entry.explain = { dir: `explain/${sem}/${id}`, chapters, count: n };
@@ -415,6 +427,30 @@ for (const s of expectedSubs) {
     process.exit(1);
   }
 }
+
+/* F06：manifest.version = 全部分片内容指纹（排序后的 relpath:sha1 串再 sha1，取 12 位）。
+ * 必须在 manifest 写出前计算，且只覆盖 packs/ + explain/（orphans.json/manifest 自身不进指纹，避免自引用）。 */
+function deriveManifestVersion() {
+  const parts = [];
+  (function walk(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fp = path.join(dir, e.name);
+      if (e.isDirectory()) walk(fp);
+      else parts.push(path.relative(OUT, fp).replace(/\\/g, '/') + ':' + crypto.createHash('sha1').update(fs.readFileSync(fp)).digest('hex'));
+    }
+  })(path.join(OUT, 'packs'));
+  (function walk(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+      const fp = path.join(dir, e.name);
+      if (e.isDirectory()) walk(fp);
+      else parts.push(path.relative(OUT, fp).replace(/\\/g, '/') + ':' + crypto.createHash('sha1').update(fs.readFileSync(fp)).digest('hex'));
+    }
+  })(path.join(OUT, 'explain'));
+  manifest.version = crypto.createHash('sha1').update(parts.sort().join('\n')).digest('hex').slice(0, 12);
+}
+deriveManifestVersion();
 
 ensureDir(OUT);
 fs.writeFileSync(path.join(OUT, 'manifest.json'), JSON.stringify(manifest), 'utf8');

@@ -210,6 +210,31 @@ const prevByFp = new Map();   // 文本指纹 -> 上一版主 id（"__AMBIG__" =
 const siteIds = new Set([...prevPacks.keys(), ...prevAlias.keys()]);
 log(`上一版 packs id 基线 ${siteIds.size}（主 ${prevPacks.size} + 别名 ${prevAlias.size}）← ${PREV}`);
 
+// —— A04 pf 基线：上一版 explain 的 pf（易错点辨析）块，必须在「清理输出目录」之前读入内存 ——
+// pf 表由 pf_gen/write_pf.mjs 直写 packs/<学期>/explain/<学科>.json（工作层），而解析正本
+// merged2 不含 pf：不做叠加，每次重建都会清空全量 AI 生成易错点表
+// （2026-10-15 实际发生：极光 270 + 扩展 11,313 + 学习通 611 共 12,194 张表被两次重建清空，
+//   靠 pf_gen/out 产物全量重放才恢复）。叠加规则：只搬 pf 块，其余块一律以 merged2 正本为准；
+// 上一版有 pf 而本次该题无任何解析 → 新建 {b:[pf]} 条目（学习通等无解析题的 pf 不丢）。
+const prevExplain = new Map(); // `${sem}|${subject}` → {qid: entry}
+{
+  for (const sem of SEM_ORDER) {
+    const d = `${PREV}/${sem}/explain`;
+    if (!existsSync(d)) continue;
+    for (const f of await readdir(d)) {
+      if (!f.endsWith(".json") || f.includes(".bak")) continue;
+      let obj = null;
+      try { obj = JSON.parse(await readFile(`${d}/${f}`, "utf8")); } catch { continue; }
+      prevExplain.set(`${sem}|${f.replace(/\.json$/, "")}`, obj);
+    }
+  }
+  let nPf = 0;
+  for (const o of prevExplain.values())
+    for (const e of Object.values(o))
+      if (Array.isArray(e?.b) && e.b.some(b => b[1] === "pf")) nPf++;
+  log(`A04 pf 基线：上一版 explain ${prevExplain.size} 科 / 含 pf 块 ${nPf} 题 ← ${PREV}`);
+}
+
 log("清理输出目录");
 const { rm, rename } = await import("fs/promises");
 for (let i = 0; i < 5; i++) { try { await rm(OUT, { recursive: true, force: true }); } catch { } if (!existsSync(OUT)) break; await new Promise(r => setTimeout(r, 300)); }
@@ -343,7 +368,19 @@ for (const f of subs) {
        * 防「前前版 id」在多次主 id 变更后静默丢失（本次事故正因：A02 基线已不含 ext-，
        * 且扩展组不继承 aliasIds → lpc 270 条 ext- 死链）。配合用 A02 前的历史基线重建，
        * 旧 ext-<hash> 经 prevId 进入别名网。 */
-      const prevItem = prevId ? prevPacks.get(prevId) : null;
+      let prevItem = prevId ? prevPacks.get(prevId) : null;
+      /* A03b（20261015）：指纹撞键会让 A02 继承**静默失效**——真重复题对（两来源各收录
+       * 一次、题干仅差标点）经 norm() 后共享同一文本指纹 → prevByFp 标 __AMBIG__ →
+       * prevId=null → prevItem=null → 上一版别名被悄悄丢掉。若该别名被用户引用过即为死链。
+       * 兜底：按「源 id 身份」直接认领上一版同 id 题（id 相同 = 同一道题，最强锚不会认错），
+       * 恢复继承。恢复后若多题声明同一别名，由别名最终化处的 A03 裁决唯一归属，
+       * 不会回到「运行期最后一写赢」的不确定态。 */
+      if (!prevItem) {
+        for (const sid0 of allIds) {
+          const c = prevPacks.get(sid0);
+          if (c) { prevItem = c; stat.inhFallback = (stat.inhFallback || 0) + 1; break; }
+        }
+      }
       if (prevItem && prevItem.flags && prevItem.flags.aliasIds)
         for (const a of prevItem.flags.aliasIds) if (a !== primaryExt) aliasSet.add(a);
       aliasCands = [...aliasSet];
@@ -442,7 +479,7 @@ for (const f of subs) {
 }
 
 log(`总题 ${stat.total} | 极光组 ${stat.jg}（修复 ${stat.fixed}） | 扩展组 ${stat.ext} | 极光补标签 ${stat.jgTags || 0} | 教材改判 ${stat.overridden} | 不可裁决标记 ${stat.ambiguous} | 病例缺正文 ${stat.stemIncomplete}`);
-log(`统一 id 网：扩展组主 id 为稳定锚 ${stat.extStable || 0}/${stat.ext} | 上一版反查命中 ${stat.extFpHit || 0}（未命中 ${stat.extFpMiss || 0}：靠源 id 或 ext-hash 兜底）`);
+log(`统一 id 网：扩展组主 id 为稳定锚 ${stat.extStable || 0}/${stat.ext} | 上一版反查命中 ${stat.extFpHit || 0}（未命中 ${stat.extFpMiss || 0}：靠源 id 或 ext-hash 兜底）| A03b 身份兜底继承 ${stat.inhFallback || 0} 题`);
 log(`元数据覆盖：难度 ${stat.metaD} / 答题人次 ${stat.metaN} / 正确率 ${stat.metaAc} / 年份 ${stat.metaY}`);
 
 // ---------------- 兜底：上一版 packs 有、本次合并未命中的题，原位补回（保证进度 100% 不丢） ----------------
@@ -480,14 +517,39 @@ if (prevPacks.size) {
 // ---------------- 别名最终化（必须在全部主 id 定下之后）----------------
 // 剔除「恰好是别题主 id」的候选：留着会让 ALIAS 把那道题指向本题（qById 用 ALIAS[id]||id 会认错）。
 {
-  let dropped = 0, kept = 0;
+  // —— A03：同一别名被多题声明的裁决 ——
+  // 背景：真重复题（两个来源各收录一次、题干仅差标点）会算出同一个 ext-<hash>，
+  // 且该别名经 A02 继承链在两题的 flags.aliasIds 里代代相传 → 运行期 ALIAS 表
+  // 「最后一写赢」，解析目标不确定。裁决规则复用 id 铁律优先级：
+  //   ① 主 id 在 siteIds（上一版在用）② 源站稳定 id（非 ext- 前缀）③ ext-<hash> 兜底；
+  // 同级按主 id 字典序，保证构建可重现。落选方剥离该别名（保留自身主 id，题目不下架），
+  // 用户数据零影响：被裁掉的别名在快照中零引用，且双方题目内容/答案一致。
+  // 自洽性：裁决后仅胜者携带该别名 → 下一版 A02 继承只有胜者传它，冲突不会复活。
+  const rankOf = pid => siteIds.has(pid) ? 0 : (/^ext-/.test(pid) ? 2 : 1);
+  const aliasOwners = new Map();   // alias -> [{ rec, primary }]
   for (const rec of aliasRecs) {
-    const al = rec.cands.filter(x => x && !usedPrimary.has(x));
+    for (const a of rec.cands) {
+      if (!a || usedPrimary.has(a)) continue;   // 与主 id 相撞的沿用下方旧逻辑剔除
+      if (!aliasOwners.has(a)) aliasOwners.set(a, []);
+      aliasOwners.get(a).push({ rec, primary: rec.item.id });
+    }
+  }
+  const aliasWinner = new Map();   // alias -> 胜者 rec（唯一归属）
+  for (const [a, owners] of aliasOwners) {
+    if (owners.length === 1) { aliasWinner.set(a, owners[0].rec); continue; }
+    owners.sort((x, y) => (rankOf(x.primary) - rankOf(y.primary)) || (x.primary < y.primary ? -1 : x.primary > y.primary ? 1 : 0));
+    aliasWinner.set(a, owners[0].rec);
+    log(`别名裁决：「${a}」被 ${owners.length} 题声明（${owners.map(o => o.primary).join(' vs ')}）→ 归属 ${owners[0].primary}`);
+  }
+  let dropped = 0, kept = 0, arbitrated = 0;
+  for (const rec of aliasRecs) {
+    const al = rec.cands.filter(x => x && !usedPrimary.has(x) && aliasWinner.get(x) === rec);
     dropped += rec.cands.length - al.length;
     kept += al.length;
     if (al.length) { rec.item.flags = rec.item.flags || {}; rec.item.flags.aliasIds = al; }
   }
-  log(`统一 id 网：别名登记 ${aliasRecs.length} 题 / 保留 ${kept} 个别名 / 因与别题主 id 相撞剔除 ${dropped} 个 | 主 id 共 ${usedPrimary.size}`);
+  arbitrated = [...aliasOwners.values()].filter(o => o.length > 1).length;
+  log(`统一 id 网：别名登记 ${aliasRecs.length} 题 / 保留 ${kept} 个别名 / 因与别题主 id 相撞剔除 ${dropped} 个 / 多题声明裁决 ${arbitrated} 组 | 主 id 共 ${usedPrimary.size}`);
 }
 
 // ---------------- 写出 ----------------
@@ -530,6 +592,45 @@ for (const sem of SEM_ORDER) {
   }
   const em = new Map();
   for (const [k, v] of explainMap) { const [s, subj] = k.split("|"); if (s === sem) em.set(subj, v); }
+  // —— A04：上一版 pf 块叠加（只搬 pf；an/ab/tx 等其余块以 merged2 正本为准，不从这里继承）——
+  {
+    let carried = 0, created = 0;
+    for (const [key, prevObj] of prevExplain) {
+      const [s, subj] = key.split("|");
+      if (s !== sem) continue;
+      const obj = em.get(subj);
+      if (!obj) {
+        // 本科本次无任何解析条目：仅由 pf 组成新条目（防止整科 pf 静默消失）
+        const fresh = {};
+        for (const [pid, pe] of Object.entries(prevObj)) {
+          const pfs = Array.isArray(pe?.b) ? pe.b.filter(b => b[1] === "pf") : [];
+          if (pfs.length) { fresh[pid] = { b: pfs.map(b => [...b]) }; created++; }
+        }
+        if (Object.keys(fresh).length) em.set(subj, fresh);
+        continue;
+      }
+      for (const [pid, pe] of Object.entries(prevObj)) {
+        const pfs = Array.isArray(pe?.b) ? pe.b.filter(b => b[1] === "pf") : [];
+        if (!pfs.length) continue;
+        const cur = obj[pid];
+        if (!cur || !Array.isArray(cur.b)) { obj[pid] = { b: pfs.map(b => [...b]) }; created++; continue; }
+        // 工作层优先：上一版 pf（write_pf 维护的 AI 表格）覆盖 merged2 派生 pf
+        //（merged2 的 pitfalls 是抓取时的散文提示，AI 表格是其升级版；替换语义与 write_pf 一致）
+        const i = cur.b.findIndex(b => b[1] === "pf");
+        const incoming = pfs.map(b => [...b]);
+        if (i < 0) {
+          const tx = cur.b.findIndex(b => b[1] === "tx");
+          if (tx >= 0) cur.b.splice(tx, 0, ...incoming);
+          else cur.b.push(...incoming);
+          carried++;
+        } else {
+          const a = JSON.stringify(cur.b[i]), b = JSON.stringify(incoming[0]);
+          if (incoming.length === 1 && a !== b) { cur.b[i] = incoming[0]; carried++; }
+        }
+      }
+    }
+    if (carried || created) log(`A04 pf 叠加：继承进既有条目 ${carried} / 新建条目 ${created}`);
+  }
   if (em.size) {
     await ensureDir(`${semDir}/explain`);
     for (const [subj, obj] of em) {

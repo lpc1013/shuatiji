@@ -1,0 +1,174 @@
+{
+  "capturedAt": "2026-10-15T10:55:00.729Z",
+  "regions": [
+    {
+      "class": "topbar",
+      "fontSize": "15px",
+      "rect": {
+        "bottom": 48.66666793823242,
+        "height": 48.66666793823242,
+        "left": 0,
+        "right": 374.6666870117187,
+        "top": 0,
+        "width": 374.6666870117187,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "class": "card",
+      "fontSize": "15px",
+      "rect": {
+        "bottom": 422.75001525878906,
+        "height": 213.0729217529297,
+        "left": 14,
+        "right": 360.6666870117187,
+        "top": 209.67709350585935,
+        "width": 346.66668701171875,
+        "x": 14,
+        "y": 209.67709350585935
+      }
+    },
+    {
+      "class": "eng-card",
+      "fontSize": "15px",
+      "rect": {
+        "bottom": 696.75,
+        "height": 250,
+        "left": 14,
+        "right": 360.6666870117187,
+        "top": 446.75,
+        "width": 346.66668701171875,
+        "x": 14,
+        "y": 446.75
+      }
+    },
+    {
+      "class": "eng-card-nav",
+      "fontSize": "15px",
+      "rect": {
+        "bottom": 746.4791679382324,
+        "height": 37.72916793823242,
+        "left": 14,
+        "right": 360.6666870117187,
+        "top": 708.75,
+        "width": 346.66668701171875,
+        "x": 14,
+        "y": 708.75
+      }
+    },
+    {
+      "class": "eng-mk ",
+      "fontSize": "12.75px",
+      "rect": {
+        "bottom": 746.4791679382324,
+        "height": 37.72916793823242,
+        "left": 14,
+        "right": 125.55208587646484,
+        "top": 708.75,
+        "width": 111.55208587646484,
+        "x": 14,
+        "y": 708.75
+      }
+    },
+    {
+      "class": "eng-mk ",
+      "fontSize": "12.75px",
+      "rect": {
+        "bottom": 746.4791679382324,
+        "height": 37.72916793823242,
+        "left": 131.55209350585938,
+        "right": 243.11459350585935,
+        "top": 708.75,
+        "width": 111.5625,
+        "x": 131.55209350585938,
+        "y": 708.75
+      }
+    },
+    {
+      "class": "eng-mk ",
+      "fontSize": "12.75px",
+      "rect": {
+        "bottom": 746.4791679382324,
+        "height": 37.72916793823242,
+        "left": 249.11459350585935,
+        "right": 360.6666793823242,
+        "top": 708.75,
+        "width": 111.55208587646484,
+        "x": 249.11459350585935,
+        "y": 708.75
+      }
+    },
+    {
+      "class": "tabbar",
+      "fontSize": "15px",
+      "rect": {
+        "bottom": 640.0000419616699,
+        "height": 61.66666793823242,
+        "left": 0,
+        "right": 374.6666870117187,
+        "top": 578.3333740234375,
+        "width": 374.6666870117187,
+        "x": 0,
+        "y": 578.3333740234375
+      }
+    },
+    {
+      "class": "eng-mk ",
+      "fontSize": "12.75px",
+      "rect": {
+        "bottom": 0,
+        "height": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "class": "eng-mk ",
+      "fontSize": "12.75px",
+      "rect": {
+        "bottom": 0,
+        "height": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "class": "eng-mk ",
+      "fontSize": "12.75px",
+      "rect": {
+        "bottom": 0,
+        "height": 0,
+        "left": 0,
+        "right": 0,
+        "top": 0,
+        "width": 0,
+        "x": 0,
+        "y": 0
+      }
+    }
+  ],
+  "resources": [
+    "https://www.lql170.cn/features.js?v=20261015c",
+    "https://www.lql170.cn/english.js?v=20261015c",
+    "https://www.lql170.cn/app.js?v=20261015c",
+    "https://www.lql170.cn/sync.js?v=20261015c"
+  ],
+  "scroll": {
+    "height": 900,
+    "y": 0
+  },
+  "url": "https://www.lql170.cn/",
+  "viewport": {
+    "height": 640,
+    "width": 390
+  }
+}

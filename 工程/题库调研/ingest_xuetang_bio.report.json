@@ -1,0 +1,255 @@
+{
+  "generatedAt": "2026-10-15T05:43:55.315Z",
+  "before": 5748,
+  "after": 5816,
+  "added": 68,
+  "skippedSelfDup": 0,
+  "corrections": 24,
+  "newIds": 68,
+  "chapterAdopt": {
+    "xuetang": 154,
+    "other": 204
+  },
+  "tagAddedCount": 1646,
+  "correctionsDetail": [
+    {
+      "id": "jiguang:a40c821f-c24c-447b-b098-0aa0e2a360df",
+      "old": "B",
+      "new": "E",
+      "chapterFolder": "DNA 的合成",
+      "stem": "DNA复制过程中不能出现的是"
+    },
+    {
+      "id": "jiguang:519962b0-399d-458a-bdc0-4c54511532d4",
+      "old": "C",
+      "new": "D",
+      "chapterFolder": "DNA 重组和重组 DNA 技术",
+      "stem": "下列哪种方法不能获得目的基因"
+    },
+    {
+      "id": "jiguang:ed419656-6848-4b2c-8f0d-6dc17d692fe5",
+      "old": "A",
+      "new": "D",
+      "chapterFolder": "DNA 重组和重组 DNA 技术",
+      "stem": "下列说法正确的是"
+    },
+    {
+      "id": "jiguang:8974aa31-348a-45e5-ab67-362ef4b5534e",
+      "old": "D",
+      "new": "B",
+      "chapterFolder": "DNA 重组和重组 DNA 技术",
+      "stem": "基因工程技术可使大肠杆菌合成人的蛋白质。下列叙述不正确的是"
+    },
+    {
+      "id": "jiguang:0244f47c-a5e2-4e89-9722-d65130ceafd4",
+      "old": "C",
+      "new": "D",
+      "chapterFolder": "DNA 重组和重组 DNA 技术",
+      "stem": "下列关于基因工程的叙述正确的是"
+    },
+    {
+      "id": "jiguang:c4d0778b-89ce-49c6-9096-9e87036479c5",
+      "old": "E",
+      "new": "C",
+      "chapterFolder": "DNA 重组和重组 DNA 技术",
+      "stem": "在重组DNA技术中，催化生成重组DNA分子的是"
+    },
+    {
+      "id": "jiguang:b27359a7-fecf-47e9-b62d-ed99ce8a4fb5",
+      "old": "D",
+      "new": "A",
+      "chapterFolder": "RNA 的生物合成",
+      "stem": "催化原核生物mRNA转录的酶是"
+    },
+    {
+      "id": "jiguang:7e405372-0b20-4d3a-8688-f5496a5858aa",
+      "old": "E",
+      "new": "D",
+      "chapterFolder": "RNA 的生物合成",
+      "stem": "DNA双链中，指导合成RNA的那条链称为"
+    },
+    {
+      "id": "jiguang:ce34d472-3280-422d-8450-a3b0dfbbd11b",
+      "old": "C",
+      "new": "B",
+      "chapterFolder": "核苷酸代谢",
+      "stem": "Lesch-Nyhan综合征也称为自毁容貌症，是下列哪种酶完全缺失？"
+    },
+    {
+      "id": "jiguang:5a43caf1-5daf-4514-8bf0-34ba1cde7a89",
+      "old": "C",
+      "new": "D",
+      "chapterFolder": "核酸的结构与功能",
+      "stem": "组成核酸分子的碱基主要有"
+    },
+    {
+      "id": "jiguang:8597e29b-4992-46a1-8a92-47443031dbf8",
+      "old": "E",
+      "new": "D",
+      "chapterFolder": "核酸的结构与功能",
+      "stem": "RNA的核苷酸间由哪种键相连接"
+    },
+    {
+      "id": "jiguang:0bd3effb-5386-4602-8696-716918981970",
+      "old": "C",
+      "new": "D",
+      "chapterFolder": "核酸的结构与功能",
+      "stem": "分子杂交试验不能用于"
+    },
+    {
+      "id": "jiguang:ba68a388-753c-4409-9fed-28fae4f6d8fe",
+      "old": "E",
+      "new": "B",
+      "chapterFolder": "氨基酸代谢",
+      "stem": "体内氨的主要去路"
+    },
+    {
+      "id": "jiguang:1a129c1c-10c8-49d7-b1b8-e2e3aeb6a78a",
+      "old": "D",
+      "new": "E",
+      "chapterFolder": "糖代谢",
+      "stem": "肝糖原分解补充血糖时，有几步反应需要消耗高能键"
+    },
+    {
+      "id": "jiguang:44f54197-dfbc-4529-a768-dce6f3c4806b",
+      "old": "C",
+      "new": "B",
+      "chapterFolder": "细胞信号转导与疾病",
+      "stem": "下列哪种物质不是细胞间信息物质"
+    },
+    {
+      "id": "jiguang:474086f3-848d-4626-bb29-0b326c14a9c2",
+      "old": "D",
+      "new": "C",
+      "chapterFolder": "肝的生物化学",
+      "stem": "在生物转化第一相反应中催化还原反应主要的酶有"
+    },
+    {
+      "id": "jiguang:8eb64d34-1e47-4426-a611-d3721aa0e269",
+      "old": "D",
+      "new": "E",
+      "chapterFolder": "脂质代谢",
+      "stem": "脂肪酸的合成中，每次碳链的延长都需要下列哪个分子?"
+    },
+    {
+      "id": "jiguang:0e0c1ba5-9919-450b-80cd-e7b56c9cb54d",
+      "old": "E",
+      "new": "A",
+      "chapterFolder": "蛋白质的合成",
+      "stem": "mRNA的信息阅读方式是"
+    },
+    {
+      "id": "jiguang:e246043c-cc13-4015-8283-e6d4c55060d4",
+      "old": "D",
+      "new": "E",
+      "chapterFolder": "蛋白质的合成",
+      "stem": "下列那种氨基酸无遗传密码子编码"
+    },
+    {
+      "id": "jiguang:d65bf543-d73a-4567-8b81-28970a74c51c",
+      "old": "D",
+      "new": "C",
+      "chapterFolder": "蛋白质的结构与功能",
+      "stem": "蛋白质的高级结构取决于"
+    },
+    {
+      "id": "jiguang:326a6795-68cf-401d-ad57-c624c23da1cd",
+      "old": "B",
+      "new": "D",
+      "chapterFolder": "蛋白质的结构与功能",
+      "stem": "下列关于多肽的描述，错误的是"
+    },
+    {
+      "id": "jiguang:01f5eaad-b120-4bf8-9e99-21049fc03f57",
+      "old": "E",
+      "new": "D",
+      "chapterFolder": "酶与酶促反应",
+      "stem": "下列关于酶的抑制剂的叙述，正确的是"
+    },
+    {
+      "id": "jiguang:d3f4e342-8c28-4698-b4b7-a976534cb3f9",
+      "old": "C",
+      "new": "D",
+      "chapterFolder": "酶与酶促反应",
+      "stem": "TPP中含下列哪种物质"
+    },
+    {
+      "id": "jiguang:5a7acf98-8490-49d4-b8c5-7b4287fd92b9",
+      "old": "A",
+      "new": "D",
+      "chapterFolder": "酶与酶促反应",
+      "stem": "有关酶的以下描述，哪项是正确的"
+    }
+  ],
+  "newIdsList": [
+    "school_bio_37eb461dfd2538f9",
+    "school_bio_9fe455643a58d962",
+    "school_bio_e154101e760530a5",
+    "school_bio_e21f23caef0cad6c",
+    "school_bio_c1d786e3446ea53d",
+    "school_bio_7229559f06825f4c",
+    "school_bio_50cbdee90df53141",
+    "school_bio_f76b79281c16fcb3",
+    "school_bio_a98924ad56651fb1",
+    "school_bio_02dd5b0315f15c19",
+    "school_bio_924fa158049f6b91",
+    "school_bio_8db703d2bee7ad98",
+    "school_bio_adb1376c152eabed",
+    "school_bio_1d609261c97e8f9e",
+    "school_bio_313c2b0b92cbd099",
+    "school_bio_a9671e1362e729e9",
+    "school_bio_cbc0e814b3934aec",
+    "school_bio_cb731165e88ed0bf",
+    "school_bio_96eaec928c3cf364",
+    "school_bio_32cd3b8bc3339b4b",
+    "school_bio_2d3426998711a4ff",
+    "school_bio_a9071a884d2d3a00",
+    "school_bio_c26be5006bc2fc16",
+    "school_bio_98de2e99caefe1ab",
+    "school_bio_04901caebb5ca86f",
+    "school_bio_778469f3c721d1aa",
+    "school_bio_e36ac69c799e3211",
+    "school_bio_5a2c9f2f8160f0e4",
+    "school_bio_dcbe83d3eccb2381",
+    "school_bio_794d588b22e49653",
+    "school_bio_bd4df029f4ae1900",
+    "school_bio_be8b40322b0b4242",
+    "school_bio_9068e5c2878d3bf9",
+    "school_bio_fffa95075107ca63",
+    "school_bio_5d7e15dcf842be1f",
+    "school_bio_7aa130b4622d4ad1",
+    "school_bio_2502f4e48e84baf9",
+    "school_bio_e6d7673953fbecad",
+    "school_bio_c367c1e70e1d77d8",
+    "school_bio_ebf472472590aa5a",
+    "school_bio_d9d769c165ccce15",
+    "school_bio_2cc299fddfd2dcb7",
+    "school_bio_5fab01c59c2bb97a",
+    "school_bio_3e159e0b0e29a13a",
+    "school_bio_b04908c20f922ad1",
+    "school_bio_cf9e0203f9d3ed29",
+    "school_bio_4f93a36121803f84",
+    "school_bio_c67ef4bc0ee83877",
+    "school_bio_17758497a375b535",
+    "school_bio_94fa290561bb09a7",
+    "school_bio_5b4eb655b1129277",
+    "school_bio_d667bc100a27d67a",
+    "school_bio_bd3c178cbf668a81",
+    "school_bio_b1cb15ad5aba8aa7",
+    "school_bio_244d69980419e7c7",
+    "school_bio_219ba117b7a862a6",
+    "school_bio_64036068555afe9c",
+    "school_bio_37fc57fd71a8f9f6",
+    "school_bio_70c296b20344a4a0",
+    "school_bio_e5c0864e06ece6a6",
+    "school_bio_9406ce4970e1fad9",
+    "school_bio_73a294dbf7fb0567",
+    "school_bio_4d7ed45048b8d581",
+    "school_bio_a1896ca13308fe9c",
+    "school_bio_01431d7045f3c4d4",
+    "school_bio_953c6f9ce808aded",
+    "school_bio_189b4f08ee613ce8",
+    "school_bio_91b5fc80e139b3a1"
+  ],
+  "backup": "D:\\朝花夕拾 闲暇随笔\\李沁玲\\大二上\\生物化学与分子生物学\\工程\\题库调研\\merged2\\by_subject\\生物化学.json.bak_2026-10-15T05-43-55-147Z"
+}

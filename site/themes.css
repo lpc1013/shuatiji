@@ -51,23 +51,19 @@
       transparent 32px),
     repeating-linear-gradient(to bottom,transparent 0 29px,var(--grid-rule) 29px 30px);
 }
-/* 卡片退成「本子上的一块淡纸」：无边框、无投影、左侧让开装订线 */
+/* 卡片退成「本子上的一块淡纸」：无边框、无投影。
+ * V12（20261015 视觉审计）：不再改内边距（旧版 14px 14px 14px 34px 的「装订线让位」）
+ * 与行高 —— 主题只换色彩与背景，正文几何与默认主题保持一致，切换主题不改变阅读密度。 */
 [data-bg="grid"]:not(.dark) .card{
   background:var(--surface);
   border:none;border-radius:3px;box-shadow:none;
-  padding:14px 14px 14px 34px;
 }
 [data-bg="grid"]:not(.dark) .card + .card{margin-top:12px;}
 /* 例外：.cols2 是 2 列网格（靠 align-items:stretch 等高），无外边距合并；
    若继承上面的 margin-top，第 2 张卡会被下推 12px 变矮 → 第 1 张显得更高。 */
 [data-bg="grid"]:not(.dark) .cols2 > .card{margin-top:0;}
-/* 正文踩线：卡片内常规文本行高 = 横线间距 */
-[data-bg="grid"]:not(.dark) .card p,
-[data-bg="grid"]:not(.dark) .card .muted,
-[data-bg="grid"]:not(.dark) .card li,
-[data-bg="grid"]:not(.dark) .card .eng-ex,
-[data-bg="grid"]:not(.dark) .card .eng-pm{line-height:30px;}
-[data-bg="grid"]:not(.dark) .exp-p{line-height:30px;}  /* B22：解析正文也踩横线，与卡片内文本同距 */
+/* V12：移除「正文踩线」强制行高（原 30px）—— 背景横线降级为纯装饰纹理，
+ * 不再把行高/内边距绑到纹理间距上（与默认主题正文几何一致）。 */
 /* 顶栏 / 底栏回到近实色，别让横线穿过它们 */
 [data-bg="grid"]:not(.dark) .topbar,
 [data-bg="grid"]:not(.dark) .tabbar{
@@ -81,9 +77,10 @@
 /* ============ 3. 中国风（宣纸 · 朱砂 · 云纹） ============ */
 [data-bg="cn"]:not(.dark){
   --bg:#f6f1e6; --surface:#fffcf5; --surface2:#f1e9da;
-  --text:#2c2721; --muted:#8c8271; --border:#e5dbc6;
+  --text:#2c2721; --muted:#6f6656; --border:#e5dbc6;  /* V02：#8c8271 对卡底仅 3.7:1，#6f6656 达 5.5:1 */
   --primary:#a8402f; --primary-d:#8a3225; --primary-soft:#f7e7e0;
   --ok:#2f7d5a; --ok-soft:#e6f1ea; --bad:#b93a34; --bad-soft:#f8e5e2;
+  --ok-t:#27684c;  /* V02：宣纸主题专属状态文字色，#2f7d5a 系对 ok-soft 仅 4.4:1 */
   --warn:#b3822a; --gold:#b8860b;
   --shadow:0 3px 14px rgba(90,66,40,.09);
 }
@@ -105,9 +102,10 @@
 /* ============ 4. 水墨青岚（黛青 · 晕染 · 护眼） ============ */
 [data-bg="ink"]:not(.dark){
   --bg:#eaf1f1; --surface:#ffffff; --surface2:#e6eef0;
-  --text:#1f2d2c; --muted:#79898a; --border:#dbe6e7;
+  --text:#1f2d2c; --muted:#5f7071; --border:#dbe6e7;  /* V02：#79898a 对白卡仅 3.6:1，#5f7071 达 5.2:1 */
   --primary:#3c6f78; --primary-d:#2e5860; --primary-soft:#e2eef0;
   --ok:#2c8a6a; --ok-soft:#e2f2ec; --bad:#c4544f; --bad-soft:#f9e8e6;
+  --ok-t:#1f6b52; --bad-t:#a83c38;  /* V02：水墨主题专属状态文字色，原色对各自软底仅 3.7–3.8:1 */
   --shadow:0 5px 20px rgba(31,56,58,.09);
 }
 [data-bg="ink"]:not(.dark) .view,

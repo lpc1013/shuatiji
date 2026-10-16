@@ -36,7 +36,36 @@ if (!fs.existsSync(DIST)) {
   process.exit(1);
 }
 
+/* ---------- 0) 发布闸门（F03，20261015）：上传前强制完整校验 ----------
+ * 直接跑上传入口不再可能绕过发布验收：run_all --full（含 dist_parity 发布闸门、
+ * schema 数据比对、前端 92+211 项测试）任一步非 0 即中止，CLI 子进程不会启动。
+ * 逃生口 EDGEONE_SKIP_VERIFY=1 仅限紧急人工使用（会打 ⚠ 并继续）。 */
+function runGate(onPass) {
+  if (process.env.EDGEONE_SKIP_VERIFY === '1') {
+    console.error('[eo] ⚠ EDGEONE_SKIP_VERIFY=1：已跳过发布校验（紧急通道，产物未经验收）');
+    onPass();
+    return;
+  }
+  console.log('[eo] ▶ 发布闸门：node 工程/题库调研/verify/run_all.mjs --full（通过才允许上传）');
+  const RUN_ALL = path.join(__dirname, 'verify', 'run_all.mjs');
+  const child = spawn(process.execPath, [RUN_ALL, '--full'], {
+    cwd: path.join(__dirname, '..', '..'),
+    stdio: ['ignore', 'inherit', 'inherit'],
+    shell: false,
+  });
+  child.on('error', e => { console.error('[eo] ✗ 启动校验失败：' + e.message); process.exit(1); });
+  child.on('exit', code => {
+    if (code !== 0) {
+      console.error('[eo] ✗ 发布校验未通过（exit=' + code + '），已阻止上传。修复后重试，或先跑 release.mjs。');
+      process.exit(1);
+    }
+    console.log('[eo] ✓ 发布校验通过');
+    onPass();
+  });
+}
+
 /* ---------- 1) 重建 .edgeone/assets ---------- */
+function upload() {
 console.log('[eo] 重建 .edgeone/assets …');
 if (!safeRmSync(ASSETS)) { console.error('[eo] ✗ 无法清理 ' + ASSETS); process.exit(1); }
 fs.mkdirSync(ASSETS, { recursive: true });
@@ -96,3 +125,6 @@ child.on('exit', (code) => {
   console.error('\n[eo] ✗ 部署失败 exit=' + code + '（' + secs + 's）');
   process.exit(code || 1);
 });
+}
+
+runGate(upload);

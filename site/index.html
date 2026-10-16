@@ -8,9 +8,9 @@
 <link rel="apple-touch-icon" href="favicon.svg">
 <link rel="manifest" href="manifest.webmanifest">
 <title>刷题记 · 个人学习站</title>
-<link rel="stylesheet" href="styles.css?v=20261014e">
+<link rel="stylesheet" href="styles.css?v=20261015g">
 <!-- 背景主题层：必须在 styles.css 之后（它靠覆盖 token 生效） -->
-<link rel="stylesheet" href="themes.css?v=20261014e">
+<link rel="stylesheet" href="themes.css?v=20261015g">
 </head>
 <body>
 <div id="app" class="font-m">
@@ -66,16 +66,16 @@
 
 <!-- 题库改为「manifest + 分片懒加载」，首屏不再下载 11.7MB 全量数据 -->
 <!-- features.js 必须在 app.js 之前：app.js 的渲染会调用 Feat.*（高级筛选/四级掌握/纠错/偏好） -->
-<script src="features.js?v=20261014e"></script>
-<script src="english.js?v=20261014e"></script>
-<script src="app.js?v=20261014e"></script>
-<script src="sync.js?v=20261014e"></script>
+<script src="features.js?v=20261015g"></script>
+<script src="english.js?v=20261015g"></script>
+<script src="app.js?v=20261015g"></script>
+<script src="sync.js?v=20261015g"></script>
 <!-- Service Worker：网络优先 + 离线回落。数据分片与页面在线时永远取最新，断网可用缓存；
      顺带取代「改 app.js 必须手改 ?v=」那个老坑（缓存名带版本，activate 时清旧的） -->
 <script>
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
   window.addEventListener('load', function () {
-    navigator.serviceWorker.register('sw.js?v=20261014e').catch(function () {});
+    navigator.serviceWorker.register('sw.js?v=20261015g').catch(function () {});
   });
 }
 </script>

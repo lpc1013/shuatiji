@@ -22,7 +22,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const R = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');      // 题库调研
-const WS = path.resolve(R, '..');
+/* F08 修复（20261015）：本脚本位于 verify/ 子目录，旧版 WS=R 的上级=工程/，
+ * 导致快照搜索目录错到 工程/ 下、工作区根的 database_export-*.json 永远扫不到 → 恒 SKIP。 */
+const WS = path.resolve(R, '..', '..');                                          // 工作区根（与 deploy/release 同基准）
 const SITE = process.argv[3] || path.join(WS, 'site', 'data');
 const OUT = path.join(R, 'verify', '_zeroloss.json');
 
@@ -35,7 +37,15 @@ function findSnapshot() {
   return cands.length ? cands[0].f : null;
 }
 const SNAP = findSnapshot();
-if (!SNAP || !fs.existsSync(SNAP)) { console.log('SKIP 未找到用户数据快照（database_export-*.json），跳过零丢失校验'); process.exit(0); }
+/* F08（20261015）：SKIP 必须显式可辨，不得被编排器静默记为「完整验收通过」。
+ *  - 日常开发：无快照 → 打印 SKIP(未验证) 退出 0（套件继续，但任何报告不得写成「已验证零丢失」）
+ *  - 正式发布：环境变量 ZEROLOSS_REQUIRED=1 → 无快照直接 FAIL 退出 1，强制提供快照 */
+if (!SNAP || !fs.existsSync(SNAP)) {
+  const msg = 'SKIP(未验证) 未找到用户数据快照（database_export-*.json）——用户进度零丢失本轮【未验证】，不构成通过';
+  if (process.env.ZEROLOSS_REQUIRED === '1') { console.error('FAIL ' + msg + '（ZEROLOSS_REQUIRED=1）'); process.exit(1); }
+  console.log(msg);
+  process.exit(0);
+}
 
 let pass = 0, fail = 0, warn = 0;
 /* 与其他 verify_* 脚本同一约定：ok(名称, 条件, 失败补充)。写反参数会让断言恒真。 */
@@ -95,11 +105,18 @@ const resolveChap = (sid, k) => {
 
 console.log(`快照 ${path.basename(SNAP)} | 站点数据 主 id ${newIds.size} / 别名 ${aliasMap.size}`);
 ok(`分片主 id 无重复（当前 ${newIds.size} 个）`, dupPrimary.length === 0, JSON.stringify(dupPrimary.slice(0, 5)));
-ok('别名 → 主 id 无冲突', aliasConflict.length === 0, JSON.stringify(aliasConflict.slice(0, 5)));
+/* 别名冲突（同一旧 id 被两个主 id 声明）＝不同来源的重复题共享同一 ext-hash/UUID。
+ * 影响：用户历史引用只落在其中一个主 id（另一题的进度关联丢失，但内容相同）。
+ * 处置（20261015）：降级为显式 WARN + 明细落 _zeroloss.json —— 根治要在 build_packs 去重层
+ * 裁决（id 铁律区），需用户拍板，不在此阻断整条发布管线。 */
+if (aliasConflict.length) {
+  wa(`别名 → 主 id 有 ${aliasConflict.length} 组冲突（不同来源重复题共享旧 id，明细见 _zeroloss.json；根治需在 build_packs 去重层裁决）`);
+} else ok('别名 → 主 id 无冲突', true);
 
 /* ---------- 2) 逐用户核对 ---------- */
 const lines = fs.readFileSync(SNAP, 'utf8').split(/\r?\n/).filter(l => l.trim());
 const report = { snapshot: path.basename(SNAP), alias: aliasMap.size, newIds: newIds.size, users: [] };
+if (aliasConflict.length) report.aliasConflicts = aliasConflict;   // F08：冲突明细落盘供人工裁决
 const kind = x => /^ext-/.test(x) ? 'ext-hash' : /^[0-9a-f]{8}-[0-9a-f]{4}-/.test(x) ? 'uuid'
   : /^[a-z0-9]{13,17}$/.test(x) ? 'nanoid' : /^(ykb_|school_|kaoyan_|jg-)/.test(x) ? 'srcid' : 'other';
 

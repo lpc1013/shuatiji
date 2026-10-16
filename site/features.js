@@ -463,7 +463,9 @@ window.Feat = (function () {
     if (q.sys && q.sys !== q.chapterId) bits.push(escp(String(q.sys).slice(0, 24)));
     if (!bits.length) return '';
     const id = q.id;
-    return `<div class="qmeta">${bits.map(b => `<span class="mtag">${b}</span>`).join('')}${masteryTag(st, id, true)}</div>`;
+    /* V08（20261015 视觉审计）：来源/难度/热度/正确率等辅助元信息折叠进「题目信息」，
+     * 题干前默认只留题号/章节、题型和掌握状态 —— 做题页保持专注单列。 */
+    return `<div class="qmeta"><details class="qmeta-fold"><summary>题目信息</summary><span class="qmeta-bits">${bits.map(b => `<span class="mtag">${b}</span>`).join('')}</span></details>${masteryTag(st, id, true)}</div>`;
   }
   function playerExtraChips(q) {
     const st = curState();
