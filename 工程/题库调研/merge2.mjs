@@ -10,7 +10,7 @@
  *  4. 其余（裁决规则、输出格式）与 v1 一致
  */
 import { readFile, readdir, writeFile, mkdir, rm } from "fs/promises";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 
 const WS = "D:/朝花夕拾 闲暇随笔/李沁玲/大二上/生物化学与分子生物学";
 const OUT = `${WS}/工程/题库调研/merged2`;
@@ -28,6 +28,20 @@ try {
   const dj = JSON.parse(await readFile(`${WS}/工程/题库调研/_dedup_rules.json`, "utf8"));
   for (const r of (dj.rules || [])) if (r.dropId) dropSet.add(r.dropId);
 } catch { /* 规则文件不存在 → 无去重，静默 */ }
+
+/* 人工修缮重放层（_curation_replay.json，持久层，位于题库调研根）。
+ * merged2 承载大量 merge2 之外的人工修缮：178 答案修正、237 解析 remap、26/20 条解析重写、
+ * 29 条选项轮转、章节/题干修正，以及学习通侧线直插的 1404 条题、源漂移但线上在用的免疫题。
+ * 没有重放层，一次 merge2 重跑 = 全部人工修缮静默清零（1015 pf 事故的同款风险）。
+ * 两类补丁：
+ *   fieldPatches —— 字段级修补，指纹守卫：fields[k].from = 生成补丁时的 raw 重建值；
+ *     重放时 fresh raw 的全部受管字段必须逐一相等才整条应用，否则视为源已更新 → 整条跳过，
+ *     记入 ${OUT}/curation_replay_warnings.json 供人工复核（源更新永远胜出，不回退源）。
+ *   additions —— 重建后仍缺失的记录原样补插（id 已存在则跳过，源新增胜出；dedup dropId 永不重放）。 */
+const RP = (() => {
+  try { return JSON.parse(readFileSync(`${WS}/工程/题库调研/_curation_replay.json`, "utf8")); }
+  catch { return {}; }
+})();
 
 /* ⚠️ answer_overrides.json 是 build_packs 的教材裁决护栏（防 merge2 重跑复活旧答案），
  * 但它住在 merged2/ 里，会被下方 rmrf 连带销毁 —— 必须先抢救、重建目录后写回，否则护栏自毁。 */
@@ -397,12 +411,48 @@ for (const [, g] of groups) {
   merged.push(out);
 }
 
+// ---------- 人工修缮重放 · 字段补丁（指纹守卫，整条 all-or-nothing） ----------
+let rpApplied = 0, rpSkipped = 0, rpFields = 0;
+const rpWarn = [];
+if (RP.fieldPatches) {
+  for (const q of merged) {
+    const p = RP.fieldPatches[q.id];
+    if (!p || !p.fields) continue;
+    let okAll = true;
+    for (const [k, fv] of Object.entries(p.fields)) {
+      if (JSON.stringify(q[k] ?? null) !== JSON.stringify(fv.from ?? null)) {
+        okAll = false;
+        rpWarn.push({ id: q.id, subject: p.subject, field: k, reason: "raw 已漂移（源更新胜出，补丁跳过）" });
+        break;
+      }
+    }
+    if (!okAll) { rpSkipped++; continue; }
+    for (const [k, fv] of Object.entries(p.fields)) { q[k] = fv.to === null ? undefined : fv.to; rpFields++; }
+    rpApplied++;
+  }
+  if (rpApplied || rpSkipped) log(`人工修缮重放：字段补丁应用 ${rpApplied} 条（${rpFields} 字段）/ 守卫拦截 ${rpSkipped} 条`);
+  if (rpWarn.length) await writeFile(`${OUT}/curation_replay_warnings.json`, JSON.stringify({ generatedAt: new Date().toISOString(), note: "以下记录 raw 已漂移，补丁未应用——请人工复核是接受源更新还是重做修缮", warnings: rpWarn }, null, 1));
+}
+
 // ---------- 人工去重规则应用（仅剔「自己当代表」的 dropId；并入大组的已被天然吸收） ----------
 if (dropSet.size) {
   for (let i = merged.length - 1; i >= 0; i--) {
     if (dropSet.has(merged[i].id)) { merged.splice(i, 1); dedupDropped++; }
   }
   if (dedupDropped) log(`人工去重规则剔除 ${dedupDropped} 条（_dedup_rules.json）`);
+}
+
+// ---------- 人工修缮重放 · 题目补插（重建后仍缺的记录；dedup dropId 永不复活） ----------
+let rpAdded = 0, rpAddSkip = 0;
+if (Array.isArray(RP.additions)) {
+  const have = new Set(merged.map(q => q.id));
+  for (const a of RP.additions) {
+    const rec = a && a.record, rid = rec && rec.id;
+    if (!rid) continue;
+    if (have.has(rid) || dropSet.has(rid) || dropSet.has(String(rid).replace(/^[a-z]+:/, ""))) { rpAddSkip++; continue; }
+    merged.push(rec); have.add(rid); rpAdded++;
+  }
+  if (rpAdded || rpAddSkip) log(`人工修缮重放：补插 ${rpAdded} 条 / 跳过 ${rpAddSkip} 条（已存在或去重规则）`);
 }
 
 // ---------- 输出 ----------
@@ -435,7 +485,8 @@ const report = {
   generatedAt: new Date().toISOString(),
   mergeVersion: "v2 (stem + option-fingerprint + fuzzy union)",
   input: { jiguangUnique: seenJg.size, totalRecords: recs.length },
-  merged: { uniqueQuestions: merged.length, dedupRemoved: recs.length - merged.length, manualDedupDropped: dedupDropped },
+  merged: { uniqueQuestions: merged.length, dedupRemoved: recs.length - merged.length, manualDedupDropped: dedupDropped,
+    curationReplay: { fieldPatchesApplied: rpApplied, fieldPatchesGuardSkipped: rpSkipped, fieldsPatched: rpFields, replayWarnings: rpWarn.length, additionsInserted: rpAdded, additionsSkipped: rpAddSkip } },
   degenerateImageQuestions: degenerate,
   pass2FuzzyMerges: pass2Merges,
   bySourceCount: merged.reduce((a, q) => { const k = q.sources.join("+"); a[k] = (a[k] || 0) + 1; return a; }, {}),
